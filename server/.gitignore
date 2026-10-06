@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.npm/
+
+# Embedded PostgreSQL data directory (64 MB of binary cluster files).
+# The cluster is recreated by `npm run db:reset`; it must never be in git.
+data/
+
+# Test/tool caches
+.vitest/
+coverage/
+logs/
+*.log
+
+# Local env overrides — never commit real secrets.
+# `.env.*` covers .env.local, .env.production, .env.staging, etc. The example
+# file is re-included so the documented variable list stays in the repository.
+.env
+.env.*
+!.env.example
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

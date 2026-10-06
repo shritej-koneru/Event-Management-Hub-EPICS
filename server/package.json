@@ -1,0 +1,44 @@
+{
+  "name": "emh-server",
+  "version": "1.0.0",
+  "description": "Event Management Hub — central backend server. Single source of truth for events, JWT auth, AI search, recommendations, navigation and BitChat announcements.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:migrate": "node src/db/migrate.js",
+    "db:seed": "node src/db/seeds/index.js",
+    "db:reset": "node src/db/reset.js",
+    "db:schema": "node scripts/dump-schema.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "npm test && npm run verify:migrations",
+    "verify:rest": "node scripts/smoke.mjs",
+    "verify:socket": "node scripts/verify-socket.mjs",
+    "verify:events": "node scripts/verify-events.mjs",
+    "verify:migrations": "node scripts/verify-migrations.mjs"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1",
+    "socket.io": "^4.7.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "embedded-postgres": "18.4.0-beta.17",
+    "socket.io-client": "^4.7.5",
+    "supertest": "^7.0.0",
+    "vitest": "^5.0.3"
+  }
+}
