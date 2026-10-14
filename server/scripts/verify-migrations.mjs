@@ -78,8 +78,13 @@ try {
 check('cold build succeeds', buildError === null, buildError ? buildError.message : '');
 
 const applied = migrationLog.filter((l) => /applied/.test(l));
-check('all three migrations applied', applied.length === 3, `${applied.length}: ${applied.join(' | ')}`);
-for (const file of ['001_init.sql', '002_integrity_and_retention.sql', '003_announcements_event_id.sql']) {
+check('all four migrations applied', applied.length === 4, `${applied.length}: ${applied.join(' | ')}`);
+for (const file of [
+  '001_init.sql',
+  '002_integrity_and_retention.sql',
+  '003_announcements_event_id.sql',
+  '004_chat_messages.sql'
+]) {
   check(`${file} ran`, migrationLog.some((l) => l.includes(file)));
 }
 
@@ -87,13 +92,22 @@ const actualTables = (await query(
   `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`
 )).rows.map((r) => r.table_name);
 
-for (const table of ['events', 'venues', 'users', 'bookmarks', 'announcements', 'search_history', 'migrations']) {
+for (const table of [
+  'events',
+  'venues',
+  'users',
+  'bookmarks',
+  'announcements',
+  'chat_messages',
+  'search_history',
+  'migrations'
+]) {
   check(`table ${table} exists`, actualTables.includes(table), actualTables.join(','));
 }
 
 // The `migrations` ledger must record every file so a re-run skips cleanly.
 const recorded = (await query(`SELECT count(*)::int AS n FROM migrations`)).rows[0].n;
-check('migrations ledger records every file', Number(recorded) === 3, `${recorded} rows`);
+check('migrations ledger records every file', Number(recorded) === 4, `${recorded} rows`);
 
 const counts = (await query(
   `SELECT (SELECT count(*) FROM events)::int       AS events,

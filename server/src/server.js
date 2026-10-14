@@ -69,6 +69,7 @@ function printRoutes(port) {
     ['GET', '/api/navigation/venues', '-'],
     ['POST', '/api/navigation/path', '-'],
     ['GET', '/api/chat/announcements', 'optional'],
+    ['GET', '/api/chat/messages', 'optional'],
     ['POST', '/api/chat/join', '-']
   ];
   const width = Math.max(...rows.map((r) => r[1].length));

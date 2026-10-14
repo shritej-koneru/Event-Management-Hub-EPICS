@@ -33,6 +33,18 @@ describe('POST /api/ai/search', () => {
     expect(response.body.results.map((r) => r.event.id)).toContain('evt_007');
   });
 
+  it('finds an event from a fragment of a single title word', async () => {
+    for (const query of ['work', 'worksho', 'andro']) {
+      const response = await api().post('/api/ai/search').send({ query });
+      expect(response.body.results.map((r) => r.event.id), `query: ${query}`).toContain('evt_001');
+    }
+  });
+
+  it('finds an event from a partially typed multi-word title', async () => {
+    const response = await api().post('/api/ai/search').send({ query: 'android dev work' });
+    expect(response.body.results[0].event.id).toBe('evt_001');
+  });
+
   it('works anonymously', async () => {
     const response = await api().post('/api/ai/search').send({ query: 'music' });
     expect(response.status).toBe(200);

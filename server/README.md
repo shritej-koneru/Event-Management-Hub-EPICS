@@ -2,10 +2,24 @@
 
 Central Node.js/Express backend for the Event Management Hub Android app. It is the
 single source of truth for events, venues, navigation, JWT authentication, AI search,
-personalized recommendations and BitChat announcements.
+personalized recommendations and BitChat **announcements + persisted chat**.
 
-Implements [`contract/API-CONTRACT.md`](../../Epics/contract/API-CONTRACT.md) exactly.
-No Android code was modified.
+Implements [`contract/API-CONTRACT.md`](../../Epics/contract/API-CONTRACT.md)
+(additive history endpoint: `GET /api/chat/messages`).
+
+## Documentation (start here)
+
+| Doc | Audience |
+| --- | --- |
+| [docs/WORK_HANDOVER.md](docs/WORK_HANDOVER.md) | **Main handover — read first** |
+| [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) | Architecture & stack |
+| [docs/BACKEND_IMPLEMENTATION.md](docs/BACKEND_IMPLEMENTATION.md) | Feature-by-feature backend guide |
+| [docs/DATABASE_GUIDE.md](docs/DATABASE_GUIDE.md) | Schema, migrations, seeds |
+| [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | Every REST + Socket.IO endpoint |
+| [docs/REALTIME_WORKFLOWS.md](docs/REALTIME_WORKFLOWS.md) | Socket.IO + chat persistence |
+| [docs/SETUP_AND_TESTING.md](docs/SETUP_AND_TESTING.md) | Install, run, test, emulator |
+| [docs/PROJECT_FLOW.md](docs/PROJECT_FLOW.md) | Mermaid diagrams |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Real git history + this handover |
 
 ---
 
@@ -17,7 +31,8 @@ npm run setup   # generates .env with a random JWT_SECRET (safe, idempotent)
 npm start       # migrates, seeds and listens on http://localhost:3000
 ```
 
-Point the Android emulator at `http://10.0.2.2:3000` (`API_BASE_URL` in `.env`).
+Point the Android emulator at `http://10.0.2.2:3000` or run
+`adb reverse tcp:3000 tcp:3000` when the app uses `http://127.0.0.1:3000/`.
 
 Verify:
 
@@ -29,6 +44,14 @@ curl http://localhost:3000/ping
 ```
 
 Demo account: `alice@uni.edu` / `secret123`
+
+Run tests (stop `npm start` first — both use embedded PG port 5433):
+
+```bash
+npm test                 # 285 tests
+npm run verify:migrations
+```
+
 
 ---
 
@@ -344,7 +367,7 @@ Fully deterministic and offline — no external API key, no LLM or embedding ser
 ## Testing
 
 ```bash
-npm test          # 267 tests, 11 suites
+npm test          # 269 tests, 11 suites
 ```
 
 Vitest runs sequentially in one worker against a real `emh_test` database created,

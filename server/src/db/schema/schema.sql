@@ -73,11 +73,14 @@
   room            text               NOT NULL
   message         text               NOT NULL
   at              timestamp with time zone NOT NULL DEFAULT now()
+  event_id        text              
   -- PRIMARY KEY (id)
   -- UNIQUE (room, message)
+  -- FOREIGN KEY (event_id) REFERENCES events(id) ON UPDATE CASCADE ON DELETE CASCADE
   -- FOREIGN KEY (room) REFERENCES venues(id) ON UPDATE CASCADE ON DELETE CASCADE
   -- INDEX announcements_pkey
   -- INDEX announcements_room_message_key
+  -- INDEX idx_announcements_event
   -- INDEX idx_announcements_room
 
 -- ---- migrations --------------------------------------------------

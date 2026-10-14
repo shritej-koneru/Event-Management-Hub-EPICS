@@ -39,6 +39,23 @@ const SCORE_K = 6;
 /** Minimum textual evidence required before an event may appear in results. */
 export const MIN_TEXT_RAW = 0.5;
 
+/**
+ * Minimum length a query term must reach before it may match the *start* of a
+ * word. Without this, `title.includes(term)` only ever compares whole words, so
+ * "work" never matches the token "workshop" and a query such as
+ * "android dev work" returns nothing for an event that plainly exists.
+ * Requiring 3+ characters keeps fragments like "ca" or "ar" from matching
+ * unrelated titles.
+ */
+const MIN_PREFIX_LEN = 3;
+
+/** True when `term` equals a word or is a leading fragment of one. */
+function hits(words, term) {
+  return words.some(
+    (word) => word === term || (term.length >= MIN_PREFIX_LEN && word.startsWith(term))
+  );
+}
+
 /** Maps an unbounded positive score onto the contract's 0..1 range. */
 export function normalise(value) {
   if (!(value > 0)) return 0;
@@ -66,27 +83,27 @@ export function scoreEvent(event, queryTerms) {
   const fields = new Set();
 
   for (const term of queryTerms) {
-    if (title.includes(term)) {
+    if (hits(title, term)) {
       textRaw += W.title;
       titleHit = true;
       fields.add('title');
-    } else if (description.includes(term)) {
+    } else if (hits(description, term)) {
       textRaw += W.description;
       fields.add('description');
     }
-    if (host.includes(term)) {
+    if (hits(host, term)) {
       textRaw += W.host;
       fields.add('host');
     }
-    if (term === category) {
+    if (hits([category], term)) {
       textRaw += W.category;
       fields.add('category');
     }
-    if (synonyms.includes(term)) {
+    if (hits(synonyms, term)) {
       textRaw += W.synonym;
       fields.add('synonym');
     }
-    if (tags.includes(term)) {
+    if (hits(tags, term)) {
       textRaw += W.tag;
       fields.add('tags');
     }

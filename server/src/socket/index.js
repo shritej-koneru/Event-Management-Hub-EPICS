@@ -2,10 +2,12 @@ import { Server as SocketIOServer } from 'socket.io';
 import { verifyToken } from '../auth/jwt.js';
 import { isValidVenueId } from '../navigation/venues.js';
 import { listEvents } from '../models/eventModel.js';
+import { findUserById } from '../models/userModel.js';
 import { recordAnnouncement, stripRoomPrefix } from '../models/announcementModel.js';
+import { insertChatMessage } from '../models/chatMessageModel.js';
 
 /**
- * BitChat announcement relay.
+ * BitChat: announcements relay + interactive chat.
  *
  * Android integration (android/.../ui/screens/ChatScreen.kt):
  *   - connects to the DEFAULT namespace at path `/socket.io`
@@ -13,6 +15,9 @@ import { recordAnnouncement, stripRoomPrefix } from '../models/announcementModel
  *   - emits `join` with an array of BARE venue ids (no `announce:` prefix)
  *   - listens for `joined` and `event`
  *   - reads `title` and `venue` from the TOP LEVEL of the `event` payload
+ *   - emits `chat:message` ({ text }) to talk, and renders every `chat:message`
+ *     the server broadcasts back to the namespace (including its own echo)
+ *   - loads missed history with GET /api/chat/messages after a reconnect
  *
  * The namespace `/announce` from contract/API-CONTRACT.md §6 is kept working,
  * so both `IO.socket(url)` and `IO.socket(url + "/announce")` receive updates.
@@ -24,7 +29,8 @@ import { recordAnnouncement, stripRoomPrefix } from '../models/announcementModel
  *     rejected with `connect_error` rather than silently downgrading to
  *     anonymous, so a client with a stale token learns to re-authenticate;
  *   - no token means anonymous, and `socket.data.userId` stays undefined.
- * There are no per-user socket actions today, so nothing else is gated.
+ * Chat authorship follows the same rule: a valid token names the user, no token
+ * means the message is attributed to `Guest`.
  */
 
 /** Socket.io room name for a venue node. */
@@ -48,6 +54,38 @@ export function resolveHandshakeAuth(auth = {}) {
 
   const decoded = verifyToken(token);
   return { userId: decoded.uid };
+}
+
+/** Display name of the built-in chat assistant that auto-replies to messages. */
+export const ASSISTANT_NAME = 'Event Hub Assistant';
+
+/**
+ * Builds a short automatic reply for an incoming chat message. Rule-based and
+ * dependency-free (may consult the events table for "what's on" questions).
+ * @returns {Promise<string>}
+ */
+export async function buildAutoReply(text) {
+  const t = String(text || '').toLowerCase();
+  if (/\b(hi|hello|hey|yo|greetings)\b/.test(t)) {
+    return "Hi! I'm the Event Hub assistant. Ask me about upcoming events or a venue \u2014 or type \"help\".";
+  }
+  if (t.includes('help')) {
+    return 'I can tell you what events are coming up, or about venues like "Room 204". Try: "what events are on?"';
+  }
+  if (/\b(event|events|what'?s on|upcoming|happening|schedule)\b/.test(t)) {
+    try {
+      const { events } = await listEvents({});
+      if (!events.length) return 'There are no events scheduled right now.';
+      const top = events.slice(0, 3).map((e) => e.title).join(', ');
+      return `There are ${events.length} events coming up. Next: ${top}.`;
+    } catch {
+      return 'I could not load events just now \u2014 please try again in a moment.';
+    }
+  }
+  if (t.endsWith('?')) {
+    return "Good question! I'm a simple demo assistant \u2014 the Events and Map tabs have the full details.";
+  }
+  return 'Got it \u2014 thanks for your message! Ask me about upcoming events or a venue anytime.';
 }
 
 function registerNamespace(namespace) {
@@ -99,6 +137,82 @@ function registerNamespace(namespace) {
         if (typeof ack === 'function') {
           ack({ ok: false, error: { code: 'INTERNAL_ERROR', message: 'Could not load events' } });
         }
+      }
+    });
+
+    // Interactive chat: the server is the single writer. It validates the text,
+    // badges it with the sender's identity, PERSISTS the row, and only then
+    // broadcasts the immutable message to every connected client in this
+    // namespace (sender included). A failed write is never broadcast — the
+    // ack carries CHAT_PERSIST_FAILED so the UI can retry.
+    socket.on('chat:message', async (payload = {}, ack) => {
+      const text = typeof payload === 'object' && payload !== null
+        ? String(payload.text ?? '').trim()
+        : '';
+      if (!text) {
+        if (typeof ack === 'function') {
+          ack({ ok: false, error: { code: 'BAD_CHAT_MESSAGE', message: 'Message text is required' } });
+        }
+        return;
+      }
+      if (text.length > 500) {
+        if (typeof ack === 'function') {
+          ack({ ok: false, error: { code: 'BAD_CHAT_MESSAGE', message: 'Message must be 500 characters or fewer' } });
+        }
+        return;
+      }
+
+      let author = 'Guest';
+      if (socket.data.userId) {
+        const user = await findUserById(socket.data.userId).catch(() => null);
+        author = (user && (user.name || user.email)) || 'Guest';
+      }
+
+      const room = normalizeRoom(payload.room);
+
+      let message;
+      try {
+        message = await insertChatMessage({
+          author,
+          text,
+          userId: socket.data.userId || null,
+          room,
+          bot: false
+        });
+      } catch {
+        if (typeof ack === 'function') {
+          ack({
+            ok: false,
+            error: { code: 'CHAT_PERSIST_FAILED', message: 'Could not save the message. Please retry.' }
+          });
+        }
+        return;
+      }
+
+      namespace.emit('chat:message', message);
+      if (typeof ack === 'function') ack({ ok: true, message });
+
+      // Built-in assistant: reply automatically to the sender shortly after the
+      // message lands. The reply is persisted too so history survives reloads.
+      try {
+        const replyText = await buildAutoReply(text);
+        setTimeout(async () => {
+          if (typeof socket.connected === 'boolean' && !socket.connected) return;
+          try {
+            const botMessage = await insertChatMessage({
+              author: ASSISTANT_NAME,
+              text: replyText,
+              userId: null,
+              room,
+              bot: true
+            });
+            socket.emit('chat:message', botMessage);
+          } catch {
+            // A failed auto-reply persist must never affect the user's message.
+          }
+        }, 500);
+      } catch {
+        // A failed auto-reply must never affect the user's own message.
       }
     });
   });

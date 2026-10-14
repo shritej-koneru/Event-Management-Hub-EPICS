@@ -1,9 +1,10 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { listRecentAnnouncements } from '../models/announcementModel.js';
+import { listRecentChatMessages } from '../models/chatMessageModel.js';
 import { findEventById } from '../models/eventModel.js';
 import { resolveVenue } from '../navigation/venues.js';
 import { ApiError } from '../utils/errors.js';
-import { roomForVenue } from '../socket/index.js';
+import { roomForVenue, normalizeRoom } from '../socket/index.js';
 import { validatedQuery } from '../middleware/validate.js';
 
 /**
@@ -46,4 +47,31 @@ export const join = asyncHandler(async (req, res) => {
     throw ApiError.badRequest(`Unknown venue: ${req.body?.venueId}`, 'UNKNOWN_VENUE');
   }
   res.json({ ok: true, room: roomForVenue(venueId) });
+});
+
+/**
+ * GET /api/chat/messages[?room=&before=&limit=] -> 200 { messages }
+ *
+ * Persisted BitChat history for reconnect / cold start. Messages are returned
+ * in chronological (oldest-first) order. `room` scopes to one bare venue id;
+ * omit it for the full thread the Android client renders. `before` is an ISO
+ * timestamp cursor for "load more".
+ *
+ * An unknown `room` value is a 400 rather than a silent empty list, so a typo
+ * is not indistinguishable from "this venue has no messages yet".
+ */
+export const messages = asyncHandler(async (req, res) => {
+  const { room, before, limit } = validatedQuery(req);
+
+  let venueId = null;
+  if (room) {
+    venueId = normalizeRoom(room);
+    if (!venueId) {
+      throw ApiError.badRequest(`Unknown venue: ${room}`, 'UNKNOWN_VENUE');
+    }
+  }
+
+  res.json({
+    messages: await listRecentChatMessages({ room: venueId, before: before || null, limit })
+  });
 });

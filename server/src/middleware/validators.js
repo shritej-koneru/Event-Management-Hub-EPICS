@@ -167,4 +167,23 @@ export const announcementQuerySchema = z
   })
   .strict();
 
+/**
+ * GET /api/chat/messages?room=&before=&limit=
+ *
+ * `room` is a bare venue id or `announce:<venueId>`; both are accepted and
+ * normalised in the controller. `before` is an ISO-8601 timestamp cursor.
+ * `limit` caps the page (server maximum is enforced in the model).
+ */
+export const chatMessageQuerySchema = z
+  .object({
+    room: z.string().trim().min(1).max(80).optional(),
+    before: z
+      .string()
+      .trim()
+      .datetime({ offset: true })
+      .optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional()
+  })
+  .strict();
+
 export { VENUE_IDS };

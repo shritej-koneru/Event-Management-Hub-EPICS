@@ -57,7 +57,8 @@ export async function migrate({ log = console.log } = {}) {
 export async function dropAll() {
   const pool = getPool();
   await pool.query(`
-    DROP TABLE IF EXISTS announcements,
+    DROP TABLE IF EXISTS chat_messages,
+                    announcements,
                     search_history,
                     bookmarks,
                     events,
