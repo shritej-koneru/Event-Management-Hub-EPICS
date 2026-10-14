@@ -4,10 +4,20 @@ Central Node.js/Express backend for the Event Management Hub Android app. It is 
 single source of truth for events, venues, navigation, JWT authentication, AI search,
 personalized recommendations and BitChat **announcements + persisted chat**.
 
-Implements [`contract/API-CONTRACT.md`](../../Epics/contract/API-CONTRACT.md)
+Implements [`contract/API-CONTRACT.md`](../contract/API-CONTRACT.md)
 (additive history endpoint: `GET /api/chat/messages`).
 
 ## Documentation (start here)
+
+Root-level handover docs (monorepo view):
+
+| Doc | Audience |
+| --- | --- |
+| [../docs/PROJECT_HANDOVER.md](../docs/PROJECT_HANDOVER.md) | Next developer — start here |
+| [../docs/MY_WORK_SUMMARY.md](../docs/MY_WORK_SUMMARY.md) | Complete summary of implemented work |
+| [../docs/IMPLEMENTATION_EXPLANATION.md](../docs/IMPLEMENTATION_EXPLANATION.md) | Beginner-friendly "how it works" |
+
+Backend-focused docs:
 
 | Doc | Audience |
 | --- | --- |
