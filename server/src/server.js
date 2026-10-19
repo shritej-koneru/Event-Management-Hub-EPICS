@@ -67,6 +67,8 @@ function printRoutes(port) {
     ['POST', '/api/ai/search', 'optional'],
     ['GET', '/api/ai/recommendations', 'Bearer'],
     ['GET', '/api/navigation/venues', '-'],
+    ['GET', '/api/navigation/map', '-'],
+    ['GET', '/api/navigation/venues/:venueId/map', '-'],
     ['POST', '/api/navigation/path', '-'],
     ['GET', '/api/chat/announcements', 'optional'],
     ['GET', '/api/chat/messages', 'optional'],

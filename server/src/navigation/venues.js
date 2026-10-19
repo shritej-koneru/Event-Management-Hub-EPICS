@@ -1,13 +1,14 @@
 /**
  * CANONICAL VENUE LIST — single source of truth.
  *
- * Mirrors `contract/API-CONTRACT.md` §1 and the Android map layout
- * (`android/.../ui/screens/MapScreen.kt` → `MapPositions`). Every event's
- * `venue` string and every navigation graph node id is keyed on these values.
+ * Mirrors `contract/API-CONTRACT.md` §1. Every event's `venue` string and
+ * every navigation graph node id is keyed on these values. The Android app
+ * receives this catalogue (and the map layout below) from the API — the map
+ * screen no longer hard-codes any of it.
  *
- * Changing a name here REQUIRES updating the contract doc and the Android map
- * layout together, otherwise routing breaks (this is the project's #1
- * integration risk). See server/README.md § "Venue naming convention".
+ * Changing a name here REQUIRES updating the contract doc, otherwise routing
+ * breaks (this is the project's #1 integration risk). See server/README.md
+ * § "Venue naming convention".
  */
 
 export const VENUES = [
@@ -47,6 +48,32 @@ export const GRAPH = {
   'library':       { 'lab-a': 20, 'cafeteria': 25 },
   'tech-lounge':   { 'auditorium': 30, 'room-102': 12, 'room-204': 15, 'cafeteria': 18 }
 };
+
+/**
+ * CANONICAL MAP LAYOUT — fractional canvas coordinates (0..1), same values
+ * the Android MapScreen previously hard-coded as `MapPositions`. Seeded into
+ * `venues.map_x/map_y` by the venue seed and served by
+ * GET /api/navigation/map, so the app's live map is backend-driven and the
+ * layout can be changed in ONE place.
+ *
+ * x grows right, y grows DOWN (screen convention, matching Compose Canvas).
+ */
+export const MAP_POSITIONS = Object.freeze({
+  entrance: { x: 0.15, y: 0.88 },
+  lobby: { x: 0.28, y: 0.7 },
+  registration: { x: 0.22, y: 0.55 },
+  auditorium: { x: 0.32, y: 0.42 },
+  'main-hall': { x: 0.48, y: 0.66 },
+  'room-101': { x: 0.42, y: 0.84 },
+  'room-102': { x: 0.55, y: 0.84 },
+  'room-204': { x: 0.72, y: 0.62 },
+  'room-205': { x: 0.8, y: 0.48 },
+  'lab-a': { x: 0.66, y: 0.44 },
+  'lab-b': { x: 0.58, y: 0.44 },
+  cafeteria: { x: 0.4, y: 0.52 },
+  library: { x: 0.58, y: 0.2 },
+  'tech-lounge': { x: 0.48, y: 0.3 }
+});
 
 /** Coarse spatial ordering used to derive synthetic compass bearings for turn-by-turn text. */
 const ORDER = VENUES.map((v) => v.id);
@@ -91,6 +118,28 @@ export function resolveVenue(input) {
   if (!trimmed) return null;
   if (isValidVenueId(trimmed)) return trimmed;
   return venueIdForName(trimmed);
+}
+
+/**
+ * Every venue needs an in-range map position, otherwise GET /navigation/map
+ * would serve coordinates the Android canvas cannot draw.
+ */
+export function assertMapIntegrity() {
+  for (const { id } of VENUES) {
+    const pos = MAP_POSITIONS[id];
+    if (!pos) throw new Error(`Venue "${id}" has no MAP_POSITIONS entry`);
+    for (const axis of ['x', 'y']) {
+      const value = pos[axis];
+      if (!Number.isFinite(value) || value < 0 || value > 1) {
+        throw new Error(`Venue "${id}" ${axis} must be a fraction in [0, 1], got ${value}`);
+      }
+    }
+  }
+  for (const id of Object.keys(MAP_POSITIONS)) {
+    if (!venueIdToName.has(id)) {
+      throw new Error(`MAP_POSITIONS entry "${id}" has no canonical venue`);
+    }
+  }
 }
 
 export function assertGraphIntegrity() {

@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.eventmanagementhub.data.HubRepository
 import com.example.eventmanagementhub.data.Result
+import com.example.eventmanagementhub.data.model.CampusMapResponse
 import com.example.eventmanagementhub.data.model.PathResponse
 import com.example.eventmanagementhub.data.model.Venue
 import com.example.eventmanagementhub.ui.theme.*
@@ -26,23 +27,8 @@ import kotlinx.coroutines.launch
 /** Destination used when the user has not asked to go anywhere specific. */
 private const val DEFAULT_DESTINATION = "room-204"
 
-// Deterministic 2D layout for the campus graph (fractions of the canvas).
-private val MapPositions = mapOf(
-    "entrance" to Offset(0.15f, 0.88f),
-    "lobby" to Offset(0.28f, 0.70f),
-    "registration" to Offset(0.22f, 0.55f),
-    "auditorium" to Offset(0.32f, 0.42f),
-    "main-hall" to Offset(0.48f, 0.66f),
-    "room-101" to Offset(0.42f, 0.84f),
-    "room-102" to Offset(0.55f, 0.84f),
-    "room-204" to Offset(0.72f, 0.62f),
-    "room-205" to Offset(0.80f, 0.48f),
-    "lab-a" to Offset(0.66f, 0.44f),
-    "lab-b" to Offset(0.58f, 0.44f),
-    "cafeteria" to Offset(0.40f, 0.52f),
-    "library" to Offset(0.58f, 0.20f),
-    "tech-lounge" to Offset(0.48f, 0.30f)
-)
+// Venue positions come from GET /api/navigation/map (backend is the source of
+// truth); the layout is no longer hard-coded here.
 
 @Composable
 fun MapScreen(
@@ -51,6 +37,7 @@ fun MapScreen(
     repository: HubRepository = HubRepository()
 ) {
     var venues by remember { mutableStateOf<List<Venue>>(emptyList()) }
+    var campusMap by remember { mutableStateOf<CampusMapResponse?>(null) }
     var from by remember { mutableStateOf("entrance") }
     var to by remember { mutableStateOf<String?>(null) }
     var path by remember { mutableStateOf<PathResponse?>(null) }
@@ -74,11 +61,13 @@ fun MapScreen(
         }
     }
 
-    // Load the venue catalogue once.
+    // Load the campus layout once — positions, edges and the venue list all
+    // come from GET /api/navigation/map (falls back to the on-device copy).
     LaunchedEffect(Unit) {
-        when (val res = repository.venues()) {
+        when (val res = repository.campusMap()) {
             is Result.Success -> {
-                venues = res.data.venues
+                campusMap = res.data
+                venues = res.data.venues.map { Venue(it.id, it.name, it.neighbors) }
                 isStale = res.isStale
             }
             is Result.Error -> {
@@ -143,11 +132,11 @@ fun MapScreen(
                 CircularProgressIndicator(color = PrimaryPurple)
             }
         } else {
-            CampusMap(venues, path?.nodes?.map { it.id } ?: emptyList())
+            CampusMap(campusMap ?: CampusMapResponse(), path?.nodes?.map { it.id } ?: emptyList())
             Spacer(Modifier.height(12.dp))
             if (isStale) {
                 Text(
-                    "Offline — showing the route computed on this device",
+                    "Offline — showing the map and route stored on this device",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFB26A00)
                 )
@@ -166,19 +155,18 @@ fun MapScreen(
 }
 
 @Composable
-private fun CampusMap(venues: List<Venue>, pathIds: List<String>) {
+private fun CampusMap(map: CampusMapResponse, pathIds: List<String>) {
     val edgeColor = CardBorder
     val pathColor = PrimaryPurple
     val pathSet = remember(pathIds) { pathIds.toSet() }
 
-    // adjacency from venue.neighbors (mirrors backend graph)
-    val edges = remember(venues) {
-        val pairs = mutableListOf<Pair<String, String>>()
-        for (v in venues) for (n in v.neighbors) {
-            if (n > v.id) pairs.add(v.id to n)
-        }
-        pairs
+    // Fractional positions from the backend map (fallback: canvas centre).
+    val positions = remember(map.venues) {
+        map.venues.associate { it.id to Offset(it.x.toFloat(), it.y.toFloat()) }
     }
+
+    // Undirected edges, one segment each (server stores each edge once).
+    val edges = remember(map.edges) { map.edges.map { it.from to it.to } }
 
     Canvas(
         modifier = Modifier
@@ -191,7 +179,7 @@ private fun CampusMap(venues: List<Venue>, pathIds: List<String>) {
         val h = size.height
 
         fun pos(id: String): Offset {
-            val frac = MapPositions[id] ?: Offset(0.5f, 0.5f)
+            val frac = positions[id] ?: Offset(0.5f, 0.5f)
             return Offset(frac.x * w, frac.y * h)
         }
 
@@ -208,7 +196,7 @@ private fun CampusMap(venues: List<Venue>, pathIds: List<String>) {
         }
 
         // nodes
-        for (v in venues) {
+        for (v in map.venues) {
             val p = pos(v.id)
             val isOnPath = pathSet.isNotEmpty() && pathSet.contains(v.id)
             drawCircle(color = Color.White, radius = 14f, center = p)

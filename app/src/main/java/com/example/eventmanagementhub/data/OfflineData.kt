@@ -1,8 +1,13 @@
 package com.example.eventmanagementhub.data
 
 import com.example.eventmanagementhub.data.model.Announcement
+import com.example.eventmanagementhub.data.model.CampusMapResponse
 import com.example.eventmanagementhub.data.model.Event
+import com.example.eventmanagementhub.data.model.MapEdge
+import com.example.eventmanagementhub.data.model.MapVenue
 import com.example.eventmanagementhub.data.model.Venue
+import com.example.eventmanagementhub.data.model.VenueMapNeighbor
+import com.example.eventmanagementhub.data.model.VenueMapResponse
 
 /**
  * Embedded offline catalog powering 100% offline usage after login.
@@ -157,6 +162,71 @@ val offlineVenueOrder: List<String> = listOf(
 
 val offlineVenues: List<Venue> = offlineVenueOrder.map { id ->
     Venue(id = id, name = offlineVenueNames[id].orEmpty(), neighbors = offlineGraph[id].orEmpty().keys.toList())
+}
+
+/**
+ * Offline canvas positions — mirror of MAP_POSITIONS in the backend
+ * venues.js (the live values come from GET /api/navigation/map; these exist
+ * only so the map still draws when the backend is unreachable).
+ */
+val offlineMapPositions: Map<String, Pair<Double, Double>> = mapOf(
+    "entrance" to (0.15 to 0.88),
+    "lobby" to (0.28 to 0.70),
+    "registration" to (0.22 to 0.55),
+    "auditorium" to (0.32 to 0.42),
+    "main-hall" to (0.48 to 0.66),
+    "room-101" to (0.42 to 0.84),
+    "room-102" to (0.55 to 0.84),
+    "room-204" to (0.72 to 0.62),
+    "room-205" to (0.80 to 0.48),
+    "lab-a" to (0.66 to 0.44),
+    "lab-b" to (0.58 to 0.44),
+    "cafeteria" to (0.40 to 0.52),
+    "library" to (0.58 to 0.20),
+    "tech-lounge" to (0.48 to 0.30)
+)
+
+/** Offline mirror of GET /api/navigation/map, used only when the backend is unreachable. */
+fun offlineCampusMap(): CampusMapResponse = CampusMapResponse(
+    venues = offlineVenueOrder.map { id ->
+        val (x, y) = offlineMapPositions[id] ?: (0.5 to 0.5)
+        MapVenue(
+            id = id,
+            name = offlineVenueNames[id].orEmpty(),
+            x = x,
+            y = y,
+            neighbors = offlineGraph[id].orEmpty().keys.toList()
+        )
+    },
+    edges = buildList {
+        for ((from, neighbors) in offlineGraph) {
+            for ((to, distance) in neighbors) {
+                if (from < to) add(MapEdge(from = from, to = to, distanceM = distance))
+            }
+        }
+    }
+)
+
+/** Offline mirror of GET /api/navigation/venues/{venueId}/map (id or display name). */
+fun offlineVenueMap(venueRef: String): VenueMapResponse? {
+    val ref = venueRef.trim()
+    val id = offlineVenueOrder.firstOrNull { it == ref }
+        ?: offlineVenueNames.entries.firstOrNull { it.value == ref }?.key
+        ?: return null
+    val (x, y) = offlineMapPositions[id] ?: (0.5 to 0.5)
+    return VenueMapResponse(
+        venue = MapVenue(id = id, name = offlineVenueNames[id].orEmpty(), x = x, y = y),
+        neighbors = offlineGraph[id].orEmpty().map { (neighborId, distance) ->
+            val (nx, ny) = offlineMapPositions[neighborId] ?: (0.5 to 0.5)
+            VenueMapNeighbor(
+                id = neighborId,
+                name = offlineVenueNames[neighborId].orEmpty(),
+                x = nx,
+                y = ny,
+                distanceM = distance
+            )
+        }
+    )
 }
 
 val offlineAnnouncements: List<Announcement> = listOf(

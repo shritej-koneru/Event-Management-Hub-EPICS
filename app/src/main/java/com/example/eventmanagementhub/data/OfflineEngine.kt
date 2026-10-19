@@ -14,6 +14,7 @@ import com.example.eventmanagementhub.data.model.PathResponse
 import com.example.eventmanagementhub.data.model.PathStep
 import com.example.eventmanagementhub.data.model.RecommendationResponse
 import com.example.eventmanagementhub.data.model.UserProfile
+import kotlin.math.round
 
 /**
  * On-device replica of the backend AI + navigation logic (ai/scoring.js,
@@ -263,7 +264,9 @@ fun search(query: String, limit: Int = 10): AiSearchResponse {
     fun details(event: Event, from: String?, announcements: List<Announcement>): EventDetails {
         val events = OfflineStore.allEvents()
         val seats = (event.capacity - event.registered).coerceAtLeast(0)
-        val occupancy = if (event.capacity > 0) (event.registered * 100) / event.capacity else 0
+        // Same rounding as GET /api/events/{id}/details: one decimal place.
+        val occupancy =
+            if (event.capacity > 0) round(event.registered * 1000.0 / event.capacity) / 10.0 else 0.0
         val scoped = announcements.filter { it.eventId == event.id }
 
         val nav = runCatching { path(from?.takeIf { it.isNotBlank() } ?: "entrance", event.venueId) }.getOrNull()

@@ -111,6 +111,29 @@ Bearer required → ranked events from interests + bookmarks + search history.
 
 No auth → all graph nodes with neighbours.
 
+## GET /api/navigation/map (1.2.0)
+
+No auth → whole-campus canvas layout read from the seeded database
+(`venues.map_x/map_y`, `venue_edges`): fractional positions (0..1) plus the
+undirected walk graph. This is what the Android map draws — the client no
+longer hard-codes venue coordinates.
+
+```bash
+curl -s 'http://localhost:3000/api/navigation/map'
+```
+
+## GET /api/navigation/venues/:venueId/map (1.2.0)
+
+No auth → one venue node with its positioned neighbours and edge distances.
+`:venueId` accepts a graph node id or a URL-encoded canonical display name;
+anything unknown (including a near-miss like `room 204`) is
+`400 UNKNOWN_VENUE` — never a guess.
+
+```bash
+curl -s 'http://localhost:3000/api/navigation/venues/room-204/map'
+curl -s 'http://localhost:3000/api/navigation/venues/Room%20204/map'
+```
+
 ## POST /api/navigation/path
 
 Body: `{ "from": "Entrance", "to": "Room 204" }` → nodes, steps, totalDistanceM.

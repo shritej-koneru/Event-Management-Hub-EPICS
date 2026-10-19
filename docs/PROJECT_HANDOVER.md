@@ -40,7 +40,7 @@ Event-Management-Hub-EPICS/          <- integration branch
 │   │   ├── db/migrations/004_chat_messages.sql
 │   │   ├── ai/scoring.js             <- Deterministic search + prefix match
 │   │   └── ...
-│   ├── tests/                        <- Vitest (285 tests)
+│   ├── tests/                        <- Vitest (295 tests)
 │   └── docs/                         <- 9 handover docs (start with WORK_HANDOVER.md)
 ├── contract/API-CONTRACT.md          <- Shared API contract
 └── docs/                             <- This handover + work summary
@@ -67,7 +67,7 @@ for the demo login).
 ### Tests (stop `npm start` first — both use embedded PG port 5433)
 
 ```bash
-npm test                    # 285 tests
+npm test                    # 295 tests
 npm run verify:migrations   # cold-build scratch DB from SQL files alone
 ```
 
@@ -77,7 +77,7 @@ npm run verify:migrations   # cold-build scratch DB from SQL files alone
 2. Emulator: either `10.0.2.2:3000` (default fallback) **or**
    `adb reverse tcp:3000 tcp:3000` if `API_BASE_URL` is `http://127.0.0.1:3000/`.
 3. Open `app/` in Android Studio → Run `app`.
-4. Unit tests: `.\gradlew.bat :app:testDebugUnitTest` (33 tests).
+4. Unit tests: `.\gradlew.bat :app:testDebugUnitTest` (38 tests).
 
 ---
 
@@ -154,6 +154,7 @@ All routes are under `/api` except `GET /ping`. Full examples: `server/docs/API_
 | POST | `/api/ai/search` | optional |
 | GET | `/api/ai/recommendations` | Bearer |
 | GET/POST | `/api/navigation/venues`, `/api/navigation/path` | none |
+| GET | `/api/navigation/map`, `/api/navigation/venues/:venueId/map` (1.2.0) | none |
 | GET | `/api/chat/announcements[?eventId=]` | optional |
 | GET | `/api/chat/messages[?room=&before=&limit=]` | optional |
 | POST | `/api/chat/join` | none |
@@ -165,9 +166,9 @@ All routes are under `/api` except `GET /ping`. Full examples: `server/docs/API_
 
 | Layer | Tool | Count |
 | --- | --- | --- |
-| Backend unit + integration | Vitest + supertest + socket.io-client | 285 |
-| Migration cold-build | `scripts/verify-migrations.mjs` (scratch DB) | 4 migrations |
-| Android unit | JUnit on JVM | 33 |
+| Backend unit + integration | Vitest + supertest + socket.io-client | 295 |
+| Migration cold-build | `scripts/verify-migrations.mjs` (scratch DB) | 5 migrations |
+| Android unit | JUnit on JVM | 38 |
 | Live smoke (manual) | `scripts/smoke.mjs`, `verify-socket.mjs`, `verify-events.mjs` | requires `VERIFY_BASE_URL` scratch server |
 
 The live verifiers refuse to run against `emh` / `emh_test` — they always need
@@ -181,7 +182,7 @@ an explicit scratch target so they cannot corrupt a real database.
 
 - JWT auth, events CRUD + details aggregate, bookmarks, recommendations
 - Deterministic search with prefix matching and explainable reasons
-- Campus navigation graph + pathfinding
+- Campus navigation graph + pathfinding + indoor map layout API (DB-backed)
 - Socket.IO announcement relay with DB dedup
 - Interactive chat with DB persistence, history API, assistant auto-reply
 - Embedded PostgreSQL, migration runner, cold-build verifier
@@ -193,7 +194,6 @@ an explicit scratch target so they cannot corrupt a real database.
 - Push notifications (FCM), payments, QR tickets, waitlists — **not implemented**.
 - Private DMs / per-user inboxes — chat is one public thread by design.
 - Horizontal scaling of Socket.IO (single process).
-- `occupancyPercent` `Int` vs `Double` type mismatch (see `MY_WORK_SUMMARY.md` §7).
 - Automated on-device E2E for chat (manual emulator verification only).
 
 ---
@@ -231,8 +231,8 @@ https://github.com/shritej-koneru/Event-Management-Hub-EPICS/pull/new/integratio
 > Hi — the Event Management Hub monorepo is on the `integration` branch
 > (commit `b6317eb`). Backend lives in `server/`, Android in `app/`, contract in
 > `contract/`. Run `cd server && npm install && npm run setup && npm start`,
-> then `npm test` (285 tests). Android: open `app/` in Android Studio, unit tests
-> via `gradlew.bat :app:testDebugUnitTest` (33 tests). Start with
+> then `npm test` (295 tests). Android: open `app/` in Android Studio, unit tests
+> via `gradlew.bat :app:testDebugUnitTest` (38 tests). Start with
 > `docs/WORK_HANDOVER.md` and `server/docs/API_REFERENCE.md`. Chat is now
 > persisted (migration `004`) and history is at `GET /api/chat/messages`; the
 > Android `ChatViewModel` is activity-scoped so messages survive tab switches.

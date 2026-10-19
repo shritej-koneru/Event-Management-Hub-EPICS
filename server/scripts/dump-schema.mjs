@@ -21,6 +21,7 @@ const TABLES = [
   'bookmarks',
   'search_history',
   'announcements',
+  'venue_edges',
   'migrations'
 ];
 

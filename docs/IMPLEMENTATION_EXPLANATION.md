@@ -328,10 +328,16 @@ This makes the Android `ErrorBody` parser trivial and consistent.
 | `tests/ai.test.js` | Prefix matching, synonym boost, popularity isolation |
 | `tests/auth.test.js` | Register/login/JWT middleware |
 | `tests/eventDetails.test.js` | Aggregate payload shape |
-| `tests/navigation.test.js` | Pathfinding |
+| `tests/navigation.test.js` | Pathfinding + indoor map layout API |
 | `tests/schema.test.js` | DB constraints |
 | `ChatHistoryMergeTest.kt` (8) | Empty refresh does not wipe; dedupe; "You" rendering |
 | `OfflineEngineTest.kt` (25) | Offline search, recommendations, path, details |
+| `OfflineMapTest.kt` (4) | Offline campus map mirrors the backend layout |
+
+**Verified locally on 2026-10-20 (indoor maps pass):**
+- Backend: `npm test` → **295 passed** (12 files)
+- Migrations: `npm run verify:migrations` → **ALL CHECKS PASSED** (5 migrations)
+- Android: `gradlew.bat :app:testDebugUnitTest` → **38 passed**, BUILD SUCCESSFUL
 
 **Verified locally on 2026-10-14:**
 - Backend: `npm test` → **285 passed** (12 files)

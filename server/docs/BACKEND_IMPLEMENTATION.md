@@ -121,7 +121,7 @@ See `docs/DATABASE_GUIDE.md`.
   uniqueness, interactive `chat:message` **persisted** to `chat_messages`,
   assistant auto-reply (also persisted), `GET /api/chat/messages` history.
 - Rate limiting on auth routes; security headers; CORS allowlist.
-- Vitest suite (285 tests) + migration rebuild verifier.
+- Vitest suite (295 tests) + migration rebuild verifier.
 
 ### Partial / intentional limits
 

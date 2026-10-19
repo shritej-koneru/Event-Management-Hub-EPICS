@@ -4,8 +4,11 @@
 > against these shapes and names. If a field changes here, update this file FIRST,
 > then bump `contractVersion` in the `/ping` response.
 
-- **Contract version: `1.1.0`** (`/ping` -> `contractVersion`; previously `1.0.0`).
-  - **1.1.0 adds, and breaks nothing:** `GET /events/:id/details`,
+- **Contract version: `1.2.0`** (`/ping` -> `contractVersion`; previously `1.1.0`).
+  - **1.2.0 adds, and breaks nothing:** `GET /navigation/map` and
+    `GET /navigation/venues/:venueId/map` (campus canvas layout + stored graph
+    edges, both additive).
+  - **1.1.0 added, and broke nothing:** `GET /events/:id/details`,
     `GET /chat/announcements?eventId=`, and an optional `eventId` on announcements.
   - Every pre-existing endpoint kept its exact response shape, so no client has to
     change. `GET /events/:id` still returns `{ event }` and nothing else.
@@ -20,7 +23,7 @@ relevant; it is never required merely to read data.
 
 | Public | Authenticated |
 | --- | --- |
-| `GET /ping`, `GET /navigation/venues`, `GET /navigation/path`, `GET /events`, `GET /events/:id`, `GET /events/:id/route`, `GET /events/:id/details`, `GET /chat/announcements`, `POST /auth/login`, `POST /auth/register` | `POST /events`, `GET /auth/me`, `POST /auth/me/bookmarks/:eventId`, `DELETE /auth/me/bookmarks/:eventId` |
+| `GET /ping`, `GET /navigation/venues`, `GET /navigation/map`, `GET /navigation/venues/:venueId/map`, `GET /navigation/path`, `GET /events`, `GET /events/:id`, `GET /events/:id/route`, `GET /events/:id/details`, `GET /chat/announcements`, `POST /auth/login`, `POST /auth/register` | `POST /events`, `GET /auth/me`, `POST /auth/me/bookmarks/:eventId`, `DELETE /auth/me/bookmarks/:eventId` |
 
 > **Correction from 1.0.0.** The old note read "all auth endpoints except
 > `/ping`, `/auth/login`, `/auth/register`, `GET /events`, `GET /events/:id`,
@@ -338,6 +341,43 @@ personalization signal are returned with `reason: "Suggested for you"`.
 ### `GET /navigation/venues`
 ```json
 { "venues": [ { "id": "room-204", "name": "Room 204", "neighbors": ["lab-a", "main-hall"] } ] }
+```
+
+### `GET /navigation/map` (1.2.0)
+Whole-campus canvas layout served from the database (`venues.map_x/map_y`,
+`venue_edges`): every venue with a fractional position (0..1, x right, y
+down — the same convention Compose Canvas uses) plus the undirected walk
+graph. The Android map screen draws this instead of a hard-coded layout, so
+moving a venue is a data change, not a client release. Public (no auth).
+```json
+{
+  "venues": [
+    { "id": "entrance", "name": "Entrance", "x": 0.15, "y": 0.88, "neighbors": ["lobby"] },
+    { "id": "room-204", "name": "Room 204", "x": 0.72, "y": 0.62, "neighbors": ["room-205", "lab-a", "tech-lounge"] }
+  ],
+  "edges": [
+    { "from": "entrance", "to": "lobby", "distanceM": 40 },
+    { "from": "room-204", "to": "room-205", "distanceM": 8 }
+  ]
+}
+```
+Every venue from `GET /navigation/venues` appears exactly once; every edge
+appears once (`from < to`) with the same distance the path API uses.
+
+### `GET /navigation/venues/:venueId/map` (1.2.0)
+One venue node with its positioned neighbours and edge distances.
+`:venueId` accepts a graph node id ("room-204") or a canonical display
+name ("Room%20204", URL-encoded). Anything unknown — including a near-miss
+like "room 204" — is `400 UNKNOWN_VENUE`; nothing is guessed. Public (no auth).
+```json
+{
+  "venue": { "id": "room-204", "name": "Room 204", "x": 0.72, "y": 0.62 },
+  "neighbors": [
+    { "id": "room-205", "name": "Room 205", "x": 0.80, "y": 0.48, "distanceM": 8 }
+  ]
+}
+// 400 response
+{ "error": "Unknown venue: dormitory. Use a navigation graph node id or canonical display name.", "code": "UNKNOWN_VENUE" }
 ```
 
 ### `POST /navigation/path`

@@ -35,6 +35,7 @@ Event-Management-Hub-EPICS/     (integration branch)
 | **Deterministic search** | Weighted field scorer (title 4, tags 3, category 3, …) with prefix matching — `"work"` matches `"workshop"` | `src/ai/scoring.js` |
 | **Recommendations** | Ranks by interests + bookmarks + recent searches | `src/services/recommendationService.js` |
 | **Navigation** | 14-node campus graph, shortest path, accepts ids or display names | `src/navigation/graph.js` |
+| **Indoor map API** (1.2.0) | `GET /navigation/map` + `GET /navigation/venues/:venueId/map` — canvas layout + edges stored in PostgreSQL (`005_venue_map.sql`), seeded from canonical `MAP_POSITIONS`/`GRAPH` | `src/navigation/venues.js`, `src/services/navigationService.js` |
 | **Announcements** | Socket.IO relay to `announce:<venueId>`, DB-deduped | `src/socket/index.js` |
 | **Chat persistence** | Messages stored in PostgreSQL **before** broadcast; history API | `src/db/migrations/004_chat_messages.sql`, `src/models/chatMessageModel.js` |
 | **Embedded PG** | Real PostgreSQL cluster for dev/test — no Docker/install needed | `src/db/embedded.js` |
@@ -48,6 +49,7 @@ Event-Management-Hub-EPICS/     (integration branch)
 | **Chat history fix** | Messages survive tab switches (activity-scoped ViewModel) | `ui/screens/ChatViewModel.kt` |
 | **Chat merge logic** | Pure Kotlin merge: never wipes on empty history, dedupes by id, renders own messages as "You" | `ui/screens/ChatHistoryMerger.kt` |
 | **Chat UI** | Compose screen wired to ViewModel, loading/empty states | `ui/screens/ChatScreen.kt` |
+| **Backend-driven map** | Map screen draws venue positions/edges from `GET /navigation/map` (no hard-coded layout); offline copy in `OfflineData` with honest stale flag | `ui/screens/MapScreen.kt`, `data/OfflineData.kt` |
 | **Gradle fix** | `dos:readonly` reset before clean (Windows build fix) | `app/build.gradle.kts` |
 
 ---
@@ -136,7 +138,7 @@ Verify: `curl http://localhost:3000/ping`
 **Tests** (stop `npm start` first — both use embedded PG port 5433):
 
 ```bash
-npm test                    # 285 tests
+npm test                    # 295 tests
 npm run verify:migrations   # cold-build scratch DB from SQL files alone
 ```
 
@@ -146,11 +148,32 @@ npm run verify:migrations   # cold-build scratch DB from SQL files alone
 2. Emulator: `10.0.2.2:3000` (default) **or** `adb reverse tcp:3000 tcp:3000`
    if app points at `127.0.0.1`.
 3. Open `app/` in Android Studio → Run.
-4. Unit tests: `.\gradlew.bat :app:testDebugUnitTest` (33 tests).
+4. Unit tests: `.\gradlew.bat :app:testDebugUnitTest` (38 tests).
 
 ---
 
-## 6. Verified test results (2026-10-14)
+## 6. Verified test results
+
+### 2026-10-20 (indoor maps / integration pass)
+
+| Suite | Command | Result |
+| --- | --- | --- |
+| Backend | `npm test` | **295 passed** (12 files), 0 failed |
+| Migrations | `npm run verify:migrations` | **ALL CHECKS PASSED** (5 migrations) |
+| Android | `gradlew.bat :app:testDebugUnitTest` | **38 passed**, BUILD SUCCESSFUL |
+
+Map-specific (`tests/navigation.test.js`, `OfflineMapTest.kt`):
+- `/api/navigation/map` serves 14 venues (positions match canonical
+  `MAP_POSITIONS`) + 19 undirected edges whose distances match `GRAPH`
+- `GET /navigation/venues/:venueId/map` by id and by URL-encoded display
+  name; unknown + near-miss → `400 UNKNOWN_VENUE`
+- DB (`venue_edges`, `venues.map_x/map_y`) is asserted equal to the canonical
+  JS graph/layout
+- Offline Android map mirror (`offlineCampusMap`) pinned to the same layout
+- Live smoke on a running server confirmed `/ping` → `contractVersion: 1.2.0`
+  and all of the above over HTTP
+
+### 2026-10-14 (chat history pass)
 
 | Suite | Command | Result |
 | --- | --- | --- |
@@ -181,6 +204,7 @@ All under `/api` except `GET /ping`. Full details: `server/docs/API_REFERENCE.md
 | POST | `/api/ai/search` | optional |
 | GET | `/api/ai/recommendations` | Bearer |
 | GET/POST | `/api/navigation/venues`, `/api/navigation/path` | none |
+| GET | `/api/navigation/map`, `/api/navigation/venues/:venueId/map` (1.2.0) | none |
 | GET | `/api/chat/announcements[?eventId=]` | optional |
 | GET | `/api/chat/messages[?room=&before=&limit=]` | optional |
 | POST | `/api/chat/join` | none |
@@ -194,7 +218,7 @@ Socket events: `join`, `leave`, `events:for`, `event`, `chat:message`.
 
 | Branch | Commit | Notes |
 | --- | --- | --- |
-| `integration` | `045b138` | **Current work** — everything |
+| `integration` | see `git log` (updated 2026-10-20) | **Current work** — everything; indoor-maps tip is on `feat/indoor-maps` until pushed |
 | `server-backend` | `4650157` | Earlier backend (pre-chat) — unchanged |
 | `master` | `26d9095` | Original Android skeleton — unchanged |
 
@@ -208,21 +232,26 @@ its ancestry. To merge: open a PR from `integration`.
 ### Done & verified
 - JWT auth, events + details aggregate, bookmarks, recommendations
 - Deterministic search with prefix matching
-- Campus navigation
+- Campus navigation (path API + indoor map layout API, both DB-backed)
 - Socket.IO announcements (DB-deduped)
 - Interactive chat with DB persistence, history API, assistant
 - Embedded PostgreSQL, migration runner + verifier
 - Android offline cache with honest stale flagging
 - Chat history retained across tab switches
+- Map screen draws backend-served venue positions (no hard-coded layout);
+  offline mirror keeps the map working with zero network
+- Occupancy percent decodes correctly (`Double`, one decimal) end to end
 
 ### Not done / known gaps
 - Push notifications, payments, QR tickets, waitlists — **not implemented**
 - Private DMs — chat is one public thread by design
 - Horizontal scaling of Socket.IO (single process)
-- **Known bug:** `EventStatistics.occupancyPercent` is `Int` in `Models.kt`
-  but backend sends `91.7` (double) → can cause false Offline banner.
-  Fix: change to `Double` and `.toDouble()` at `OfflineEngine.kt:275`.
-- On-device E2E chat test was manual (emulator), not in CI
+- Outdoor GPS maps — deliberately out of scope (no real-world coordinates;
+  the campus layout is an indoor canvas served by the backend)
+- Support tickets — no API, table, or UI exists anywhere; not invented
+- Server-side registrations table — by design (contract §2): registrations
+  live on-device; server bookmarks are the "Registered" signal
+- On-device E2E chat/map test was manual (emulator), not in CI
 
 ---
 
@@ -255,12 +284,12 @@ its ancestry. To merge: open a PR from `integration`.
 ## 12. Quick message you can paste
 
 > Hi — the Event Management Hub monorepo is on the `integration` branch
-> (commit `045b138`). Backend in `server/`, Android in `app/`, contract in
-> `contract/`. Run `cd server && npm install && npm run setup && npm start`,
-> then `npm test` (285 tests). Android: open `app/` in Android Studio, unit
-> tests via `gradlew.bat :app:testDebugUnitTest` (33 tests). Start with
-> `docs/PROJECT_HANDOVER.md` and `server/docs/API_REFERENCE.md`. Chat is now
-> persisted (migration `004`) and history is at `GET /api/chat/messages`; the
-> Android `ChatViewModel` is activity-scoped so messages survive tab switches.
-> If the emulator can't reach :3000, run `adb reverse tcp:3000 tcp:3000` or use
-> `10.0.2.2`. Demo login is in `server/README.md`.
+> (indoor-maps work pushed 2026-10-20). Backend in `server/`, Android in `app/`,
+> contract in `contract/`. Run `cd server && npm install && npm run setup &&
+> npm start`, then `npm test` (295 tests). Android: open `app/` in Android
+> Studio, unit tests via `gradlew.bat :app:testDebugUnitTest` (38 tests). Start
+> with `docs/PROJECT_HANDOVER.md` and `server/docs/API_REFERENCE.md`. Chat is
+> persisted (migration `004`) with history at `GET /api/chat/messages`; the
+> campus map is drawn from `GET /api/navigation/map` (contract 1.2.0, migration
+> `005`). If the emulator can't reach :3000, run `adb reverse tcp:3000 tcp:3000`
+> or use `10.0.2.2`. Demo login is in `server/README.md`.

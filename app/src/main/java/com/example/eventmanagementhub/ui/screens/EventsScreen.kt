@@ -150,7 +150,7 @@ fun EventsScreen(
 
                 if (shownEvents.isEmpty()) {
                     Text(
-                        text = if (registeredOnly) "No registered events yet — open an event and tap Register" else "No events found",
+                        text = if (registeredOnly) "No registered events yet — open an event and tap Save" else "No events found",
                         modifier = Modifier.padding(top = 40.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MutedText

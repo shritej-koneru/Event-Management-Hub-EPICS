@@ -71,7 +71,9 @@ export const config = {
   // 1.1.0 added GET /events/:id/details, GET /chat/announcements?eventId=, and
   // the optional announcement eventId field. Additive only — no existing
   // response shape changed.
-  contractVersion: '1.1.0',
+  // 1.2.0 added GET /navigation/map and GET /navigation/venues/:venueId/map
+  // (stored canvas layout + edges). Additive only — no existing shape changed.
+  contractVersion: '1.2.0',
 
   jwt: {
     secret: isTest && !(env.JWT_SECRET || '').trim() ? 'test-only-secret' : requiredSecret('JWT_SECRET'),

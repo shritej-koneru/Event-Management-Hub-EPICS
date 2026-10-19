@@ -137,15 +137,24 @@ class ChatViewModel(
                 socket = s
                 s.on(Socket.EVENT_CONNECT) {
                     Log.i(TAG, "socket connected id=${s.id()}")
-                    allVenueRooms().forEach { room ->
-                        s.emit("join", room, Ack { ack ->
-                            val n = (ack.firstOrNull() as? JSONObject)?.optJSONArray("joined")?.length() ?: 0
-                            Log.i(TAG, "join ack for $room: $n room(s)")
-                        })
+                    viewModelScope.launch {
+                        // Rooms come from the backend venue catalogue; the
+                        // offline list is only the fallback (socket connected
+                        // means the server is reachable, so this rarely fails).
+                        val rooms = when (val res = repository.venues()) {
+                            is Result.Success -> res.data.venues.map { "announce:${it.id}" }
+                            is Result.Error -> allVenueRooms()
+                        }
+                        rooms.forEach { room ->
+                            s.emit("join", room, Ack { ack ->
+                                val n = (ack.firstOrNull() as? JSONObject)?.optJSONArray("joined")?.length() ?: 0
+                                Log.i(TAG, "join ack for $room: $n room(s)")
+                            })
+                        }
+                        _connected.value = true
+                        // Pull anything we missed while disconnected.
+                        loadHistory()
                     }
-                    _connected.value = true
-                    // Pull anything we missed while disconnected.
-                    viewModelScope.launch { loadHistory() }
                 }
                 s.on("joined") { _connected.value = true }
                 s.on("event") { args ->
@@ -211,6 +220,7 @@ class ChatViewModel(
         private const val TAG = "BitChatSocket"
         private const val HISTORY_LIMIT = 100
 
+        /** Fallback join list — used only when GET /api/navigation/venues is unreachable. */
         fun allVenueRooms(): List<String> = offlineVenueOrder.map { "announce:$it" }
 
         fun parseBaseUri(): String =

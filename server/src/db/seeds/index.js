@@ -4,8 +4,8 @@ import { config } from '../../config/index.js';
 import { getPool } from '../pool.js';
 import { ensureDatabase, releaseDatabase } from '../bootstrap.js';
 import { validateGraph } from '../../navigation/graph.js';
-import { isValidVenueId } from '../../navigation/venues.js';
-import { upsertVenues, countVenues } from '../../models/venueModel.js';
+import { isValidVenueId, assertMapIntegrity } from '../../navigation/venues.js';
+import { upsertVenues, upsertVenueEdges, countVenues } from '../../models/venueModel.js';
 import { insertEvent, countEvents } from '../../models/eventModel.js';
 import { findUserByEmail, insertUser, countUsers } from '../../models/userModel.js';
 import { addBookmark, listBookmarkIds } from '../../models/bookmarkModel.js';
@@ -23,12 +23,15 @@ import { DEMO_USER, DEMO_PERSONALIZATION, SEED_ANNOUNCEMENTS } from './users.js'
  * @param {boolean} [options.demoUser] Overrides `config.seedDemoUser`. The demo
  *   account has a publicly documented password, so it is skipped by default in
  *   production. When skipped, its bookmarks and search history are skipped too.
- * @returns {Promise<{venues:number, events:number, users:number, announcements:number, demoUser:boolean}>}
+ * @returns {Promise<{venues:number, venueEdges:number, events:number, users:number, announcements:number, demoUser:boolean}>}
  */
 export async function seed({ log = console.log, demoUser = config.seedDemoUser } = {}) {
   // Fail fast if the graph or the seed data drifted apart.
   const graph = validateGraph();
   log(`  navigation graph: ${graph.reachableCount}/${graph.venueCount} venues reachable from Entrance`);
+
+  // The stored map layout must cover every venue and stay inside the canvas.
+  assertMapIntegrity();
 
   for (const event of SEED_EVENTS) {
     if (!isValidVenueId(event.venueId)) {
@@ -40,6 +43,10 @@ export async function seed({ log = console.log, demoUser = config.seedDemoUser }
 
   const venueCount = await upsertVenues();
   log(`  venues: ${venueCount} synced`);
+
+  // Mirror GRAPH into venue_edges so the map API serves the stored copy.
+  const edgeCount = await upsertVenueEdges();
+  log(`  venue edges: ${edgeCount} synced`);
 
   let eventsInserted = 0;
   for (const event of SEED_EVENTS) {
@@ -96,6 +103,7 @@ export async function seed({ log = console.log, demoUser = config.seedDemoUser }
 
   const counts = {
     venues: await countVenues(),
+    venueEdges: edgeCount,
     events: await countEvents(),
     users: await countUsers(),
     bookmarks: demoUser ? (await listBookmarkIds(DEMO_USER.id)).length : 0,

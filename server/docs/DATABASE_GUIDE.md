@@ -31,11 +31,12 @@ and `NODE_ENV=production`).
 
 `.env` is gitignored. `.env.example` lists names only.
 
-## Schema (after migration 004)
+## Schema (after migration 005)
 
 | Table | Role |
 | --- | --- |
-| `venues` | 14 campus graph nodes (id, name, neighbours JSON) |
+| `venues` | 14 campus graph nodes (id, name, map_x, map_y canvas fractions) |
+| `venue_edges` | Stored walk graph, one row per undirected edge (`from_id < to_id`) |
 | `events` | Catalogue; `venue_id` FK → venues; capacity CHECK |
 | `users` | `id text` PK, email unique, password_hash, interests jsonb |
 | `bookmarks` | PK `(user_id, event_id)` — personalization signal |
@@ -47,6 +48,7 @@ and `NODE_ENV=production`).
 Relationships:
 
 - `events.venue_id` → `venues.id` (required)
+- `venue_edges.from_id` → `venues.id`, `venue_edges.to_id` → `venues.id`
 - `bookmarks.user_id` → `users.id`, `bookmarks.event_id` → `events.id`
 - `announcements.room` → `venues.id`, `announcements.event_id` → `events.id` (nullable)
 - `chat_messages.user_id` → `users.id` (nullable), `chat_messages.room` → `venues.id` (nullable)
@@ -59,6 +61,7 @@ Applied in filename sort order; each file is one transaction:
 2. `002_integrity_and_retention.sql` — announcements.room FK, search index + prune fn
 3. `003_announcements_event_id.sql` — announcements.event_id column + index
 4. `004_chat_messages.sql` — chat_messages table + indexes
+5. `005_venue_map.sql` — venues.map_x/map_y + venue_edges (stored walk graph)
 
 Migrations run automatically on every boot and are idempotent.
 

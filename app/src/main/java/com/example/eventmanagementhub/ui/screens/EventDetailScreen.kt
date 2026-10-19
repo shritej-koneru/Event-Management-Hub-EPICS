@@ -169,7 +169,11 @@ fun EventDetailScreen(
                     details?.statistics?.let { stats ->
                         SectionCard("Statistics") {
                             StatRow("Seats remaining", "${stats.seatsRemaining}")
-                            StatRow("Occupancy", "${stats.occupancyPercent}%")
+                            StatRow(
+                                "Occupancy",
+                                if (stats.occupancyPercent % 1.0 == 0.0) "${stats.occupancyPercent.toLong()}%"
+                                else "${stats.occupancyPercent}%"
+                            )
                             StatRow("Duration", "${stats.durationMin} min")
                             StatRow(
                                 "In this category",

@@ -6,6 +6,7 @@ import com.example.eventmanagementhub.data.model.AnnouncementsResponse
 import com.example.eventmanagementhub.data.model.AuthResponse
 import com.example.eventmanagementhub.data.model.BookmarkMutationResponse
 import com.example.eventmanagementhub.data.model.BookmarksResponse
+import com.example.eventmanagementhub.data.model.CampusMapResponse
 import com.example.eventmanagementhub.data.model.ChatMessagesResponse
 import com.example.eventmanagementhub.data.model.EventDetailsResponse
 import com.example.eventmanagementhub.data.model.EventListResponse
@@ -17,6 +18,7 @@ import com.example.eventmanagementhub.data.model.PathResponse
 import com.example.eventmanagementhub.data.model.RecommendationResponse
 import com.example.eventmanagementhub.data.model.RegisterRequest
 import com.example.eventmanagementhub.data.model.UserResponse
+import com.example.eventmanagementhub.data.model.VenueMapResponse
 import com.example.eventmanagementhub.data.model.VenuesResponse
 import retrofit2.Response
 import retrofit2.http.Body
@@ -85,6 +87,14 @@ interface HubApi {
     // Navigation
     @GET("api/navigation/venues")
     suspend fun venues(): Response<VenuesResponse>
+
+    /** Whole-campus canvas layout: fractional positions + undirected walk graph. */
+    @GET("api/navigation/map")
+    suspend fun campusMap(): Response<CampusMapResponse>
+
+    /** One venue node with positioned neighbours and edge distances. */
+    @GET("api/navigation/venues/{venueId}/map")
+    suspend fun venueMap(@Path("venueId") venueId: String): Response<VenueMapResponse>
 
     @POST("api/navigation/path")
     suspend fun path(@Body body: PathRequest): Response<PathResponse>

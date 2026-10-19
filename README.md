@@ -41,7 +41,7 @@ Verify: `curl http://localhost:3000/ping`
 
 ```bash
 cd server
-npm test                    # 285 backend tests
+npm test                    # 295 backend tests
 npm run verify:migrations   # cold-build scratch DB from SQL files alone
 ```
 
@@ -49,7 +49,7 @@ Android unit tests:
 
 ```powershell
 cd app
-.\gradlew.bat :app:testDebugUnitTest   # 33 tests
+.\gradlew.bat :app:testDebugUnitTest   # 38 tests
 ```
 
 ---

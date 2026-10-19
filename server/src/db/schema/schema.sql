@@ -7,6 +7,8 @@
 -- ---- venues ------------------------------------------------------
   id              text               NOT NULL
   name            text               NOT NULL
+  map_x           double precision   NOT NULL DEFAULT 0.5
+  map_y           double precision   NOT NULL DEFAULT 0.5
   -- PRIMARY KEY (id)
   -- UNIQUE (name)
   -- INDEX venues_name_key
@@ -82,6 +84,15 @@
   -- INDEX announcements_room_message_key
   -- INDEX idx_announcements_event
   -- INDEX idx_announcements_room
+
+-- ---- venue_edges -------------------------------------------------
+  from_id         text               NOT NULL
+  to_id           text               NOT NULL
+  distance_m      integer            NOT NULL
+  -- PRIMARY KEY (from_id, to_id)
+  -- FOREIGN KEY (from_id) REFERENCES venues(id) ON UPDATE CASCADE ON DELETE CASCADE
+  -- FOREIGN KEY (to_id) REFERENCES venues(id) ON UPDATE CASCADE ON DELETE CASCADE
+  -- INDEX venue_edges_pkey
 
 -- ---- migrations --------------------------------------------------
   id              text               NOT NULL

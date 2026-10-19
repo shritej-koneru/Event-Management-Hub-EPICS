@@ -24,7 +24,7 @@ main user journeys, and extend features without breaking the Android client.
 | Search | Deterministic field scoring + prefix match (not a chatbot/LLM) |
 | Real-time | Socket.IO rooms, event announcement relay, interactive chat |
 | Chat persistence | `chat_messages` table; save-before-broadcast; `GET /api/chat/messages` |
-| Quality | 285 Vitest tests, migration cold-build verifier, error codes |
+| Quality | 295 Vitest tests, migration cold-build verifier, error codes |
 
 ## 3. Important source files
 

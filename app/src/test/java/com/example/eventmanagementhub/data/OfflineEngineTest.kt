@@ -188,7 +188,7 @@ class OfflineEngineTest {
         assertEquals(100, stats.capacity)
         assertEquals(40, stats.registered)
         assertEquals(60, stats.seatsRemaining)
-        assertEquals(40, stats.occupancyPercent)
+        assertEquals(40.0, stats.occupancyPercent, 1e-9)
     }
 
     @Test

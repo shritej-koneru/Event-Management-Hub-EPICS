@@ -58,7 +58,7 @@ Demo account: `alice@uni.edu` / `secret123`
 Run tests (stop `npm start` first — both use embedded PG port 5433):
 
 ```bash
-npm test                 # 285 tests
+npm test                 # 295 tests
 npm run verify:migrations
 ```
 

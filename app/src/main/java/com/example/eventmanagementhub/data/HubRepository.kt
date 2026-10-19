@@ -9,6 +9,7 @@ import com.example.eventmanagementhub.data.model.Announcement
 import com.example.eventmanagementhub.data.model.AnnouncementsResponse
 import com.example.eventmanagementhub.data.model.AuthResponse
 import com.example.eventmanagementhub.data.model.BookmarkMutationResponse
+import com.example.eventmanagementhub.data.model.CampusMapResponse
 import com.example.eventmanagementhub.data.model.ChatMessagesResponse
 import com.example.eventmanagementhub.data.model.ErrorBody
 import com.example.eventmanagementhub.data.model.Event
@@ -24,6 +25,7 @@ import com.example.eventmanagementhub.data.model.PathResponse
 import com.example.eventmanagementhub.data.model.RecommendationResponse
 import com.example.eventmanagementhub.data.model.RegisterRequest
 import com.example.eventmanagementhub.data.model.UserProfile
+import com.example.eventmanagementhub.data.model.VenueMapResponse
 import com.example.eventmanagementhub.data.model.VenuesResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -276,6 +278,30 @@ class HubRepository(
             else failure(resp, "Could not load venues").propagate()
         } catch (e: Exception) {
             Result.Success(VenuesResponse(venues = offlineVenues), isStale = true)
+        }
+    }
+
+    suspend fun campusMap(): Result<CampusMapResponse> = withContext(Dispatchers.IO) {
+        try {
+            val resp = api.campusMap()
+            val body = resp.body()
+            if (resp.isSuccessful && body != null) Result.Success(body)
+            else failure(resp, "Could not load campus map").propagate()
+        } catch (e: Exception) {
+            Result.Success(offlineCampusMap(), isStale = true)
+        }
+    }
+
+    suspend fun venueMap(venueRef: String): Result<VenueMapResponse> = withContext(Dispatchers.IO) {
+        try {
+            val resp = api.venueMap(venueRef)
+            val body = resp.body()
+            if (resp.isSuccessful && body != null) Result.Success(body)
+            else failure(resp, "Could not load venue map").propagate()
+        } catch (e: Exception) {
+            val offline = offlineVenueMap(venueRef)
+            if (offline != null) Result.Success(offline, isStale = true)
+            else Result.Error("Unknown venue: $venueRef", 400)
         }
     }
 

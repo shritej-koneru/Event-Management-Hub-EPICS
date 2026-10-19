@@ -145,6 +145,14 @@ export const navigationPathSchema = z.object({
   to: venueRef
 });
 
+/**
+ * GET /api/navigation/venues/:venueId/map — same ref rules as the path body;
+ * a URL-encoded display name ("Room%20204") is decoded by Express first.
+ */
+export const navigationVenueMapParamsSchema = z.object({
+  venueId: venueRef
+});
+
 /* -------------------------------------------------------------------------- */
 /* Chat / announcements                                                        */
 /* -------------------------------------------------------------------------- */

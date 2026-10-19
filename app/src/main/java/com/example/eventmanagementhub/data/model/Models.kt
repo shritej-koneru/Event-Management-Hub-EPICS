@@ -90,6 +90,50 @@ data class Venue(
 @Serializable
 data class VenuesResponse(val venues: List<Venue> = emptyList())
 
+/**
+ * One drawable venue — GET /api/navigation/map. `x`/`y` are fractional canvas
+ * coordinates (0..1) served by the backend, replacing the positions the map
+ * screen used to hard-code.
+ */
+@Serializable
+data class MapVenue(
+    val id: String = "",
+    val name: String = "",
+    val x: Double = 0.5,
+    val y: Double = 0.5,
+    val neighbors: List<String> = emptyList()
+)
+
+/** Undirected walk edge — GET /api/navigation/map. */
+@Serializable
+data class MapEdge(
+    val from: String = "",
+    val to: String = "",
+    val distanceM: Int = 0
+)
+
+@Serializable
+data class CampusMapResponse(
+    val venues: List<MapVenue> = emptyList(),
+    val edges: List<MapEdge> = emptyList()
+)
+
+/** Positioned neighbour — GET /api/navigation/venues/{venueId}/map. */
+@Serializable
+data class VenueMapNeighbor(
+    val id: String = "",
+    val name: String = "",
+    val x: Double = 0.5,
+    val y: Double = 0.5,
+    val distanceM: Int = 0
+)
+
+@Serializable
+data class VenueMapResponse(
+    val venue: MapVenue = MapVenue(),
+    val neighbors: List<VenueMapNeighbor> = emptyList()
+)
+
 @Serializable
 data class PathRequest(val from: String, val to: String)
 
@@ -164,7 +208,8 @@ data class EventStatistics(
     val capacity: Int = 0,
     val registered: Int = 0,
     val seatsRemaining: Int = 0,
-    val occupancyPercent: Int = 0,
+    /** Server sends one decimal place (e.g. 91.7), so this must be a Double. */
+    val occupancyPercent: Double = 0.0,
     val durationMin: Int = 0,
     val announcementCount: Int = 0,
     val bookmarkCount: Int = 0,

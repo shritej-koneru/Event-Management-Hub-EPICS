@@ -21,7 +21,7 @@ that code. Nothing here is aspirational.
 | Real-time (Socket.IO) | Room join/leave, announcement relay, interactive chat with DB persistence |
 | REST APIs | All `/api/*` endpoints behind the shared contract |
 | Deterministic AI search | Field scoring engine with prefix matching and explainability |
-| Testing | 285 backend Vitest tests + 16 chat-persistence tests |
+| Testing | 295 backend Vitest tests (incl. 16 chat-persistence tests) |
 | Documentation | 9 handover docs + README + API contract updates |
 | Android integration (shared) | Chat history persistence UI (`ChatViewModel`, `ChatHistoryMerger`, `ChatScreen`) |
 
@@ -242,7 +242,21 @@ A pure Kotlin object with no Android types, so unit tests run without a device:
 
 ## 5. Verified test results
 
-Run locally against the code in commit `c42308e` / `b6317eb` on 2026-10-14.
+### 2026-10-20 — indoor maps / integration pass (`feat/indoor-maps`)
+
+| Suite | Command | Result |
+| --- | --- | --- |
+| Backend unit + integration | `npm test` | **295 passed** (12 files), 0 failed |
+| Migration cold-build | `npm run verify:migrations` | **ALL CHECKS PASSED** (5 migrations, `venue_edges` + map columns verified) |
+| Android unit | `.\gradlew.bat :app:testDebugUnitTest` | **38 passed** (OfflineEngineTest 25 + OfflineMapTest 4 + ChatHistoryMergeTest 8 + ExampleUnitTest 1), BUILD SUCCESSFUL |
+
+Map coverage: `GET /api/navigation/map` (14 venues, 19 edges, canonical
+layout), `GET /api/navigation/venues/:venueId/map` (id and display name;
+unknown/near-miss → `400 UNKNOWN_VENUE`), DB-vs-JS graph consistency, and the
+Android offline map mirror (`OfflineMapTest`). Live HTTP smoke confirmed
+`/ping` → `contractVersion: 1.2.0`.
+
+### 2026-10-14 — chat history pass (commits `c42308e` / `b6317eb`)
 
 | Suite | Command | Result |
 | --- | --- | --- |
@@ -291,10 +305,9 @@ Android chat tests (8):
   query the events table.
 - **Single-process Socket.IO** — no Redis adapter for horizontal scaling.
 - **Embedded PG is dev/test only** — production must set `DATABASE_URL`.
-- **`occupancyPercent` type mismatch** (known, not fixed): backend sends
-  `91.7` (double) but `EventStatistics.occupancyPercent` is `Int` in
-  `Models.kt`, which can cause a false Offline banner in `OfflineEngine.kt`.
-  Fix: change to `Double` and call `.toDouble()` at the call site.
+- **No outdoor/GPS maps** — the campus map is an indoor canvas layout served
+  by `GET /api/navigation/map`; there are no real-world coordinates anywhere
+  in the project by design.
 - **On-device end-to-end verification** of chat across tab switches was done
   manually on an emulator (`emh_test`) but not automated in CI.
 
