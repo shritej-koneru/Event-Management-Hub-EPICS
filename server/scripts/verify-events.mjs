@@ -14,6 +14,7 @@
  * URL and no positional argument; see scripts/lib/requireScratchTarget.mjs.
  */
 import { requireScratchTarget } from './lib/requireScratchTarget.mjs';
+import { config } from '../src/config/index.js';
 
 const base = await requireScratchTarget();
 if (!base) process.exit(2);
@@ -55,7 +56,10 @@ async function verifierToken() {
 
 const ping = await get('/ping');
 check('ping responds', ping.status === 200, ping.body);
-check('ping advertises contract 1.1.0', ping.body?.contractVersion === '1.1.0', ping.body?.contractVersion);
+// Compared against config.contractVersion (single source of truth) rather
+// than a hard-coded literal, which went stale at 1.1.0 when the additive
+// navigation-map endpoints bumped the contract to 1.2.0.
+check('ping advertises the current contract', ping.body?.contractVersion === config.contractVersion, ping.body?.contractVersion);
 
 const list = await get('/api/events');
 check('event list responds', list.status === 200, list.body);

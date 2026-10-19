@@ -3,6 +3,25 @@
 Derived from **actual git history** in this repository plus the working tree at
 the time of handover. Nothing here is invented.
 
+## Unreleased (fix/qa-verification branch, 2026-10-20)
+
+### Fixed
+
+- **`scripts/verify-events.mjs` stale contract check:** the live verifier
+  hard-coded contract `1.1.0` and failed against the 1.2.0 server ("ping
+  advertises contract 1.1.0 -> 1.2.0"). The check now compares against
+  `config.contractVersion` (single source of truth) so it cannot go stale
+  again. Live re-run: **496 passed, 0 failed**.
+
+### Verified (full QA pass, 2026-10-20)
+
+- Backend `npm test` → 295 passed; `verify:migrations` → ALL CHECKS PASSED;
+  live scratch server: `verify:rest` ALL LIVE CHECKS PASSED,
+  `verify:socket` 21/21, `verify:events` 496/496
+- Android 52/52 unit tests, `assembleDebug` BUILD SUCCESSFUL; installed and
+  driven on emulator-5554 (login, events, details, navigation, chat history
+  survives process death)
+
 ## Unreleased (feat/maps-nav-ui branch, 2026-10-20)
 
 ### Added (Android — Google Maps-style navigation UI)
