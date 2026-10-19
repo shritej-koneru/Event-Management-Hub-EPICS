@@ -148,11 +148,28 @@ npm run verify:migrations   # cold-build scratch DB from SQL files alone
 2. Emulator: `10.0.2.2:3000` (default) **or** `adb reverse tcp:3000 tcp:3000`
    if app points at `127.0.0.1`.
 3. Open `app/` in Android Studio → Run.
-4. Unit tests: `.\gradlew.bat :app:testDebugUnitTest` (38 tests).
+4. Unit tests: `.\gradlew.bat :app:testDebugUnitTest` (52 tests).
 
 ---
 
 ## 6. Verified test results
+
+### 2026-10-20 (navigation UI pass, feat/maps-nav-ui)
+
+| Suite | Command | Result |
+| --- | --- | --- |
+| Android unit | `gradlew.bat :app:testDebugUnitTest` | **52 passed** (+14 `NavigationUiLogicTest`), BUILD SUCCESSFUL |
+| Android APK | `gradlew.bat :app:assembleDebug` | BUILD SUCCESSFUL |
+
+Navigation-UI specifics:
+- `NavigationUiLogicTest` (14) pins search ranking, walking-time estimate
+  from backend metres, Google Maps hand-off URL encoding, step progression
+- Outdoor mode uses the Google Maps SDK behind a `MAPS_API_KEY` gate (same
+  config style as `API_BASE_URL`); no key committed; without a key a setup
+  card is shown. Indoor navigation (backend graph + canvas) is key-free
+- Location permission is requested only when Outdoor mode/locate is used;
+  the blue dot is drawn from a single-fix request, updates stopped on dispose
+- Backend unchanged in this pass (295 tests still green as of `2db435a`)
 
 ### 2026-10-20 (indoor maps / integration pass)
 
@@ -287,7 +304,7 @@ its ancestry. To merge: open a PR from `integration`.
 > (indoor-maps work pushed 2026-10-20). Backend in `server/`, Android in `app/`,
 > contract in `contract/`. Run `cd server && npm install && npm run setup &&
 > npm start`, then `npm test` (295 tests). Android: open `app/` in Android
-> Studio, unit tests via `gradlew.bat :app:testDebugUnitTest` (38 tests). Start
+> Studio, unit tests via `gradlew.bat :app:testDebugUnitTest` (52 tests). Start
 > with `docs/PROJECT_HANDOVER.md` and `server/docs/API_REFERENCE.md`. Chat is
 > persisted (migration `004`) with history at `GET /api/chat/messages`; the
 > campus map is drawn from `GET /api/navigation/map` (contract 1.2.0, migration

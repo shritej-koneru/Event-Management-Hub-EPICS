@@ -11,6 +11,17 @@ plugins {
 // tree or OneDrive holds file handles and Gradle can't delete intermediates.
 layout.buildDirectory.set(file("C:/Users/satvi/.emh/epics-build/app"))
 
+// Gradle does not expose local.properties as project properties, so it is
+// read explicitly here; a physical device on the LAN needs this override.
+fun localProp(key: String): String? {
+    val f = rootProject.layout.projectDirectory.file("local.properties").asFile
+    if (!f.isFile) return null
+    return f.readLines()
+        .map { it.trim() }
+        .firstOrNull { it.startsWith("$key=") }
+        ?.substringAfter('=')?.trim()
+}
+
 android {
     namespace = "com.example.eventmanagementhub"
     compileSdk = 36
@@ -29,19 +40,17 @@ android {
         //   1. -P API_BASE_URL=... on the Gradle command line
         //   2. API_BASE_URL=... in local.properties (gitignored -> this machine only)
         //   3. "" -> ApiClient falls back to the emulator alias http://10.0.2.2:3000/
-        // Gradle does not expose local.properties as project properties, so it is
-        // read explicitly here; a physical device on the LAN needs this override.
-        val localApiBaseUrl = run {
-            val f = rootProject.layout.projectDirectory.file("local.properties").asFile
-            if (f.isFile) {
-                f.readLines()
-                    .map { it.trim() }
-                    .firstOrNull { it.startsWith("API_BASE_URL=") }
-                    ?.substringAfter('=')?.trim()
-            } else null
-        }
-        val apiBaseUrl = (project.findProperty("API_BASE_URL") as String?) ?: localApiBaseUrl ?: ""
+        val apiBaseUrl = (project.findProperty("API_BASE_URL") as String?) ?: localProp("API_BASE_URL") ?: ""
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+
+        // Google Maps SDK key for the Outdoor map layer. Same three-tier mechanism
+        // as API_BASE_URL. Empty (the default) -> Outdoor mode shows a setup card
+        // and the GoogleMap composable is never created; the key is never
+        // hard-coded or committed (local.properties is gitignored).
+        val mapsApiKey = (project.findProperty("MAPS_API_KEY") as String?) ?: localProp("MAPS_API_KEY") ?: ""
+        buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
+        // Read by the Maps SDK from the manifest meta-data entry.
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -131,6 +140,11 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.socketio)
     implementation(libs.androidx.datastore.preferences)
+
+    // Outdoor map layer (Google Maps SDK). Indoor navigation uses the backend
+    // graph + Compose canvas and does not depend on these.
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

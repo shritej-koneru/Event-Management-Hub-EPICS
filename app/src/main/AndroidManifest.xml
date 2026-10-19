@@ -3,6 +3,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Outdoor map "my location" blue dot. Requested at runtime only when the
+         user opens Outdoor mode or taps the locate button; never at startup. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
         android:name=".App"
@@ -13,6 +17,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.EventManagementHub"
         android:networkSecurityConfig="@xml/network_security_config">
+
+        <!-- Maps SDK API key, injected by Gradle from local.properties /
+             -P MAPS_API_KEY (manifestPlaceholders). Empty when unconfigured;
+             the Outdoor map is then never instantiated. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}" />
 
         <activity
             android:name=".MainActivity"

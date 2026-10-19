@@ -37,6 +37,21 @@ Verify: `curl http://localhost:3000/ping`
    `adb reverse tcp:3000 tcp:3000` if the app points at `127.0.0.1`.
 3. Open `app/` in Android Studio → Run `app`.
 
+#### Outdoor map (Google Maps SDK)
+
+Indoor navigation needs no extra setup. The Outdoor mode uses the Google
+Maps SDK and needs an API key:
+
+1. In Google Cloud Console enable **Maps SDK for Android** (billing required
+   by Google) and create an API key.
+2. Restrict the key to the **Maps SDK for Android** API and to your package
+   name + debug/release SHA-1 fingerprints.
+3. Add `MAPS_API_KEY=...` to `local.properties` (gitignored) or pass
+   `-PMAPS_API_KEY=...` to Gradle. Never commit the key.
+
+Without a key the Outdoor tab shows a setup card; Indoor navigation is
+unaffected.
+
 ### Tests
 
 ```bash
@@ -49,7 +64,7 @@ Android unit tests:
 
 ```powershell
 cd app
-.\gradlew.bat :app:testDebugUnitTest   # 38 tests
+.\gradlew.bat :app:testDebugUnitTest   # 52 tests
 ```
 
 ---
@@ -92,3 +107,4 @@ backend history is preserved in its ancestry.
 | Database | PostgreSQL (embedded dev) | Zero-install real SQL for students |
 | Tests | Vitest + supertest + socket.io-client | Same runner; real HTTP + sockets |
 | Android | Jetpack Compose + Retrofit | Modern UI; matches course tooling |
+| Outdoor maps | Google Maps SDK (key-gated) | Real outdoor map; key via local.properties, never committed |

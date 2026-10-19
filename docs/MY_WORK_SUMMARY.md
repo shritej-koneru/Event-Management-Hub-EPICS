@@ -242,6 +242,19 @@ A pure Kotlin object with no Android types, so unit tests run without a device:
 
 ## 5. Verified test results
 
+### 2026-10-20 — navigation UI pass (`feat/maps-nav-ui`)
+
+| Suite | Command | Result |
+| --- | --- | --- |
+| Android unit | `.\gradlew.bat :app:testDebugUnitTest` | **52 passed** (+14 `NavigationUiLogicTest`), BUILD SUCCESSFUL |
+| Android APK | `.\gradlew.bat :app:assembleDebug` | BUILD SUCCESSFUL |
+
+`NavigationUiLogicTest` pins the navigation screen's pure rules: venue search
+ranking against the backend list, walking-time estimates computed only from
+backend metres, Google Maps hand-off URL encoding, and manual step
+progression. Outdoor mode is the Google Maps SDK behind a `MAPS_API_KEY`
+gate; indoor navigation needs no key. Backend unchanged in this pass.
+
 ### 2026-10-20 — indoor maps / integration pass (`feat/indoor-maps`)
 
 | Suite | Command | Result |

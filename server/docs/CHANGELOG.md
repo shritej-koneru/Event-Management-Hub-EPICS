@@ -3,6 +3,42 @@
 Derived from **actual git history** in this repository plus the working tree at
 the time of handover. Nothing here is invented.
 
+## Unreleased (feat/maps-nav-ui branch, 2026-10-20)
+
+### Added (Android — Google Maps-style navigation UI)
+
+- Navigation screen redesign (`ui/screens/MapScreen.kt`):
+  - Search bar over the map with backend venue results
+    (`GET /api/navigation/map` venue list; filtering in
+    `NavigationUiLogic.searchVenues`)
+  - Indoor mode: backend-driven canvas with pinch-zoom/pan, zoom buttons,
+    labelled start/destination/active-step nodes, route bottom sheet showing
+    the real backend distance plus a clearly-labelled walking-time estimate,
+    Walking travel-mode chip, and a manual-advance navigation mode (Next/End,
+    arrival state) — no fake live turn-by-turn
+  - Outdoor mode: Google Maps SDK layer (`ui/screens/OutdoorMap.kt`,
+    play-services-maps 19.0.0 + maps-compose 6.1.2) created only when a
+    `MAPS_API_KEY` is configured (same three-tier mechanism as
+    `API_BASE_URL`: -P, local.properties — never committed); without a key a
+    setup card is shown. Venue outdoor directions hand off to the real
+    Google Maps app via a deep link (the backend holds no lat/lng for venues;
+    none invented)
+  - `ui/navigation/NavigationUiLogic.kt` — pure JVM rules (search ranking,
+    walking estimate from backend metres, hand-off URL, step progression)
+  - `ui/navigation/DeviceLocation.kt` — single-fix LocationManager helper;
+    location permission is requested only when Outdoor mode/locate is used,
+    updates stop on dispose; nothing persisted
+  - Manifest: `ACCESS_COARSE/FINE_LOCATION` (runtime-requested) + Maps
+    API-key meta-data placeholder
+- `NavigationUiLogicTest` (14 tests) pins the search/ETA/URL/step rules
+
+### Verified (this branch)
+
+- Android `:app:testDebugUnitTest` → **52 passed** (was 38; +14 new)
+- Android `:app:assembleDebug` → BUILD SUCCESSFUL
+- Backend unchanged in this pass (295 tests / 5 migrations green as of
+  `2db435a`)
+
 ## Unreleased (feat/indoor-maps branch, 2026-10-20)
 
 ### Added

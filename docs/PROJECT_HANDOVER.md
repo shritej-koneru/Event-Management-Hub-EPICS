@@ -77,7 +77,7 @@ npm run verify:migrations   # cold-build scratch DB from SQL files alone
 2. Emulator: either `10.0.2.2:3000` (default fallback) **or**
    `adb reverse tcp:3000 tcp:3000` if `API_BASE_URL` is `http://127.0.0.1:3000/`.
 3. Open `app/` in Android Studio → Run `app`.
-4. Unit tests: `.\gradlew.bat :app:testDebugUnitTest` (38 tests).
+4. Unit tests: `.\gradlew.bat :app:testDebugUnitTest` (52 tests).
 
 ---
 
@@ -232,7 +232,7 @@ https://github.com/shritej-koneru/Event-Management-Hub-EPICS/pull/new/integratio
 > (commit `b6317eb`). Backend lives in `server/`, Android in `app/`, contract in
 > `contract/`. Run `cd server && npm install && npm run setup && npm start`,
 > then `npm test` (295 tests). Android: open `app/` in Android Studio, unit tests
-> via `gradlew.bat :app:testDebugUnitTest` (38 tests). Start with
+> via `gradlew.bat :app:testDebugUnitTest` (52 tests). Start with
 > `docs/WORK_HANDOVER.md` and `server/docs/API_REFERENCE.md`. Chat is now
 > persisted (migration `004`) and history is at `GET /api/chat/messages`; the
 > Android `ChatViewModel` is activity-scoped so messages survive tab switches.

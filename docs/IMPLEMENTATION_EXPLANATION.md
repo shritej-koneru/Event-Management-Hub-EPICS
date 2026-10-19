@@ -333,6 +333,11 @@ This makes the Android `ErrorBody` parser trivial and consistent.
 | `ChatHistoryMergeTest.kt` (8) | Empty refresh does not wipe; dedupe; "You" rendering |
 | `OfflineEngineTest.kt` (25) | Offline search, recommendations, path, details |
 | `OfflineMapTest.kt` (4) | Offline campus map mirrors the backend layout |
+| `NavigationUiLogicTest.kt` (14) | Search ranking, walking estimate, Maps hand-off URL, step progression |
+
+**Verified locally on 2026-10-20 (navigation UI pass):**
+- Android: `gradlew.bat :app:testDebugUnitTest` → **52 passed**, BUILD SUCCESSFUL
+- Android: `gradlew.bat :app:assembleDebug` → BUILD SUCCESSFUL
 
 **Verified locally on 2026-10-20 (indoor maps pass):**
 - Backend: `npm test` → **295 passed** (12 files)
