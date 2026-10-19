@@ -87,7 +87,7 @@ cd app
 
 | Branch | Commit | Notes |
 | --- | --- | --- |
-| `integration` | `b6317eb` | **Current work** — backend + Android + contract + docs |
+| `integration` | `985211c` | **Current work** — backend + Android + contract + docs |
 | `server-backend` | `4650157` | Earlier backend (pre-chat-persistence) — unchanged |
 | `master` | `26d9095` | Original Android skeleton — unchanged |
 
