@@ -3,6 +3,33 @@
 Derived from **actual git history** in this repository plus the working tree at
 the time of handover. Nothing here is invented.
 
+## Unreleased (integration, 2026-10-20)
+
+### Changed (Android — outdoor map: Google Maps → OpenStreetMap)
+
+- Outdoor map layer now uses **osmdroid 6.1.20** (OpenStreetMap raster tiles)
+  instead of the Google Maps SDK:
+  - No Google Maps API key, Google Cloud project, billing account or Play
+    Services is required. Removed the `MAPS_API_KEY` BuildConfig field and
+    manifestPlaceholders wiring, and the
+    `com.google.android.geo.API_KEY` manifest meta-data entry.
+  - Removed `play-services-maps` 19.0.0 and `maps-compose` 6.1.2;
+    added `org.osmdroid:osmdroid-android` 6.1.20.
+  - `ui/screens/OutdoorMap.kt` rewritten: osmdroid `MapView` inside an
+    `AndroidView`, default OSM Mapnik tiles, app User-Agent for OSM's
+    tile-usage policy, built-in "© OpenStreetMap contributors" attribution,
+    screen-lifecycle pause/resume/detach, and a real single-fix
+    "You are here" marker (coordinates only from `DeviceLocation` /
+    LocationManager — never invented).
+  - Shared outdoor zoom/recenter buttons now drive the osmdroid
+    `OutdoorMapController` (outdoor zoom was previously inert).
+  - Indoor navigation, destination search, Indoor/Outdoor toggle, bottom
+    sheet, and the external Google Maps directions deep link (honest outdoor
+    hand-off — the app does not route itself) are unchanged.
+  - osmdroid upstream last released 6.1.20 (Aug 2024) and is now archived;
+    it remains zero-key and stable for this use. MapLibre Native is the
+    actively maintained alternative if a future migration is needed.
+
 ## Unreleased (fix/qa-verification branch, 2026-10-20)
 
 ### Fixed

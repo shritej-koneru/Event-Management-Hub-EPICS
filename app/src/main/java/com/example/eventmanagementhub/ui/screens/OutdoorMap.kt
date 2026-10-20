@@ -1,124 +1,146 @@
 package com.example.eventmanagementhub.ui.screens
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import com.example.eventmanagementhub.BuildConfig
-import com.example.eventmanagementhub.ui.theme.CardBorder
-import com.example.eventmanagementhub.ui.theme.EventCardWhiteGradient
-import com.example.eventmanagementhub.ui.theme.MutedText
-import com.example.eventmanagementhub.ui.theme.NavyText
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.rememberCameraPositionState
-import com.google.maps.android.compose.rememberMarkerState
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 
 /**
- * Outdoor layer of the navigation screen, backed by the Google Maps SDK.
+ * Outdoor layer of the navigation screen, backed by OpenStreetMap raster
+ * tiles via osmdroid (Apache-2.0). No Google Maps API key, Google Cloud
+ * project, billing account or Play Services is required.
  *
- * Key policy: the SDK is only instantiated when [BuildConfig.MAPS_API_KEY] is
- * configured (local.properties / -P MAPS_API_KEY — never hard-coded). Without
- * a key the screen shows setup instructions instead of a broken map.
+ * Tile source: osmdroid's default OSM "Mapnik" tiles. MapView draws the
+ * built-in "© OpenStreetMap contributors" attribution overlay. Tiles are
+ * fetched on demand with an app User-Agent (OSM tile-usage policy) and
+ * cached on disk by osmdroid — never bulk-downloaded.
  *
  * Coordinates: the backend holds no outdoor (lat/lng) coordinates for venues,
  * so none are invented here. The map starts on the user's real location when
- * permission was granted; venue hand-off to outdoor turn-by-turn is done via
- * the Google Maps app deep link in the route sheet.
+ * permission was granted; outdoor turn-by-turn still hands off to an external
+ * maps app via a deep link in the route sheet.
  */
-@Composable
-fun OutdoorMap(
-    myLocation: LatLng?,
-    modifier: Modifier = Modifier
-) {
-    if (BuildConfig.MAPS_API_KEY.isBlank()) {
-        MapsKeySetupCard(modifier)
-        return
+
+/** Bridges MapScreen's zoom/recenter buttons to the osmdroid [MapView]. */
+class OutdoorMapController {
+    private var mapView: MapView? = null
+
+    internal fun attach(map: MapView) {
+        mapView = map
     }
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(myLocation ?: LatLng(0.0, 0.0), 1f)
+
+    internal fun detach() {
+        mapView = null
     }
-    LaunchedEffect(myLocation) {
-        if (myLocation != null) {
-            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(myLocation, 16.0f))
-        }
+
+    fun zoomIn() {
+        mapView?.controller?.zoomIn()
     }
-    GoogleMap(
-        modifier = modifier,
-        cameraPositionState = cameraPositionState,
-        uiSettings = MapUiSettings(
-            zoomControlsEnabled = false,
-            myLocationButtonEnabled = false
-        )
-    ) {
-        myLocation?.let { pos ->
-            Marker(
-                state = rememberMarkerState(position = pos),
-                title = "You are here"
-            )
+
+    fun zoomOut() {
+        mapView?.controller?.zoomOut()
+    }
+
+    /** Centers on [target] when one exists; never invents a position. */
+    fun recenter(target: GeoPoint?, zoom: Double = 16.0) {
+        if (target == null) return
+        mapView?.controller?.apply {
+            setZoom(zoom)
+            setCenter(target)
         }
     }
 }
 
-/** Shown instead of the map when no Maps SDK key has been configured. */
 @Composable
-private fun MapsKeySetupCard(modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .testTag("maps-key-setup-card"),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        border = BorderStroke(1.dp, CardBorder)
-    ) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .background(EventCardWhiteGradient)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                "Outdoor map needs a Google Maps key",
-                style = MaterialTheme.typography.titleMedium,
-                color = NavyText,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                "Enable the Maps SDK for Android in Google Cloud, then add\n" +
-                    "MAPS_API_KEY=... to local.properties (or pass -P MAPS_API_KEY).\n\n" +
-                    "Indoor navigation works without a key.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MutedText,
-                textAlign = TextAlign.Center
-            )
+fun OutdoorMap(
+    myLocation: GeoPoint?,
+    modifier: Modifier = Modifier,
+    controller: OutdoorMapController = remember { OutdoorMapController() }
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // osmdroid configuration (safe to re-apply). The User-Agent identifies
+    // this app to the OpenStreetMap tile servers, as their usage policy
+    // requires; the tile cache lives in app-specific storage (no permissions).
+    remember {
+        Configuration.getInstance().apply {
+            userAgentValue = "EventManagementHub/1.0 (${context.packageName})"
         }
     }
+
+    val mapView = remember {
+        MapView(context).apply {
+            setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
+            setMultiTouchControls(true)
+            // World view until a real location arrives — no fabricated centre.
+            // `this.controller` (MapView's IMapController) — not the outer
+            // OutdoorMapController parameter, which shadows the property.
+            this.controller.setZoom(2.5)
+        }
+    }
+
+    // osmdroid MapView must follow the screen lifecycle and detach when this
+    // composable leaves composition (mode switch, navigation away).
+    DisposableEffect(lifecycleOwner, mapView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        mapView.onResume()
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView.onDetach()
+        }
+    }
+
+    // Parent zoom/recenter buttons drive the same MapView.
+    DisposableEffect(controller, mapView) {
+        controller.attach(mapView)
+        onDispose { controller.detach() }
+    }
+
+    // Single-fix "You are here" marker. Coordinates come only from
+    // DeviceLocation (LocationManager) — nothing is fabricated.
+    val fixMarker = remember(myLocation, mapView) {
+        myLocation?.let { pos ->
+            Marker(mapView).apply {
+                position = pos
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                title = "You are here"
+            }
+        }
+    }
+    DisposableEffect(fixMarker, mapView) {
+        fixMarker?.let { mapView.overlays.add(it) }
+        mapView.invalidate()
+        onDispose { fixMarker?.let { mapView.overlays.remove(it) } }
+    }
+
+    LaunchedEffect(myLocation, mapView) {
+        if (myLocation != null) {
+            mapView.controller.setZoom(16.0)
+            mapView.controller.setCenter(myLocation)
+        }
+    }
+
+    AndroidView(
+        factory = { mapView },
+        modifier = modifier
+    )
 }

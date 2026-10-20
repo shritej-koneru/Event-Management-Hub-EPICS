@@ -15,8 +15,8 @@ import androidx.core.content.ContextCompat
 
 /**
  * Minimal last-known / single-fix location helper built on [LocationManager]
- * (no extra Google Play Services dependency; the Maps SDK pulls in GMS anyway
- * but only for the map itself).
+ * (no Google Play Services dependency — the outdoor map uses osmdroid tiles,
+ * which also need neither GMS nor an API key).
  *
  * Privacy contract: callers invoke [requestSingle] only after the user opens
  * Outdoor mode or taps the locate button; [stop] cancels any in-flight

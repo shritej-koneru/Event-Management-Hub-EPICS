@@ -242,6 +242,23 @@ A pure Kotlin object with no Android types, so unit tests run without a device:
 
 ## 5. Verified test results
 
+### 2026-10-20 — outdoor map: OpenStreetMap migration (`integration`)
+
+Outdoor mode now renders OpenStreetMap raster tiles through **osmdroid
+6.1.20** instead of the Google Maps SDK. No Google Maps API key, Google
+Cloud project, billing account or Play Services is required. The
+`MAPS_API_KEY` BuildConfig/manifest wiring and
+`com.google.android.geo.API_KEY` meta-data entry were removed;
+`play-services-maps` / `maps-compose` were replaced with
+`org.osmdroid:osmdroid-android` 6.1.20. `OutdoorMap.kt` hosts an osmdroid
+`MapView` (default Mapnik tiles, app User-Agent per OSM tile policy,
+built-in attribution overlay, lifecycle-aware) plus `OutdoorMapController`
+so the shared zoom/recenter buttons work in outdoor mode. Indoor
+navigation, search, Indoor/Outdoor toggle, bottom sheet and the external
+maps-app directions deep link are unchanged. osmdroid upstream is archived
+(last release Aug 2024) but stable and zero-key; MapLibre Native is the
+actively maintained alternative if needed later.
+
 ### 2026-10-20 — navigation UI pass (`feat/maps-nav-ui`)
 
 | Suite | Command | Result |

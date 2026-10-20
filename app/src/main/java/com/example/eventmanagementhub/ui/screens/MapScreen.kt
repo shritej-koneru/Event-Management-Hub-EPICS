@@ -47,13 +47,13 @@ import com.example.eventmanagementhub.ui.components.CustomSearchBar
 import com.example.eventmanagementhub.ui.navigation.DeviceLocation
 import com.example.eventmanagementhub.ui.navigation.NavigationUiLogic
 import com.example.eventmanagementhub.ui.theme.*
-import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.launch
+import org.osmdroid.util.GeoPoint
 
 /** Start node used until the user picks a different origin. */
 private const val DEFAULT_START = "entrance"
 
-/** Indoor = backend venue graph on the Compose canvas. Outdoor = Maps SDK. */
+/** Indoor = backend venue graph on the Compose canvas. Outdoor = OSM tiles. */
 private enum class MapMode { Indoor, Outdoor }
 
 // Venue positions come from GET /api/navigation/map (backend is the source of
@@ -62,8 +62,9 @@ private enum class MapMode { Indoor, Outdoor }
 /**
  * Google Maps-style navigation screen. Indoor routes are computed by the
  * backend's venue graph (POST /api/navigation/path) and drawn on the campus
- * canvas; outdoor mode shows the Google Maps SDK layer (key-gated) and hands
- * real-world turn-by-turn off to the Google Maps app via a deep link.
+ * canvas; outdoor mode shows OpenStreetMap tiles via osmdroid (no API key)
+ * and hands real-world turn-by-turn off to an external maps app via a deep
+ * link.
  */
 @Composable
 fun MapScreen(
@@ -93,9 +94,10 @@ fun MapScreen(
     var mapOffset by remember { mutableStateOf(Offset.Zero) }
 
     // ---- location (privacy: requested only for outdoor / locate) ----------
-    var myLocation by remember { mutableStateOf<LatLng?>(null) }
+    var myLocation by remember { mutableStateOf<GeoPoint?>(null) }
     var locationDenied by remember { mutableStateOf(false) }
     val deviceLocation = remember { DeviceLocation(context) }
+    val outdoorController = remember { OutdoorMapController() }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -103,7 +105,7 @@ fun MapScreen(
         if (grants.values.any { it }) {
             locationDenied = false
             deviceLocation.requestSingle { loc ->
-                myLocation = loc?.let { LatLng(it.latitude, it.longitude) }
+                myLocation = loc?.let { GeoPoint(it.latitude, it.longitude) }
             }
         } else {
             locationDenied = true
@@ -113,7 +115,7 @@ fun MapScreen(
     fun ensureMyLocation() {
         if (DeviceLocation.hasPermission(context)) {
             deviceLocation.requestSingle { loc ->
-                myLocation = loc?.let { LatLng(it.latitude, it.longitude) }
+                myLocation = loc?.let { GeoPoint(it.latitude, it.longitude) }
             }
         } else {
             permissionLauncher.launch(
@@ -324,6 +326,7 @@ fun MapScreen(
 
                 MapMode.Outdoor -> OutdoorMap(
                     myLocation = myLocation,
+                    controller = outdoorController,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -345,14 +348,18 @@ fun MapScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 MapCircleButton(Icons.Default.Add, "Zoom in", "map-zoom-in") {
-                    mapScale = (mapScale * 1.25f).coerceAtMost(5f)
+                    if (mode == MapMode.Outdoor) outdoorController.zoomIn()
+                    else mapScale = (mapScale * 1.25f).coerceAtMost(5f)
                 }
                 MapCircleButton(Icons.Default.Remove, "Zoom out", "map-zoom-out") {
-                    mapScale = (mapScale / 1.25f).coerceAtLeast(0.8f)
+                    if (mode == MapMode.Outdoor) outdoorController.zoomOut()
+                    else mapScale = (mapScale / 1.25f).coerceAtLeast(0.8f)
                 }
                 MapCircleButton(Icons.Default.MyLocation, "My location", "map-recenter") {
-                    if (mode == MapMode.Outdoor) ensureMyLocation()
-                    else {
+                    if (mode == MapMode.Outdoor) {
+                        ensureMyLocation()
+                        outdoorController.recenter(myLocation)
+                    } else {
                         mapScale = 1f
                         mapOffset = Offset.Zero
                     }

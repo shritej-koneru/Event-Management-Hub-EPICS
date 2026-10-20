@@ -18,13 +18,6 @@
         android:theme="@style/Theme.EventManagementHub"
         android:networkSecurityConfig="@xml/network_security_config">
 
-        <!-- Maps SDK API key, injected by Gradle from local.properties /
-             -P MAPS_API_KEY (manifestPlaceholders). Empty when unconfigured;
-             the Outdoor map is then never instantiated. -->
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="${MAPS_API_KEY}" />
-
         <activity
             android:name=".MainActivity"
             android:exported="true"

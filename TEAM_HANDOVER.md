@@ -164,9 +164,9 @@ npm run verify:migrations   # cold-build scratch DB from SQL files alone
 Navigation-UI specifics:
 - `NavigationUiLogicTest` (14) pins search ranking, walking-time estimate
   from backend metres, Google Maps hand-off URL encoding, step progression
-- Outdoor mode uses the Google Maps SDK behind a `MAPS_API_KEY` gate (same
-  config style as `API_BASE_URL`); no key committed; without a key a setup
-  card is shown. Indoor navigation (backend graph + canvas) is key-free
+- Outdoor mode uses OpenStreetMap tiles via **osmdroid 6.1.20** (no API key,
+  no Google Cloud billing, no Play Services). Indoor navigation (backend
+  graph + canvas) is also key-free
 - Location permission is requested only when Outdoor mode/locate is used;
   the blue dot is drawn from a single-fix request, updates stopped on dispose
 - Backend unchanged in this pass (295 tests still green as of `2db435a`)

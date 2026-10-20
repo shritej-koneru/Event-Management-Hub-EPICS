@@ -37,20 +37,33 @@ Verify: `curl http://localhost:3000/ping`
    `adb reverse tcp:3000 tcp:3000` if the app points at `127.0.0.1`.
 3. Open `app/` in Android Studio → Run `app`.
 
-#### Outdoor map (Google Maps SDK)
+#### Outdoor map (OpenStreetMap)
 
-Indoor navigation needs no extra setup. The Outdoor mode uses the Google
-Maps SDK and needs an API key:
+Indoor navigation needs no extra setup, and neither does Outdoor mode. The
+outdoor layer shows real OpenStreetMap tiles through
+[osmdroid](https://github.com/osmdroid/osmdroid)
+(`org.osmdroid:osmdroid-android` 6.1.20, Apache-2.0). **No Google Maps API
+key, Google Cloud project, billing account or credit card is required.**
 
-1. In Google Cloud Console enable **Maps SDK for Android** (billing required
-   by Google) and create an API key.
-2. Restrict the key to the **Maps SDK for Android** API and to your package
-   name + debug/release SHA-1 fingerprints.
-3. Add `MAPS_API_KEY=...` to `local.properties` (gitignored) or pass
-   `-PMAPS_API_KEY=...` to Gradle. Never commit the key.
+- **Tile provider:** OpenStreetMap's default "Mapnik" raster tiles
+  (`tile.openstreetmap.org`), fetched on demand and cached on disk by
+  osmdroid.
+- **Attribution:** the map view shows the built-in
+  "© OpenStreetMap contributors" notice; keep it visible in screenshots and
+  releases.
+- **Tile-usage policy:** the public OSM tile servers are fine for development
+  and light use, but they are **not** licensed for unlimited production
+  traffic. Do not bulk-download tiles. For a public/production deployment,
+  point `OutdoorMap.kt` at a commercial tile provider (MapTiler,
+  Thunderforest, …) or a self-hosted tile server — osmdroid accepts any XYZ
+  tile URL.
+- **Play Services:** not required; the map also runs on bare AOSP emulator
+  images.
 
-Without a key the Outdoor tab shows a setup card; Indoor navigation is
-unaffected.
+Outdoor turn-by-turn is still handed to the user's external maps app
+(Google Maps, or any browser that handles the URL) via a deep link — the app
+does not run routing itself, and the backend holds no outdoor coordinates
+for venues.
 
 ### Tests
 
@@ -107,4 +120,4 @@ backend history is preserved in its ancestry.
 | Database | PostgreSQL (embedded dev) | Zero-install real SQL for students |
 | Tests | Vitest + supertest + socket.io-client | Same runner; real HTTP + sockets |
 | Android | Jetpack Compose + Retrofit | Modern UI; matches course tooling |
-| Outdoor maps | Google Maps SDK (key-gated) | Real outdoor map; key via local.properties, never committed |
+| Outdoor maps | OpenStreetMap via osmdroid (no API key) | Free OSM raster tiles; attribution built in; no billing or Play Services |

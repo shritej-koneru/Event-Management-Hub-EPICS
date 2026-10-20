@@ -42,15 +42,6 @@ android {
         //   3. "" -> ApiClient falls back to the emulator alias http://10.0.2.2:3000/
         val apiBaseUrl = (project.findProperty("API_BASE_URL") as String?) ?: localProp("API_BASE_URL") ?: ""
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
-
-        // Google Maps SDK key for the Outdoor map layer. Same three-tier mechanism
-        // as API_BASE_URL. Empty (the default) -> Outdoor mode shows a setup card
-        // and the GoogleMap composable is never created; the key is never
-        // hard-coded or committed (local.properties is gitignored).
-        val mapsApiKey = (project.findProperty("MAPS_API_KEY") as String?) ?: localProp("MAPS_API_KEY") ?: ""
-        buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
-        // Read by the Maps SDK from the manifest meta-data entry.
-        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -141,10 +132,10 @@ dependencies {
     implementation(libs.socketio)
     implementation(libs.androidx.datastore.preferences)
 
-    // Outdoor map layer (Google Maps SDK). Indoor navigation uses the backend
-    // graph + Compose canvas and does not depend on these.
-    implementation(libs.play.services.maps)
-    implementation(libs.maps.compose)
+    // Outdoor map layer: OpenStreetMap tiles via osmdroid (no API key, no
+    // Google Play Services, no billing). Indoor navigation uses the backend
+    // graph + Compose canvas and does not depend on this.
+    implementation(libs.osmdroid.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
