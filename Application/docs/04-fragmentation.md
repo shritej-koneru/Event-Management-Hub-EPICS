@@ -10,7 +10,13 @@ layer for lost frames.
 ## 4.1 Send path — auto-splitting
 
 Callers never fragment manually: [`MeshNode.send`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshNode.java)
-routes any text over 14 chars into `sendFragmentsWithGroup`:
+routes any text over 14 chars into `sendFragments` → `sendFragmentsWithGroup`.
+The helper [`sendFragments(dst, kind, text, ttl, nowMs)`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshNode.java)
+first mints the group id itself — `PacketCodec.fragmentGroupId(nodeId, text, nowMs)` —
+and then runs the shared flush path `sendFragmentsWithGroup(..., groupId, frameIds)`.
+That second parameter is the difference between the two callers: user sends pass
+`null` (random per-frame ids), while the ingest path passes event-derived ids
+(chapter [4.5](#45-ingest-and-deterministic-frame-ids)):
 
 1. [`PacketCodec.fragment(text, groupId)`](../meshlib/src/main/java/com/epics/bitchat/mesh/PacketCodec.java)
    sanitizes to printable ASCII, splits greedily **at spaces** (cutting
@@ -72,7 +78,7 @@ dropping incomplete groups, the receiver asks for exactly what is missing —
 the pattern Meshtastic formalizes (explicit ACK/NAK with retransmission):
 
 **Receiver** ([`FragmentAssembler.nackSweep`](../meshlib/src/main/java/com/epics/bitchat/mesh/FragmentAssembler.java),
-called on a 2 s maintenance tick):
+called on a 2 s maintenance tick — `MeshNode.nackSweepTick()`):
 - waits `NACK_AFTER_MS = 2 000` grace (frames are still 400 ms apart in flight),
 - then fires `onGroupIncomplete(sender, groupId, missingIndices, received, total)`
   — at most `MAX_NACK_ROUNDS = 3` rounds, `NACK_RETRY_MS = 6 000` apart,
@@ -82,7 +88,10 @@ called on a 2 s maintenance tick):
   sent **unicast** to the original sender (`MeshKind.NACK`). The mask
   alphabet is lowercase so a NACK can never decode as a fragment frame.
 
-**Sender**: recently sent groups are cached 60 s (16 groups max). On NACK,
+**Sender**: recently sent groups are cached for 60 s (16 groups max) by
+[`cacheFragments(groupId, dstId, kind, frames, nowMs)`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshNode.java)
+— a `FRAGMENT_CACHE_TTL_MS` sweep drops expired entries first and the map is
+capped oldest-first. On NACK,
 [`resendMissingFrames`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshNode.java)
 re-floods exactly the requested frames **with fresh message ids** — relays
 that already deduped the originals would otherwise swallow the recovery

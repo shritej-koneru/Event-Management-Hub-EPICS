@@ -46,7 +46,10 @@ NACK framing `makeNackPayload(groupId, mask)`, `isNack`, `nackGroupId`,
 limits `MAX_PAYLOAD = 14`, `FRAMING_OVERHEAD = 5`, `FRAGMENT_TEXT_CHARS = 9`,
 `MAX_FRAGMENTS = 36`, `MAX_FRAGMENTED_TEXT = 324`, `HEADER_SIZE = 13`,
 `PACKET_SIZE = 27`;
-identity `sanitizeNodeId`.
+identity `sanitizeNodeId`; internals `kindByte`/`kindFrom` (MeshKind ⇄ wire byte),
+`fragmentIndex` / `fragmentCount` / `fragmentText` (frame-element readers),
+`fragChar`/`fragVal` (A–Z, 0–9 token alphabet), `sanitizeText`,
+`wireMsgId` (FNV-1a → 3-char id).
 
 ### BeaconParser / BlePacketInterpreter
 Identity-advert codec (`BeaconInfo{nodeId, displayName, floor, isBeacon}`,
@@ -122,18 +125,76 @@ Constants: `HOP_ATTENUATION_DB = 7`, `DIRECT_ADVERT_RSSI = −55`,
 | [`Graph`](../meshlib/src/main/java/com/epics/bitchat/nav/Graph.java) | `addNode`, `addEdge`, `getNode`, `findNodeByName`, `getEdges`, `getNeighbors`, `getAllEdges` |
 | [`GraphNode`](../meshlib/src/main/java/com/epics/bitchat/nav/GraphNode.java) | id, name, x/y, floor, `isBeacon`, tags, `distanceTo` |
 | [`GraphEdge`](../meshlib/src/main/java/com/epics/bitchat/nav/GraphEdge.java) | from, to, `getWeightMeters()`, `isAccessible()` |
-| [`Dijkstra`](../meshlib/src/main/java/com/epics/bitchat/nav/Dijkstra.java) / [`AStar`](../meshlib/src/main/java/com/epics/bitchat/nav/AStar.java) | shortest path over the graph |
-| [`RouteBuilder`](../meshlib/src/main/java/com/epics/bitchat/nav/RouteBuilder.java) | node path → `List<RouteStep>` (turns, distance, floor, accessible preference) |
+| [`Dijkstra`](../meshlib/src/main/java/com/epics/bitchat/nav/Dijkstra.java) / [`AStar`](../meshlib/src/main/java/com/epics/bitchat/nav/AStar.java) | `findShortestPath(graph, fromId, toId[, accessible])` → `List<GraphNode>` (empty if unreachable); Dijkstra settles by `dist`, A* by `f = g + hypot(dx, dy)`; both share `reconstruct(prev, toId)` — step-by-step in [5.6](05-positioning-navigation.md#56-routes) |
+| [`RouteBuilder`](../meshlib/src/main/java/com/epics/bitchat/nav/RouteBuilder.java) | `build(graph, path[, accessible])` → `Route`; per leg `edgeWeight(from, to)`, `bearingDeg(a, b)` (0–360, 0 = north), `stepText(...)` (8 compass sectors) |
+| [`Route`](../meshlib/src/main/java/com/epics/bitchat/nav/Route.java) | `getPath`, `getSteps`, `getTotalMeters`, `getTotalSeconds` (`meters / 1.4 + 30 s per floor change`), `isAccessible`, `getStart` / `getDestination`; `WALK_SPEED_MPS = 1.4`, `FLOOR_CHANGE_PENALTY_S = 30` |
+| [`RouteStep`](../meshlib/src/main/java/com/epics/bitchat/nav/RouteStep.java) | `getFromId`, `getToId`, `getText`, `getDistanceMeters`, `getBearingDeg`, `isFloorChange` |
 | [`DemoGraphFactory`](../meshlib/src/main/java/com/epics/bitchat/nav/DemoGraphFactory.java) | `buildCampusGraph()`, `isTransitionNode(id)` |
 
-## ai — recommendation
+## ai — recommendation & assistant
 
-[`RecommendationEngine`](../meshlib/src/main/java/com/epics/bitchat/ai/RecommendationEngine.java)
-ranks catalogued events against position and time;
-[`DemoEventCatalog`](../meshlib/src/main/java/com/epics/bitchat/ai/DemoEventCatalog.java)
-supplies the offline dataset; [`Assistant`](../meshlib/src/main/java/com/epics/bitchat/ai/Assistant.java)
-composes the answers consumed by the app's assistant screens (chapter [6.5](06-android-app.md#65-ai-layer)).
-The app-side HTTP bridge is [`AiServiceClient`](../app/src/main/java/com/epics/bitchat/ai/AiServiceClient.java).
+Two dependency-free engines in [`meshlib/.../ai`](../meshlib/src/main/java/com/epics/bitchat/ai).
+Both are **Java mirrors of the Python `ai-service`** (`recommendations.py`,
+`assistant.py`) so the on-device test UI and the server score identically —
+chapter [6.5](06-android-app.md#65-ai-layer).
+
+### RecommendationEngine
+
+Static utility (`private` constructor) that ranks events for one user.
+
+| Member | Signature / notes |
+|--------|-------------------|
+| `recommend` | `static List<Result> recommend(List<Event> events, String[] interests, int limit, long nowMs)` — scores every event, sorts **descending by score**, tie-breaks by `eventId`, returns `min(limit, size)` |
+| score | `0.6·interest + 0.25·popularity + 0.15·(recency − 1)` |
+| `Event.popularity()` | `min(1, registered / capacity)`; `0` when `capacity ≤ 0` |
+| `jaccard(wanted, tags, category)` | interest = `\|common\| / \|union\|` over lower-cased strings, where `offered = tags + category` and `wanted` is the user's normalized interest set |
+| category boost | if the user's interests contain the event's category → `min(1, interest × CATEGORY_BOOST)` |
+| `recencyBoost(event, nowMs)` | `1 + e^(−Δdays/2)` with `Δdays = (start − now)/86 400 000`; an event already started returns `2.0` (maximum) |
+| `normalize(raw)` | trims + lower-cases the interest array into a `Set<String>`; empty interests ⇒ pure popularity/recency ranking |
+| constants | `W_INTEREST = 0.6`, `W_POPULARITY = 0.25`, `W_RECENCY = 0.15`, `CATEGORY_BOOST = 1.25` |
+| types | `Event{eventId, title, category, tags, startEpochMs, capacity, registered, venue}` · `Result{event, score, interest, popularity, recency}` (breakdown kept for the UI) |
+
+*Worked example* — interest match 0.33, 60 % full, starting in 2 days, no
+category match: `0.6·0.33 + 0.25·0.60 + 0.15·(1.368 − 1) ≈ 0.40`. If the
+category matched, `interest` would be ×1.25 **before** weighting.
+
+### Assistant
+
+Grounded FAQ + navigation answers: `answer(query, accessibilityMode)` →
+`Answer{text, intent, matchedFaq}`, evaluated strictly in this order:
+
+1. **`classify(text)`** → intent — `navigate` (any of `where `, `how do i get`,
+   `directions`, `route`, `navigate`, `way to`), then `registration`
+   (`register`, `check in`, `check-in`), then `schedule` (`when `, `what time`,
+   `start`), else `unknown`.
+2. **`bestFaq(text)`** — scores each `FaqEntry`: **+2.0 per keyword hit**
+   (substring match) plus **3 × (shared tokens ÷ question tokens)**; the entry
+   is returned only when its score reaches `≥ 2.0`. A FAQ match short-circuits
+   everything below.
+3. **`mentionedVenues(text)`** — every graph node whose name occurs in the
+   query, sorted by first mention.
+4. **`navAnswer(...)`** (intent `navigate` **and** ≥ 2 venues) — the mention
+   *before* `" from "` is the destination, the one after it is the origin
+   (`"Library from Hall 1"`); then
+   `Dijkstra.findShortestPath(…, accessibilityMode)` → `RouteBuilder.build(…)`.
+   The answer reports metres, minutes, whether a floor change is involved, and
+   the first step. If the accessible search fails but the standard one
+   succeeds: *"There is no step-free route … the standard route uses stairs"*.
+5. Exactly one venue → *"\<name> is on floor N …"*; nothing matched → the
+   fallback prompt.
+6. **`defaultFaq()`** — six organizer entries (registration desk, wheelchair
+   accessibility, food, parking, lost & found, check-in), shared verbatim with
+   `assistant.py`.
+
+### DemoEventCatalog
+
+Offline dataset behind `RecommendationEngine`; `days(...)` / `hours(...)`
+helpers build relative `startEpochMs` values so the demo schedule never goes
+stale.
+
+The app-side HTTP bridge to the Python service is
+[`AiServiceClient`](../app/src/main/java/com/epics/bitchat/ai/AiServiceClient.java)
+(function table in chapter [6.5](06-android-app.md#65-ai-layer)).
 
 ## Integration recipe (30 seconds)
 

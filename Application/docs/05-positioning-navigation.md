@@ -85,13 +85,46 @@ firing `onPositionUpdated` only on change (chapter [2.1](02-mesh-engine.md#21-me
 
 ## 5.6 Routes
 
-- [`Dijkstra`](../meshlib/src/main/java/com/epics/bitchat/nav/Dijkstra.java)
-  and [`AStar`](../meshlib/src/main/java/com/epics/bitchat/nav/AStar.java)
-  compute shortest paths over edge weights (meters).
-- [`RouteBuilder`](../meshlib/src/main/java/com/epics/bitchat/nav/RouteBuilder.java)
-  turns a node path into human [`RouteStep`s](../meshlib/src/main/java/com/epics/bitchat/nav/RouteStep.java)
-  — turn direction, distance, floor changes — preferring accessible edges
-  when the user asks for step-free routing.
+**Path search — [`Dijkstra.findShortestPath(graph, fromId, toId, accessible)`](../meshlib/src/main/java/com/epics/bitchat/nav/Dijkstra.java)**
+
+1. Guard: either endpoint missing from the graph → empty list (unreachable).
+2. `dist[from] = 0`, everything else ∞; push `NodeCost(from, 0)` on a
+   min-`PriorityQueue` (ordered by cost).
+3. Loop: poll the cheapest node; skip it if already `settled`; settle it; and
+   **stop the moment the destination is polled**.
+4. Relax every outgoing [`GraphEdge`](../meshlib/src/main/java/com/epics/bitchat/nav/GraphEdge.java):
+   skip settled targets, skip `!isAccessible()` edges when `accessible` is
+   set (the step-free guarantee), and whenever
+   `dist[current] + weight < dist[target]` update `dist`/`prev` and re-queue.
+5. [`reconstruct(prev, toId)`](../meshlib/src/main/java/com/epics/bitchat/nav/Dijkstra.java)
+   walks `prev` back to the start, reverses the id list and maps it to
+   `GraphNode`s; a `null` node mid-walk aborts to empty.
+
+[`AStar.findShortestPath`](../meshlib/src/main/java/com/epics/bitchat/nav/AStar.java)
+is the same algorithm with priority `f = g + h`, where
+`h = hypot(dx, dy)` is the Euclidean distance to the goal — **admissible**, so
+the route stays optimal while fewer nodes are expanded. It shares
+`Dijkstra.reconstruct` verbatim.
+
+**Turn generation — [`RouteBuilder.build(graph, path, accessible)`](../meshlib/src/main/java/com/epics/bitchat/nav/RouteBuilder.java)**
+For each consecutive node pair:
+
+- `edgeWeight(from, to)` — the matching edge's `getWeightMeters()`, falling
+  back to `GraphNode.distanceTo(to)` if no edge exists.
+- `bearingDeg(from, to)` — `atan2(dx, dy)` normalised to 0–360° (0 = north).
+- `stepText(...)` — quantises the bearing into 8 sectors of 22.5° →
+  *"Head north-east to Library"*; across floors →
+  *"Change floor at Stairs A then head … to …"*.
+- `isFloorChange` = differing `floor` values; leg distances accumulate into
+  `totalMeters`.
+
+**Result — [`Route`](../meshlib/src/main/java/com/epics/bitchat/nav/Route.java)**:
+`path`, `steps`, `totalMeters`, `totalSeconds` (`meters / WALK_SPEED_MPS(1.4)
++ 30 s × floor changes`), `isAccessible`, `getStart()`/`getDestination()`.
+Consumed by [`NavigationFragment.computeRoute`](../app/src/main/java/com/epics/bitchat/ui/NavigationFragment.java)
+(chapter [6.4](06-android-app.md#64-ui-layer)) and by
+`Assistant.navAnswer` for the assistant's one-line reply (chapter [8](08-reference.md)).
+
 - The Android layer draws the graph ([`GraphView`](../app/src/main/java/com/epics/bitchat/ui/GraphView.java)),
   shows heading ([`CompassView`](../app/src/main/java/com/epics/bitchat/ui/CompassView.java))
   and renders steps ([`StepAdapter`](../app/src/main/java/com/epics/bitchat/ui/StepAdapter.java)) —

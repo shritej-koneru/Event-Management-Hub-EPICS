@@ -20,6 +20,24 @@ is the app's engine owner:
 - forwards engine callbacks into [`MeshViewModel`](../app/src/main/java/com/epics/bitchat/ui/MeshViewModel.java)
   LiveData.
 
+**Key functions** (full listing in [MeshManager.java](../app/src/main/java/com/epics/bitchat/mesh/MeshManager.java)):
+
+| Group | Functions |
+|-------|-----------|
+| Lifecycle | `get(Context)` (singleton), `start()` / `start(forcedMode)` (transport choice, cache restore, engine start), `restart()` / `restartWithMode(mode)`, `stop()`, `isRunning()` |
+| Identity & naming | `getDeviceId()` (stable 3-char wire id from `generateDeviceId()`), `getNodeName()` / `resolveNodeName()` (hardware model unless renamed in Settings; legacy "Phone A"-style defaults are migrated), `defaultNodeName()`, `isLegacyDefaultName(name)` |
+| Transport choice | `getDefaultMode()` (BLE when a radio is on, else the simulator), `isBluetoothEnabled()`, `hasBlePermissions()` (includes location on API ≤ 30), `blePermissionHint()`, `registerBtStateReceiver()` — the `STATE_ON` receiver upgrades simulator → BLE via `restartWithMode` |
+| Engine access | `getMeshNode()`, `getGraph()`, `getReachableNodeIds()`, `getNodeCount()`, `getLossPct()`, `getMode()`, `addListener` / `removeListener` |
+| Peers & addressing | `displayNameFor(nodeId)`, `idsFromPeers(peers)`, `loadKnownDevices()` / `persistKnownDevices()` / `getKnownDevices()` (newest first, kept while out of range), `isReachable(nodeId)` |
+| Settings | `saveSettings(nodeName, nodeCount, loss, mode)`, `getServerBaseUrl()` / `saveServerBaseUrl(url)` (ai-service base; `""` = server features off), `hasNetwork()` (gates server calls so an offline demo never waits on the 4 s connect timeout), `isRelayEnabled` / `setRelayEnabled`, `isAutoAnnounceEnabled` / `setAutoAnnounceEnabled` |
+| Venue persistence | `getVenueDirectory()`, `setVenueAdvertised(venue)` (manual announce pinned as the auto-announce override), `persistVenueDirectory(force)` / `writeVenueDirectoryToPrefs()` / `restoreCachedVenueDirectory()` — seeds a fresh node with cached adverts at full TTL (2 min per entry, refreshed by the 15 s advert cycle) |
+| Internet backhaul | `ingestFromInternet(externalId, payload)` (floods a server-originated message with a dedupable id; `""` clears the venue), `wireMsgIdForExternal(externalId)`, `hasSeenExternal(externalId)` (dedup check) |
+
+It also implements [`MeshEventListener`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshEventListener.java)
+itself — `onLogEntry`, `onPeerDiscovered`, `onPeerLost`, `onMessageDelivered`,
+`onDeliveryStatus`, `onPositionUpdated`, `onVenueDirectoryChanged` — which is
+the bridge that turns engine events into the ViewModel's LiveData.
+
 ## 6.2 BLE transport
 
 [`BleAdvertiserTransport`](../app/src/main/java/com/epics/bitchat/mesh/BleAdvertiserTransport.java)
@@ -73,6 +91,34 @@ LiveData:
 | [`NavigationFragment`](../app/src/main/java/com/epics/bitchat/ui/NavigationFragment.java) | map ([`GraphView`](../app/src/main/java/com/epics/bitchat/ui/GraphView.java)), heading ([`CompassView`](../app/src/main/java/com/epics/bitchat/ui/CompassView.java)), step list ([`StepAdapter`](../app/src/main/java/com/epics/bitchat/ui/StepAdapter.java)) |
 | [`SettingsFragment`](../app/src/main/java/com/epics/bitchat/ui/SettingsFragment.java) | display name, relay on/off, auto-announce, venue pin, transport override |
 
+### MeshViewModel — the single source of truth
+
+Every tab observes its LiveData; the ViewModel owns the engine callbacks and
+republishes **immutable snapshots** (`MeshLogEntry`, `Peer`, `TrailPoint`):
+
+| Area | LiveData / functions |
+|------|----------------------|
+| Traffic | `getLogs(): LiveData<List<MeshLogEntry>>` |
+| Peers | `getPeers(): LiveData<List<Peer>>` |
+| Position | `getPosition()`, `getPositionSource()` ("beacon" / "mesh" / "none"), `pushPositionSource(node)` |
+| Server position | `refreshServerPosition()` — POSTs the current venue-advert anchors to `POST /position` (the server's weighted-centroid twin of `PositionEstimator`, chapter [5.5](05-positioning-navigation.md#55-estimating-the-position)) — plus `getServerPosition()`, `appendServerTrailSample(x, y)` (near-identical fixes collapse into one dot, list capped oldest-first), `getServerTrail()`, `clearServerTrail()` |
+| Venues | `getVenueDirectory(): LiveData<List<VenueDirectory.Entry>>`, `refreshVenues()` (constructor + cache restore — `onVenueDirectoryChanged` only fires for *new* adverts, hence the explicit re-push) |
+| Sending | `send(dstId, kind, payload)`, `getReachableIds()`, `getKnownDestinations()` (in-range targets first), `getLastDestinationId()` / `setLastDestinationId(id)` (Send tab) |
+| Status & toggles | `getEventMessage()`, `getDeliveryStatus()`, `isRelayEnabled` / `setRelayEnabled`, `isAutoAnnounceEnabled` / `setAutoAnnounceEnabled`, `setAdvertisedVenue(venue)` |
+| Misc | `displayNameFor(nodeId)`, `getGraph()`, `getMeshManager()`, `onCleared()` |
+
+Fragment-level logic worth naming: [`NavigationFragment`](../app/src/main/java/com/epics/bitchat/ui/NavigationFragment.java)
+`computeRoute()` runs Dijkstra or A\* for the picked start/destination (the
+accessible toggle flows through — chapter [5.6](05-positioning-navigation.md#56-routes)),
+`advanceStep()` walks the step list as the user moves, and `refreshCompass()`
++ `onSensorChanged` drive the heading;
+[`GraphView`](../app/src/main/java/com/epics/bitchat/ui/GraphView.java) is fed
+by `setGraph` / `setRoute` / `setCurrentNode` / `setCurrentStepIndex` /
+`setServerTrail` / `setPositionSource`. Console's quick-send chips call
+`ConsoleFragment.quickSend(...)`; `SettingsFragment.saveSettings(...)` writes
+through `MeshManager.saveSettings(...)`, so name, node count, loss model and
+transport override survive restarts.
+
 ## 6.5 AI layer
 
 A small on-device assistant demonstrates cross-team integration:
@@ -83,6 +129,25 @@ ranks events against the user's position (the venue graph supplies the
 "near me" half — chapter [5](05-positioning-navigation.md)), and
 [`DemoEventCatalog`](../meshlib/src/main/java/com/epics/bitchat/ai/DemoEventCatalog.java)
 keeps the demo self-sufficient offline.
+
+All calls are blocking `HttpURLConnection` on a background thread (callbacks
+arrive there; the caller hops to main). `normalizeBaseUrl(raw)` accepts
+`10.0.2.2:8000`, `http://10.0.2.2:8000` or empty (= server features off), and
+`hasNetwork()` gates every call (chapter [6.1](#61-meshmanager)):
+
+| Client function | Endpoint | Notes |
+|-----------------|----------|-------|
+| `getRoute(baseUrl, from, to, accessible, …)` | `GET /route` | `parsePath(...)` renders the JSON id array `[Hall 1, elevator_1, Library]` for display and map lookup |
+| `getRecommendations(baseUrl, interests, limit, …)` | `GET /recommend` | interests as a comma-separated list |
+| `postPosition(baseUrl, anchors, floor, …)` | `POST /position` | each anchor is `{"beacon": "Hall 1", "rssi": -60}` (measured beacon) or `{"beacon": "Hall 1", "hops": 2}` (mesh venue advert) — the server's weighted-centroid twin of `PositionEstimator` |
+| `askAssistant(baseUrl, question, accessible, …)` | `POST /assistant` | grounded FAQ + nav answers — the server twin of [`Assistant`](08-reference.md) (chapter [8](08-reference.md)) |
+| `get(url, onSuccess, onError)` / `postJson(...)` | — | raw HTTP primitives (`read`, `enc`, `trim` helpers) |
+
+The Python service itself (`ai-service/app/main.py`, FastAPI) additionally
+serves `GET /`, `GET /graph`, `GET /graph/nodes` and `GET /nearest`. Every
+endpoint runs the same Dijkstra/A\* and recommendation math as the on-device
+mirrors (chapter [8](08-reference.md#ai--recommendation--assistant)), so server
+and phone answers match.
 
 ## 6.6 Test hub
 

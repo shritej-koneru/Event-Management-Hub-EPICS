@@ -20,18 +20,34 @@ hears comes back through it.
 3. Receives: [`onPacketReceived`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshNode.java)
    offers every payload to the [`FragmentAssembler`](../meshlib/src/main/java/com/epics/bitchat/mesh/FragmentAssembler.java)
    first, then hands the packet to the `Router` for dedup/deliver/relay.
-4. Delivery bookkeeping: sends ACKs for CHAT, matches incoming ACK tokens in
-   the [`DeliveryTracker`](#26-acknowledgements-and-nacks), answers NACKs by
+4. Delivery bookkeeping: [`sendAck`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshNode.java)
+   sends ACKs for CHAT, matches incoming ACK tokens in the
+   [`DeliveryTracker`](#26-acknowledgements-and-nacks), and
+   [`resendMissingFrames`](#26-acknowledgements-and-nacks) answers NACKs by
    re-sending cached frames (chapter [4.4](04-fragmentation.md#44-nack-recovery-meshtastic-style)).
 5. Venue life-cycle: [`announceVenue`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshNode.java),
-   the 15 s re-advertise tick, and auto-announce
-   (chapter [5.4](05-positioning-navigation.md#54-auto-announce-and-the-echo-chamber)).
+   the 15 s re-advertise tick ([`advertiseVenue`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshNode.java)),
+   and auto-announce ([`autoAnnounceTick`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshNode.java)
+   — chapter [5.4](05-positioning-navigation.md#54-auto-announce-and-the-echo-chamber)).
 6. Internet backhaul: [`ingestFromInternet`](#27-internet-ingest) floods
    server events into the neighbourhood with dedupable ids.
-7. Maintenance single-thread: peer refresh (2 s), delivery sweeps (2 s),
-   NACK sweeps (2 s), venue re-advertise (15 s), auto-announce (5 s),
-   rebroadcast window service (500 ms) — all scheduled in
-   [`start()`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshNode.java).
+7. Maintenance single-thread — one `maintenance.scheduleWithFixedDelay` block
+   in [`start()`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshNode.java):
+
+   | Period | Runnable | What it does |
+   |--------|----------|--------------|
+   | 500 ms | `rebroadcastTick()` | re-floods ingested internet messages while their [`RebroadcastWindow`](../meshlib/src/main/java/com/epics/bitchat/mesh/RebroadcastWindow.java) is open, then drops them |
+   | 2 s | `refreshPeers()` | upserts/expires the peer table from the transport and re-runs `updatePosition()` |
+   | 2 s | `sweepDeliveries()` | `DeliveryTracker.sweep` → fires `onDeliveryStatus(…, false)` for 12 s timeouts |
+   | 2 s | `nackSweepTick()` | delegates to `FragmentAssembler.nackSweep` (chapter [4.4](04-fragmentation.md#44-nack-recovery-meshtastic-style)) |
+   | 5 s | `autoAnnounceTick()` | evaluates the three auto-announce gates (chapter [5.4](05-positioning-navigation.md#54-auto-announce-and-the-echo-chamber)) |
+   | 15 s | `advertiseVenue()` | re-broadcasts `V:<venue>` so roaming nodes learn it |
+   | 400 ms | `flushFragments()` | staggered fragment-frame send (chapter [4.1](04-fragmentation.md#41-send-path--auto-splitting)), re-scheduled while frames remain |
+
+   Every event leaves through the **`fire*` dispatch family** — `fireDelivered`,
+   `firePeerDiscovered`, `firePeerLost`, `firePositionUpdated`,
+   `fireVenueDirectoryChanged`, `fireDeliveryStatus` — one loop over
+   `listeners` each, which is what the callback table below describes.
 
 **Listener contract** — [`MeshEventListener`](../meshlib/src/main/java/com/epics/bitchat/mesh/MeshEventListener.java)
 callbacks (all on mesh worker threads; the app must hop to main):
