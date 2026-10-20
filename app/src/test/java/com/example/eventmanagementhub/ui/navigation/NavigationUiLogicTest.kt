@@ -139,4 +139,35 @@ class NavigationUiLogicTest {
         assertTrue(!NavigationUiLogic.hasArrived(1, 3))
         assertTrue(!NavigationUiLogic.hasArrived(0, 0))
     }
+
+    // ---- completedPathIds (indoor route muting) --------------------------
+
+    @Test
+    fun `no active node means nothing completed`() {
+        assertTrue(
+            NavigationUiLogic.completedPathIds(listOf("a", "b", "c"), null).isEmpty()
+        )
+    }
+
+    @Test
+    fun `active node at start means nothing completed`() {
+        assertTrue(
+            NavigationUiLogic.completedPathIds(listOf("a", "b", "c"), "a").isEmpty()
+        )
+    }
+
+    @Test
+    fun `active node mid-route completes prior nodes only`() {
+        assertEquals(
+            setOf("a", "b"),
+            NavigationUiLogic.completedPathIds(listOf("a", "b", "c", "d"), "c")
+        )
+    }
+
+    @Test
+    fun `active node not on path completes nothing`() {
+        assertTrue(
+            NavigationUiLogic.completedPathIds(listOf("a", "b"), "zzz").isEmpty()
+        )
+    }
 }

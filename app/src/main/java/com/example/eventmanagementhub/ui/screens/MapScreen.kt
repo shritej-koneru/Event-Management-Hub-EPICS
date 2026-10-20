@@ -25,10 +25,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -36,6 +41,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.eventmanagementhub.data.HubRepository
@@ -547,10 +553,21 @@ fun MapScreen(
 // ---------------------------------------------------------------------------
 
 /**
- * Backend-driven campus canvas: fractional venue positions and undirected
- * edges from GET /api/navigation/map, with the computed route highlighted.
- * Pinch/drag to pan-zoom; the start, destination and active navigation node
- * are labelled.
+ * Polished campus navigation canvas driven entirely by the backend map
+ * (fractional venue positions + undirected edges from GET /api/navigation/map).
+ *
+ * Visual language (Google-Maps-inspired indoor plan):
+ *  - soft neutral floor background
+ *  - rooms as white rounded cards with centred names (ellipsised when long)
+ *  - corridors as soft beds under every edge; ordinary links are thin muted
+ *    centre-lines; the computed route is a thick purple path with a white
+ *    casing and rounded caps
+ *  - start = green chip + dot, destination = red chip + dot, active step =
+ *    purple ring + "Now" chip; traveled route segments mute once navigating
+ *  - fixed corner legend (does not zoom with the map)
+ *
+ * Graph topology, distances and route order always come from the backend —
+ * nothing is invented or re-wired here.
  */
 @Composable
 private fun CampusMap(
@@ -564,100 +581,324 @@ private fun CampusMap(
     onTransform: (Float, Offset) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val edgeColor = CardBorder
-    val pathColor = PrimaryPurple
-    val pathSet = remember(pathIds) { pathIds.toSet() }
     val textMeasurer = rememberTextMeasurer()
-    val labelStyle = TextStyle(
-        fontSize = 12.sp,
+    val pathSet = remember(pathIds) { pathIds.toSet() }
+    val completedSet = remember(pathIds, activeNodeId) {
+        NavigationUiLogic.completedPathIds(pathIds, activeNodeId)
+    }
+
+    val roomNameStyle = TextStyle(
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Medium,
+        color = NavyText,
+        textAlign = TextAlign.Center
+    )
+    val chipTextStyle = TextStyle(
+        fontSize = 9.sp,
         fontWeight = FontWeight.SemiBold,
-        color = NavyText
+        color = Color.White
     )
 
     // Fractional positions from the backend map (fallback: canvas centre).
     val positions = remember(map.venues) {
         map.venues.associate { it.id to Offset(it.x.toFloat(), it.y.toFloat()) }
     }
-
     // Undirected edges, one segment each (server stores each edge once).
     val edges = remember(map.edges) { map.edges.map { it.from to it.to } }
 
-    // Ids to label on the map, in draw order.
-    val labels = remember(startId, endId, activeNodeId, map.venues) {
-        listOfNotNull(startId, endId, activeNodeId)
-            .distinct()
-            .mapNotNull { id -> map.venues.firstOrNull { it.id == id }?.let { it.id to it.name } }
+    // Room cards are measured against the canvas size so long names ellipsize
+    // consistently; size comes from onSizeChanged on the Canvas host.
+    var canvasSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    val roomNameStyleLocal = roomNameStyle
+    val rooms = remember(map.venues, canvasSize, textMeasurer) {
+        if (canvasSize.width == 0 || canvasSize.height == 0) return@remember emptyList()
+        val w = canvasSize.width.toFloat()
+        val h = canvasSize.height.toFloat()
+        map.venues.map { v ->
+            val frac = positions[v.id] ?: Offset(0.5f, 0.5f)
+            val center = Offset(frac.x * w, frac.y * h)
+            val maxLabel = (w * 0.22f).coerceIn(64f, 150f)
+            val layout = textMeasurer.measure(
+                text = v.name,
+                style = roomNameStyleLocal,
+                constraints = Constraints(maxWidth = maxLabel.toInt())
+            )
+            IndoorRoom(
+                id = v.id,
+                center = center,
+                width = (layout.size.width + 32f).coerceIn(64f, maxLabel + 32f),
+                height = (layout.size.height + 24f).coerceAtLeast(38f)
+            )
+        }
     }
+    val nameById = remember(map.venues) { map.venues.associate { it.id to it.name } }
 
-    Canvas(
-        modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(EventCardWhiteGradient)
-            .pointerInput(map.venues) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    onTransform(zoom, pan)
+    Box(modifier = modifier) {
+        Canvas(
+            Modifier
+                .matchParentSize()
+                .clip(RoundedCornerShape(20.dp))
+                .background(IndoorMapBackground)
+                .onSizeChanged { canvasSize = it }
+                .pointerInput(map.venues) {
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        onTransform(zoom, pan)
+                    }
+                }
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationX = offset.x
+                    translationY = offset.y
+                }
+        ) {
+            val w = size.width
+            val h = size.height
+
+            fun pos(id: String): Offset {
+                val frac = positions[id] ?: Offset(0.5f, 0.5f)
+                return Offset(frac.x * w, frac.y * h)
+            }
+
+            // --- corridors + links (under rooms) --------------------------------
+            for ((a, b) in edges) {
+                val p1 = pos(a)
+                val p2 = pos(b)
+                val bothOnPath = pathSet.isNotEmpty() && a in pathSet && b in pathSet
+                val bothCompleted = completedSet.isNotEmpty() && a in completedSet && b in completedSet
+
+                if (bothOnPath) {
+                    // White casing + coloured route stroke (remaining bright,
+                    // already-walked segments muted).
+                    drawLine(
+                        color = IndoorRouteCasing,
+                        start = p1,
+                        end = p2,
+                        strokeWidth = 16f,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = if (bothCompleted) IndoorRouteTraveled else IndoorRoute,
+                        start = p1,
+                        end = p2,
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
+                } else {
+                    // Soft corridor bed + thin muted centre line.
+                    drawLine(
+                        color = IndoorCorridorBed,
+                        start = p1,
+                        end = p2,
+                        strokeWidth = 12f,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = IndoorEdgeLine,
+                        start = p1,
+                        end = p2,
+                        strokeWidth = 2.5f,
+                        cap = StrokeCap.Round
+                    )
                 }
             }
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                translationX = offset.x
-                translationY = offset.y
+
+            // --- room cards ------------------------------------------------------
+            fun drawRoomCard(room: IndoorRoom, fill: Color, stroke: Color, strokeW: Float) {
+                val topLeft = Offset(room.center.x - room.width / 2f, room.center.y - room.height / 2f)
+                drawRoundRect(
+                    color = fill,
+                    topLeft = topLeft,
+                    size = Size(room.width, room.height),
+                    cornerRadius = CornerRadius(14f, 14f)
+                )
+                drawRoundRect(
+                    color = stroke,
+                    topLeft = topLeft,
+                    size = Size(room.width, room.height),
+                    cornerRadius = CornerRadius(14f, 14f),
+                    style = Stroke(width = strokeW)
+                )
             }
+
+            fun drawRoomLabel(room: IndoorRoom, name: String) {
+                val maxLabel = (room.width - 20f).toInt().coerceAtLeast(40)
+                val layout = textMeasurer.measure(
+                    text = name,
+                    style = roomNameStyleLocal,
+                    constraints = Constraints(maxWidth = maxLabel)
+                )
+                drawText(
+                    textLayoutResult = layout,
+                    topLeft = Offset(
+                        room.center.x - layout.size.width / 2f,
+                        room.center.y - layout.size.height / 2f
+                    )
+                )
+            }
+
+            fun drawChip(center: Offset, label: String, color: Color) {
+                val layout = textMeasurer.measure(label, style = chipTextStyle)
+                val cw = layout.size.width + 18f
+                val ch = layout.size.height + 10f
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(center.x - cw / 2f, center.y - ch / 2f),
+                    size = Size(cw, ch),
+                    cornerRadius = CornerRadius(ch / 2f, ch / 2f)
+                )
+                drawText(
+                    textLayoutResult = layout,
+                    topLeft = Offset(center.x - layout.size.width / 2f, center.y - layout.size.height / 2f)
+                )
+            }
+
+            for (room in rooms) {
+                val onPath = room.id in pathSet
+                val isActive = room.id == activeNodeId
+                val fill = when {
+                    onPath || isActive -> IndoorRoomOnPathFill
+                    else -> IndoorRoomFill
+                }
+                val stroke = when {
+                    isActive -> IndoorActiveRing
+                    room.id == startId -> IndoorStart
+                    room.id == endId -> IndoorDestination
+                    onPath -> IndoorRoute.copy(alpha = 0.45f)
+                    else -> IndoorRoomStroke
+                }
+                val strokeW = when {
+                    isActive || room.id == startId || room.id == endId -> 2.5f
+                    onPath -> 1.8f
+                    else -> 1.5f
+                }
+                drawRoomCard(room, fill, stroke, strokeW)
+                drawRoomLabel(room, nameById[room.id] ?: room.id)
+            }
+
+            // --- status rings + chips (drawn last so they sit on top) ------------
+            for (room in rooms) {
+                val id = room.id
+                if (id == activeNodeId) {
+                    drawCircle(
+                        color = IndoorActiveRing.copy(alpha = 0.18f),
+                        radius = maxOf(room.width, room.height) / 2f + 10f,
+                        center = room.center
+                    )
+                    drawCircle(
+                        color = IndoorActiveRing,
+                        radius = maxOf(room.width, room.height) / 2f + 6f,
+                        center = room.center,
+                        style = Stroke(width = 3f)
+                    )
+                    drawChip(
+                        center = Offset(room.center.x, room.center.y - room.height / 2f - 16f),
+                        label = "Now",
+                        color = IndoorActiveRing
+                    )
+                }
+                if (id == startId) {
+                    drawCircle(
+                        color = IndoorStart,
+                        radius = 7f,
+                        center = Offset(room.center.x, room.center.y + room.height / 2f + 12f)
+                    )
+                    drawCircle(
+                        color = Color.White,
+                        radius = 3f,
+                        center = Offset(room.center.x, room.center.y + room.height / 2f + 12f)
+                    )
+                    drawChip(
+                        center = Offset(room.center.x, room.center.y - room.height / 2f - 16f),
+                        label = "Start",
+                        color = IndoorStart
+                    )
+                }
+                if (id == endId) {
+                    drawCircle(
+                        color = IndoorDestination,
+                        radius = 7f,
+                        center = Offset(room.center.x, room.center.y + room.height / 2f + 12f)
+                    )
+                    drawCircle(
+                        color = Color.White,
+                        radius = 3f,
+                        center = Offset(room.center.x, room.center.y + room.height / 2f + 12f)
+                    )
+                    drawChip(
+                        center = Offset(room.center.x, room.center.y - room.height / 2f - 16f),
+                        label = "End",
+                        color = IndoorDestination
+                    )
+                }
+            }
+        }
+
+        IndoorMapLegend(
+            Modifier
+                .align(Alignment.TopStart)
+                .padding(12.dp)
+        )
+    }
+}
+
+/** Measured room card geometry for one venue on the indoor canvas. */
+private data class IndoorRoom(
+    val id: String,
+    val center: Offset,
+    val width: Float,
+    val height: Float
+)
+
+/**
+ * Compact fixed legend for the indoor map. Lives outside the zoomable canvas
+ * so it stays readable at any zoom level.
+ */
+@Composable
+private fun IndoorMapLegend(modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = Color.White.copy(alpha = 0.94f),
+        shadowElevation = 3.dp,
+        border = BorderStroke(1.dp, CardBorder),
+        modifier = modifier.testTag("indoor-map-legend")
     ) {
-        val w = size.width
-        val h = size.height
-
-        fun pos(id: String): Offset {
-            val frac = positions[id] ?: Offset(0.5f, 0.5f)
-            return Offset(frac.x * w, frac.y * h)
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+            LegendRow(IndoorStart, "Start")
+            LegendRow(IndoorRoute, "Route")
+            LegendRow(IndoorDestination, "Destination")
+            LegendRow(IndoorEdgeLine, "Walkway", isLine = true)
         }
+    }
+}
 
-        // edges
-        for ((a, b) in edges) {
-            val p1 = pos(a); val p2 = pos(b)
-            val onPath = pathSet.isNotEmpty() && pathSet.contains(a) && pathSet.contains(b)
-            drawLine(
-                color = if (onPath) pathColor else edgeColor,
-                start = p1,
-                end = p2,
-                strokeWidth = if (onPath) 8f else 3f
-            )
+@Composable
+private fun LegendRow(color: Color, label: String, isLine: Boolean = false) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 2.dp)
+    ) {
+        if (isLine) {
+            Canvas(Modifier.size(width = 14.dp, height = 6.dp)) {
+                drawLine(
+                    color = color,
+                    start = Offset(0f, size.height / 2f),
+                    end = Offset(size.width, size.height / 2f),
+                    strokeWidth = 4f,
+                    cap = StrokeCap.Round
+                )
+            }
+        } else {
+            Canvas(Modifier.size(10.dp)) {
+                drawCircle(color = color)
+            }
         }
-
-        // nodes
-        for (v in map.venues) {
-            val p = pos(v.id)
-            val isOnPath = pathSet.isNotEmpty() && pathSet.contains(v.id)
-            drawCircle(color = Color.White, radius = 14f, center = p)
-            drawCircle(
-                color = if (isOnPath) pathColor else Color(0xFF9C93C2),
-                radius = 10f,
-                center = p
-            )
-        }
-
-        // start / destination / active-step labels with a white pill behind
-        for ((id, name) in labels) {
-            val p = pos(id)
-            val layout = textMeasurer.measure(name, style = labelStyle)
-            val pillPad = 8f
-            val pillW = layout.size.width + pillPad * 2
-            val pillH = layout.size.height + pillPad * 2
-            val pillTopLeft = Offset(p.x - pillW / 2f, p.y - 20f - pillH)
-            drawRoundRect(
-                color = Color.White.copy(alpha = 0.92f),
-                topLeft = pillTopLeft,
-                size = androidx.compose.ui.geometry.Size(pillW, pillH),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f, 8f)
-            )
-            drawText(
-                textMeasurer = textMeasurer,
-                text = name,
-                style = labelStyle,
-                topLeft = Offset(pillTopLeft.x + pillPad, pillTopLeft.y + pillPad)
-            )
-        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = NavyText
+        )
     }
 }
 

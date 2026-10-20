@@ -111,4 +111,16 @@ object NavigationUiLogic {
     /** True when navigation mode has consumed every step. */
     fun hasArrived(currentIndex: Int, stepCount: Int): Boolean =
         stepCount > 0 && currentIndex >= stepCount - 1
+
+    /**
+     * Node ids already walked on the ordered route [pathIds] when navigation
+     * is sitting on [activeNodeId]. Empty when not navigating or when the
+     * active node is the start (nothing completed yet). Used to mute the
+     * traveled portion of the indoor route while the remainder stays bright.
+     */
+    fun completedPathIds(pathIds: List<String>, activeNodeId: String?): Set<String> {
+        if (activeNodeId == null) return emptySet()
+        val index = pathIds.indexOf(activeNodeId)
+        return if (index <= 0) emptySet() else pathIds.take(index).toSet()
+    }
 }

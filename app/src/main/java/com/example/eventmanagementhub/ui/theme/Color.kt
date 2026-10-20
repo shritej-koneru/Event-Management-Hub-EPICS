@@ -18,3 +18,17 @@ val IconOrangeGradient = Brush.linearGradient(listOf(Color(0xFFFBBF24), Color(0x
 // Card background white gradient (Person 1's EventCardWhiteGradient)
 val EventCardWhiteGradient =
     Brush.linearGradient(listOf(Color(0xFFFFFFFF), Color(0xFFFDFBFF)))
+
+// Indoor campus map palette (soft neutral "floor plan" look)
+val IndoorMapBackground = Color(0xFFF3F2EF)
+val IndoorCorridorBed = Color(0xFFE8E6E1)
+val IndoorEdgeLine = Color(0xFFA8A4B5)
+val IndoorRoute = PrimaryPurple
+val IndoorRouteCasing = Color(0xFFFFFFFF)
+val IndoorRouteTraveled = Color(0xFFC4B5FD)
+val IndoorRoomFill = Color(0xFFFFFFFF)
+val IndoorRoomStroke = Color(0xFFE2DFEA)
+val IndoorRoomOnPathFill = Color(0xFFEDE9FE)
+val IndoorStart = Color(0xFF22C55E)
+val IndoorDestination = Color(0xFFE11D48)
+val IndoorActiveRing = PrimaryPurple

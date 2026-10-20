@@ -5,6 +5,21 @@ the time of handover. Nothing here is invented.
 
 ## Unreleased (integration, 2026-10-20)
 
+### Changed (Android — indoor campus map visual redesign)
+
+- Indoor `CampusMap` rewritten for a clean Google-Maps-inspired floor plan:
+  soft neutral background; venues as white rounded room cards with centred
+  (ellipsised) names sized from measured text; corridors as soft beds under
+  every edge with thin muted centre-lines; selected route as a thick purple
+  path with white casing and rounded caps; green Start / red End chips and
+  dots; purple ring + "Now" chip for the active navigation step; traveled
+  route segments mute while the remainder stays bright
+- Fixed non-zooming corner legend (Start / Route / Destination / Walkway)
+- Graph topology, positions and distances still come only from
+  `GET /api/navigation/map` — nothing re-wired or invented
+- `NavigationUiLogic.completedPathIds` (pure) + 4 unit tests for route
+  muting; Indoor/Outdoor switch, search, sheet and Outdoor OSM map unchanged
+
 ### Added (Android — outdoor map home on VR Siddhartha campus)
 
 - Outdoor map now opens centred on **VR Siddhartha Engineering College**
