@@ -98,6 +98,12 @@ fun MapScreen(
     var locationDenied by remember { mutableStateOf(false) }
     val deviceLocation = remember { DeviceLocation(context) }
     val outdoorController = remember { OutdoorMapController() }
+    // Real campus landmark (VR Siddhartha) — outdoor map home centre + a
+    // searchable destination that needs no backend venue id.
+    val collegePoint = remember {
+        GeoPoint(NavigationUiLogic.COLLEGE_LAT, NavigationUiLogic.COLLEGE_LNG)
+    }
+    var collegeSelected by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -187,12 +193,14 @@ fun MapScreen(
     val searchResults = remember(venues, query) {
         NavigationUiLogic.searchVenues(venues, query)
     }
+    val collegeMatch = remember(query) { NavigationUiLogic.collegeMatches(query) }
     val destName: String = to?.let { id -> venues.firstOrNull { it.id == id }?.name }
         ?: path?.nodes?.lastOrNull()?.name
         ?: ""
 
     fun selectDestination(id: String) {
         to = id
+        collegeSelected = false
         query = ""
         navActive = false
         navFinished = false
@@ -200,8 +208,22 @@ fun MapScreen(
         runPath(from, id)
     }
 
+    fun selectCollegeDestination() {
+        query = ""
+        to = null
+        path = null
+        error = null
+        collegeSelected = true
+        navActive = false
+        navFinished = false
+        stepIndex = 0
+        mode = MapMode.Outdoor
+        outdoorController.recenter(collegePoint, NavigationUiLogic.COLLEGE_ZOOM)
+    }
+
     fun clearDestination() {
         to = null
+        collegeSelected = false
         path = null
         error = null
         navActive = false
@@ -256,7 +278,7 @@ fun MapScreen(
                 modifier = Modifier.testTag("map-search"),
                 onSearch = { }
             )
-            if (query.isNotBlank() && searchResults.isNotEmpty()) {
+            if (query.isNotBlank() && (searchResults.isNotEmpty() || collegeMatch)) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -273,6 +295,36 @@ fun MapScreen(
                             .background(EventCardWhiteGradient)
                             .padding(vertical = 4.dp)
                     ) {
+                        if (collegeMatch) {
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectCollegeDestination() }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                                    .testTag("map-search-college"),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Place,
+                                    contentDescription = null,
+                                    tint = NavyText
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        NavigationUiLogic.COLLEGE_NAME,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = NavyText,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        NavigationUiLogic.COLLEGE_ADDRESS,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MutedText
+                                    )
+                                }
+                            }
+                        }
                         searchResults.take(4).forEach { v ->
                             Row(
                                 Modifier
@@ -358,7 +410,17 @@ fun MapScreen(
                 MapCircleButton(Icons.Default.MyLocation, "My location", "map-recenter") {
                     if (mode == MapMode.Outdoor) {
                         ensureMyLocation()
-                        outdoorController.recenter(myLocation)
+                        // With a fix already: pan to the user. Without one:
+                        // stay/recentre on the college (async fix only updates
+                        // the green marker — it never replaces the college).
+                        if (myLocation != null) {
+                            outdoorController.recenter(myLocation, 16.0)
+                        } else {
+                            outdoorController.recenter(
+                                collegePoint,
+                                NavigationUiLogic.COLLEGE_ZOOM
+                            )
+                        }
                     } else {
                         mapScale = 1f
                         mapOffset = Offset.Zero
@@ -447,6 +509,12 @@ fun MapScreen(
                     to != null && mode == MapMode.Outdoor -> OutdoorRoutePanel(
                         destName = destName,
                         onOpenMaps = { openInGoogleMaps(destName) },
+                        onClear = ::clearDestination
+                    )
+
+                    collegeSelected && mode == MapMode.Outdoor -> OutdoorRoutePanel(
+                        destName = NavigationUiLogic.COLLEGE_NAME,
+                        onOpenMaps = { openInGoogleMaps(NavigationUiLogic.COLLEGE_NAME) },
                         onClear = ::clearDestination
                     )
 

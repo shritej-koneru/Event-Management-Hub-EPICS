@@ -16,6 +16,32 @@ object NavigationUiLogic {
     /** Standard walking pace used to estimate minutes from the backend's metres. */
     const val WALKING_SPEED_M_PER_S = 1.2
 
+    // ---- campus landmark: VR Siddhartha Engineering College (real coords) --
+    // Provided by the campus (Kanuru, Vijayawada). Used as the outdoor map's
+    // home centre and as a searchable destination. Not invented here.
+
+    const val COLLEGE_NAME = "VR Siddhartha Engineering College"
+    const val COLLEGE_ADDRESS = "Kanuru, Vijayawada, Andhra Pradesh 520007"
+    const val COLLEGE_LAT = 16.485277
+    const val COLLEGE_LNG = 80.692780
+
+    /** Home zoom for the outdoor map: street-level around the college. */
+    const val COLLEGE_ZOOM = 16.5
+
+    /**
+     * True when [query] should surface the college as an outdoor destination.
+     * Matches the college name, address, or common short aliases
+     * (case-insensitive substring; blank queries never match).
+     */
+    fun collegeMatches(query: String): Boolean {
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) return false
+        return COLLEGE_NAME.lowercase().contains(q) ||
+            COLLEGE_ADDRESS.lowercase().contains(q) ||
+            listOf("vr siddhartha", "velagapudi", "siddhartha engineering")
+                .any { it.contains(q) }
+    }
+
     /**
      * Filters the backend venue list for the search box. Matches display name
      * or venue id (case-insensitive substring); results ranked name-prefix

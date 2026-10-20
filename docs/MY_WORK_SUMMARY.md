@@ -242,6 +242,16 @@ A pure Kotlin object with no Android types, so unit tests run without a device:
 
 ## 5. Verified test results
 
+### 2026-10-20 — outdoor map home on VR Siddhartha campus (`integration`)
+
+Outdoor mode opens centred on VR Siddhartha Engineering College (real
+coordinates `16.485277, 80.692780`, zoom 16.5) with a labelled college
+marker distinct from the user's green location fix. The college is offered
+as a searchable outdoor destination (`collegeMatches` on name/address/
+aliases); selecting it recentres on campus and hands directions off to an
+external maps app — no invented routes or distances. Google Maps key
+requirement remains removed. Indoor navigation unchanged.
+
 ### 2026-10-20 — outdoor map: OpenStreetMap migration (`integration`)
 
 Outdoor mode now renders OpenStreetMap raster tiles through **osmdroid

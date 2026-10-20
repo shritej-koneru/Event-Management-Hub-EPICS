@@ -45,6 +45,15 @@ outdoor layer shows real OpenStreetMap tiles through
 (`org.osmdroid:osmdroid-android` 6.1.20, Apache-2.0). **No Google Maps API
 key, Google Cloud project, billing account or credit card is required.**
 
+- **Home view:** the map opens centred on **VR Siddhartha Engineering
+  College** (Kanuru, Vijayawada — real campus coordinates
+  `16.485277, 80.692780`) at zoom 16.5, with a labelled college marker.
+  The user's own location (when permission is granted) is a separate green
+  "You are here" marker and is never substituted for the college.
+- **Search:** typing a college alias (e.g. "VR", "Siddhartha", "Kanuru")
+  offers the college as a destination; selecting it switches to Outdoor and
+  recentres on campus. Directions still hand off to an external maps app —
+  the app does not invent walking routes or distances for the college.
 - **Tile provider:** OpenStreetMap's default "Mapnik" raster tiles
   (`tile.openstreetmap.org`), fetched on demand and cached on disk by
   osmdroid.
@@ -63,7 +72,7 @@ key, Google Cloud project, billing account or credit card is required.**
 Outdoor turn-by-turn is still handed to the user's external maps app
 (Google Maps, or any browser that handles the URL) via a deep link — the app
 does not run routing itself, and the backend holds no outdoor coordinates
-for venues.
+for indoor venues.
 
 ### Tests
 

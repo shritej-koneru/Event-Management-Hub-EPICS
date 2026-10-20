@@ -86,6 +86,32 @@ class NavigationUiLogicTest {
         )
     }
 
+    // ---- college landmark ------------------------------------------------
+
+    @Test
+    fun `college coordinates match the real campus`() {
+        assertEquals(16.485277, NavigationUiLogic.COLLEGE_LAT, 1e-6)
+        assertEquals(80.692780, NavigationUiLogic.COLLEGE_LNG, 1e-6)
+        assertEquals("VR Siddhartha Engineering College", NavigationUiLogic.COLLEGE_NAME)
+    }
+
+    @Test
+    fun `college search matches name address and aliases`() {
+        assertTrue(NavigationUiLogic.collegeMatches("VR"))
+        assertTrue(NavigationUiLogic.collegeMatches("siddhartha"))
+        assertTrue(NavigationUiLogic.collegeMatches("velagapudi"))
+        assertTrue(NavigationUiLogic.collegeMatches("kanuru"))
+        assertTrue(NavigationUiLogic.collegeMatches("engineering college"))
+        assertTrue(NavigationUiLogic.collegeMatches("  College  "))
+    }
+
+    @Test
+    fun `college search ignores blank and unrelated queries`() {
+        assertTrue(!NavigationUiLogic.collegeMatches(""))
+        assertTrue(!NavigationUiLogic.collegeMatches("    "))
+        assertTrue(!NavigationUiLogic.collegeMatches("gymn"))
+    }
+
     // ---- step progression ------------------------------------------------
 
     @Test

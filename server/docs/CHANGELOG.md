@@ -5,6 +5,22 @@ the time of handover. Nothing here is invented.
 
 ## Unreleased (integration, 2026-10-20)
 
+### Added (Android — outdoor map home on VR Siddhartha campus)
+
+- Outdoor map now opens centred on **VR Siddhartha Engineering College**
+  (Kanuru, Vijayawada — real coordinates `16.485277, 80.692780`, zoom 16.5)
+  with a labelled college marker (distinct colour from the user's green
+  "You are here" fix, which still comes only from `DeviceLocation`).
+- College is a searchable destination (`NavigationUiLogic.collegeMatches`:
+  name/address/aliases). Selecting it switches to Outdoor, recentres on
+  campus, and offers the existing external maps-app directions deep link —
+  no invented routes, distances or ETAs.
+- Outdoor recenter button: pans to the user fix when available, otherwise
+  back to the college. Indoor mode, venue graph, routes, bottom sheet and
+  app navigation unchanged. `NavigationUiLogicTest` +3 college tests.
+- Google Maps key requirement remains fully removed (no `MAPS_API_KEY`,
+  no Play Services dependency).
+
 ### Changed (Android — outdoor map: Google Maps → OpenStreetMap)
 
 - Outdoor map layer now uses **osmdroid 6.1.20** (OpenStreetMap raster tiles)
