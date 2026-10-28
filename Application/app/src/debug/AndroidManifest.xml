@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only (#14): re-declare the test activities as exported so
+     `adb shell am start -n com.epics.bitchat/...` can launch them for
+     CI/automation. Release builds keep them non-exported (main manifest). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <activity
+            android:name="com.epics.bitchat.ui.TestHubActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+        <activity
+            android:name="com.epics.bitchat.ui.test.RoutingTestActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+        <activity
+            android:name="com.epics.bitchat.ui.test.PositioningTestActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+        <activity
+            android:name="com.epics.bitchat.ui.test.BlePairTestActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+        <activity
+            android:name="com.epics.bitchat.ui.test.HopTestActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+    </application>
+
+</manifest>

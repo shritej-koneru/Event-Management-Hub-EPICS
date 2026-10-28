@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Node name"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/setting_node_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:inputType="text"
+            android:hint="Phone A" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Simulator node count"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/setting_node_count"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:inputType="number" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Packet loss (%)"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/setting_loss"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:inputType="number" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Transport"
+            android:textSize="14sp" />
+
+        <RadioGroup
+            android:id="@+id/setting_transport"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="4dp">
+
+            <RadioButton
+                android:id="@+id/setting_transport_sim"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Simulator (in-process mesh)" />
+
+            <RadioButton
+                android:id="@+id/setting_transport_ble"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Real BLE advertisements" />
+
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Users as nodes"
+            android:textSize="14sp" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/setting_relay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Relay other users' messages (act as a hop)" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/setting_auto_announce"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Auto-announce my venue (every phone becomes a navigation beacon)" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="12sp"
+            android:text="Only beacon-backed positions are announced — mesh-relayed hearsay is never rebroadcast, and a manual announcement below always wins." />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Announce my venue over the mesh (navigation beacon) — overrides auto-announce"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <EditText
+                android:id="@+id/setting_venue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:inputType="text"
+                android:hint="e.g. Hall 2 (blank = clear pin)" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/setting_announce"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Announce" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="ai-service URL for server location (Navigate tab compares it with the on-device estimate; blank = off)"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/setting_server_url"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:inputType="textUri"
+            android:textSize="13sp"
+            android:hint="e.g. 192.168.1.5:8000 (same Wi-Fi as this PC)"
+            android:imeOptions="actionDone"
+            android:maxLines="1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/setting_save"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Save and restart mesh" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/setting_reset_log"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Clear traffic log" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/setting_test_hub"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Open test hub" />
+
+    </LinearLayout>
+</ScrollView>
