@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+
+    <!-- Real-test mode in the test hub calls the FastAPI ai-service over HTTP. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
+        android:theme="@style/Theme.BitChatMesh">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Full-screen test hub opened from Settings → Tests. -->
+        <activity
+            android:name=".ui.TestHubActivity"
+            android:exported="false" />
+
+        <!-- Internet-backhaul entry: server pushes are flooded into the BLE
+             mesh from here (also used by the demo/test harness). -->
+        <receiver
+            android:name=".mesh.IngestReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.epics.bitchat.INGEST" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Person 3 test screens: one per backend process, merged away later. -->
+        <activity
+            android:name=".ui.test.RoutingTestActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.test.PositioningTestActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.test.BlePairTestActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.test.HopTestActivity"
+            android:exported="false" />
+
+        <service
+            android:name=".service.MeshTransportService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the BitChat mesh engine and demo running in the background" />
+        </service>
+    </application>
+
+</manifest>

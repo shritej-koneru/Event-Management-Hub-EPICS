@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_console"
+        android:icon="@drawable/ic_console"
+        android:title="Console" />
+    <item
+        android:id="@+id/nav_peers"
+        android:icon="@drawable/ic_peers"
+        android:title="Peers" />
+    <item
+        android:id="@+id/nav_send"
+        android:icon="@drawable/ic_send"
+        android:title="Send" />
+    <item
+        android:id="@+id/nav_navigation"
+        android:icon="@drawable/ic_navigation"
+        android:title="Navigate" />
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="Settings" />
+</menu>
