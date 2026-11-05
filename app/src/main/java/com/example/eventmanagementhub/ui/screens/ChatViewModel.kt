@@ -188,7 +188,10 @@ class ChatViewModel(
                     val venue = obj?.optString("venue")?.takeIf { it.isNotBlank() }
                     val body = if (venue != null) "🔔 $title — $venue" else "🔔 $title"
                     Log.i(TAG, "event broadcast: $title @ $venue")
-                    pushAnnouncement(Announcement(id = 0, room = "", message = body))
+                    // The stored row id tells a manager's deliberate repeat apart from a
+                    // duplicate delivery of the same broadcast (0 when the server sent none).
+                    val rowId = obj?.optJSONObject("announcement")?.optLong("id", 0L) ?: 0L
+                    pushAnnouncement(Announcement(id = rowId, room = "", message = body))
                     prependSystemMessage(
                         if (venue != null) "New announcement at $venue: $title" else "New announcement: $title"
                     )
