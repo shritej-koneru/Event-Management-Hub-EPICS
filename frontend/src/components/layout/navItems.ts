@@ -1,11 +1,4 @@
-import {
-  CalendarDays,
-  CalendarHeart,
-  Home,
-  LayoutDashboard,
-  MessageCircle,
-  User,
-} from 'lucide-react'
+import { CalendarDays, LayoutDashboard, Map, Megaphone } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 export interface NavItem {
@@ -15,10 +8,8 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Home', icon: Home },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/events', label: 'Events', icon: CalendarDays },
-  { to: '/chat', label: 'Chat', icon: MessageCircle },
-  { to: '/my-events', label: 'My Events', icon: CalendarHeart },
-  { to: '/profile', label: 'Profile', icon: User },
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/map', label: 'Map', icon: Map },
+  { to: '/announcements', label: 'Announcements', icon: Megaphone },
 ]

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { api, setAuthToken, setUnauthorizedHandler } from '@/lib/api'
-import type { User } from '@/lib/types'
+import type { Role, User } from '@/lib/types'
 
-import { AuthContext } from './context'
+import { AuthContext, NotManagerError } from './context'
 import type { AuthState } from './context'
+
+const isManager = (role: Role) => role === 'organizer' || role === 'admin'
 
 const STORAGE_KEY = 'eventhub.token'
 
@@ -76,68 +78,30 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const accept = useCallback(
-    (res: AuthResponse) => {
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const res = await api<AuthResponse>('/auth/login', { method: 'POST', body: { email, password } })
+      if (!isManager(res.user.role)) {
+        // Never keep a student session in this console.
+        throw new NotManagerError()
+      }
       applyToken(res.token)
       setUser(res.user)
       setLoading(false)
-      // /auth/me carries the bookmark list; the login response does not.
-      api<{ user: User }>('/auth/me')
-        .then((me) => setUser(me.user))
-        .catch(() => undefined)
     },
     [applyToken],
   )
-
-  const login = useCallback(
-    async (email: string, password: string) => {
-      accept(await api<AuthResponse>('/auth/login', { method: 'POST', body: { email, password } }))
-    },
-    [accept],
-  )
-
-  const register = useCallback(
-    async (name: string, email: string, password: string) => {
-      accept(
-        await api<AuthResponse>('/auth/register', {
-          method: 'POST',
-          body: { name, email, password },
-        }),
-      )
-    },
-    [accept],
-  )
-
-  const toggleBookmark = useCallback(async (eventId: string) => {
-    const current = (await api<{ bookmarks: string[] }>('/auth/me/bookmarks')).bookmarks
-    const res = await api<{ bookmarks: string[] }>(`/auth/me/bookmarks/${encodeURIComponent(eventId)}`, {
-      method: current.includes(eventId) ? 'DELETE' : 'POST',
-    })
-    setUser((u) => (u ? { ...u, bookmarks: res.bookmarks } : u))
-  }, [])
-
-  const saveInterests = useCallback(async (interests: string[]) => {
-    const res = await api<{ user: User }>('/auth/me/interests', {
-      method: 'PUT',
-      body: { interests },
-    })
-    setUser((u) => (u ? { ...u, interests: res.user.interests } : u))
-  }, [])
 
   const value = useMemo<AuthState>(
     () => ({
       token,
       user,
       loading,
-      bookmarks: user?.bookmarks ?? [],
-      canManageEvents: user?.role === 'organizer' || user?.role === 'admin',
+      isManager: user ? isManager(user.role) : false,
       login,
-      register,
       logout,
-      toggleBookmark,
-      saveInterests,
     }),
-    [token, user, loading, login, register, logout, toggleBookmark, saveInterests],
+    [token, user, loading, login, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

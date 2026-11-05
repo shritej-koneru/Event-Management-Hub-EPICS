@@ -1,3 +1,7 @@
+/**
+ * All API shapes for the manager console live here. The /api/manage/* shapes follow
+ * server contract 1.4.0 (manager-api-spec); if the server deviates, fix it in this file.
+ */
 export type Role = 'student' | 'organizer' | 'admin'
 
 export interface User {
@@ -5,7 +9,7 @@ export interface User {
   name: string
   email: string
   role: Role
-  interests: string[]
+  interests?: string[]
   bookmarks?: string[]
 }
 
@@ -26,41 +30,63 @@ export interface EventItem {
   icon: string
 }
 
-export interface ScoredEvent {
-  event: EventItem
-  score: number
-  reason: string
+/** GET /api/manage/events item: normal event fields + createdBy, bookmarkCount. */
+export interface ManagedEvent extends EventItem {
+  createdBy?: string | null
+  bookmarkCount: number
 }
 
-export interface ChatMessage {
-  id: number
-  author: string
-  text: string
-  room: string | null
-  bot: boolean
-  ts: string
+/** GET /api/manage/overview */
+export interface Overview {
+  events: { total: number; upcoming: number; past: number }
+  bookmarks: number
+  announcements: number
+  venues: number
+  edges: number
 }
 
-export interface Announcement {
-  id: number
-  room: string
-  message: string
-  at: string
-  eventId?: string
-}
-
+/** Used for socket room joins. */
 export interface Venue {
   id: string
   name: string
+}
+
+/** GET /api/navigation/map */
+export interface MapVenue {
+  id: string
+  name: string
+  x: number
+  y: number
   neighbors?: string[]
 }
 
-/** Payload of the Socket.IO `event` broadcast. */
+export interface MapEdge {
+  from: string
+  to: string
+  distanceM: number
+}
+
+export interface CampusMap {
+  venues: MapVenue[]
+  edges: MapEdge[]
+}
+
+/** POST /api/manage/announcements -> { announcement } ; GET list items. */
+export interface ManagedAnnouncement {
+  id: number | string
+  room: string
+  message: string
+  at: string
+  eventId?: string | null
+  sentBy?: string | null
+}
+
+/** Payload of the Socket.IO `event` broadcast (events and manager announcements). */
 export interface EventBroadcast {
-  event: EventItem
-  title: string
-  venue: string
-  venueId: string
-  eventId: string
-  reason: 'created' | 'updated' | 'deleted'
+  title?: string
+  venue?: string
+  venueId?: string
+  eventId?: string
+  reason?: string
+  announcement?: { title?: string; message?: string }
 }
