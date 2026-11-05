@@ -199,3 +199,18 @@ export async function countAnnouncementsBy(sentBy = null) {
   );
   return rows[0].count;
 }
+
+/**
+ * Announcements an attendee of one event should see: those recorded for THAT
+ * event plus campus-wide (global, room NULL) ones. Never another event's.
+ */
+export async function listAnnouncementsForEventFeed(eventId, limit = 100) {
+  const { rows } = await getPool().query(
+    `SELECT ${MANAGED_COLUMNS} FROM announcements
+      WHERE event_id = $1 OR (room IS NULL AND event_id IS NULL)
+      ORDER BY id DESC
+      LIMIT $2`,
+    [eventId, limit]
+  );
+  return rows.map((row) => ({ ...serializeManaged(row), global: row.room == null }));
+}

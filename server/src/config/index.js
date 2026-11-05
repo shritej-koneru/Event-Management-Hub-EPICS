@@ -96,7 +96,10 @@ export const config = {
   // 1.5.0 added campus geo bounds + per-venue lat/lng/kind/description/geoPlaced
   // (migration 008), POST/PUT /manage/venues by lat/lng with connectToNearest,
   // repeatable manager announcements, and admin-only /manage/users.
-  contractVersion: '1.5.0',
+  // 1.6.0 added GET /events/:id/announcements, the /support attendee help
+  // desk, /manage/support/* and the user:/managers: socket rooms + support:*
+  // events (migration 009).
+  contractVersion: '1.6.0',
 
   jwt: {
     secret: resolveJwtSecret(),

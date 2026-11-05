@@ -5,6 +5,7 @@ import aiRoutes from './aiRoutes.js';
 import navigationRoutes from './navigationRoutes.js';
 import chatRoutes from './chatRoutes.js';
 import manageRoutes from './manageRoutes.js';
+import supportRoutes from './supportRoutes.js';
 
 /**
  * All versioned API routes.
@@ -21,5 +22,6 @@ router.use('/ai', aiRoutes);
 router.use('/navigation', navigationRoutes);
 router.use('/chat', chatRoutes);
 router.use('/manage', manageRoutes);
+router.use('/support', supportRoutes);
 
 export default router;

@@ -12,9 +12,14 @@ import {
   announcementIdParamSchema,
   adminCreateUserSchema,
   adminUpdateUserSchema,
-  userIdParamSchema
+  userIdParamSchema,
+  supportTicketIdParamSchema,
+  supportMessageSchema,
+  managerSupportTicketsQuerySchema,
+  supportStatusSchema
 } from '../middleware/validators.js';
 import * as manage from '../controllers/manageController.js';
+import * as support from '../controllers/supportController.js';
 
 /**
  * Event-manager console API. Every route needs a JWT and an organizer/admin
@@ -43,6 +48,25 @@ router.delete(
   '/announcements/:id',
   validate({ params: announcementIdParamSchema }),
   manage.deleteAnnouncement
+);
+
+// Help desk: organizers see chats of events they created, admins all.
+router.get('/support/events', support.supportEvents);
+router.get('/support/tickets', validate({ query: managerSupportTicketsQuerySchema }), support.managerTickets);
+router.get(
+  '/support/tickets/:id/messages',
+  validate({ params: supportTicketIdParamSchema }),
+  support.managerThread
+);
+router.post(
+  '/support/tickets/:id/messages',
+  validate({ params: supportTicketIdParamSchema, body: supportMessageSchema }),
+  support.managerReply
+);
+router.put(
+  '/support/tickets/:id',
+  validate({ params: supportTicketIdParamSchema, body: supportStatusSchema }),
+  support.managerSetStatus
 );
 
 // Accounts: admin only (organizers get 403 FORBIDDEN).

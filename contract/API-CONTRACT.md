@@ -4,7 +4,12 @@
 > against these shapes and names. If a field changes here, update this file FIRST,
 > then bump `contractVersion` in the `/ping` response.
 
-- **Contract version: `1.5.0`** (`/ping` -> `contractVersion`; previously `1.4.0`).
+- **Contract version: `1.6.0`** (`/ping` -> `contractVersion`; previously `1.5.0`).
+  - **1.6.0 adds (additive for Android):** `GET /events/:id/announcements` (public; this event's
+    announcements plus global ones); the attendee help desk `/support/*` (own tickets only, needs the
+    event bookmarked -> `403 NOT_REGISTERED`); the manager help desk `/manage/support/*`; socket rooms
+    `user:<id>` / `managers:<id>` / `managers:all` and events `support:message`, `support:ticket`;
+    migration 009. Existing fields are unchanged. See section 6c.
   - **1.5.0 adds (additive for Android):** `bounds` on `GET /navigation/map` and per-venue
     `lat`, `lng`, `kind`, `description`, `geoPlaced` on `/navigation/map` and `/navigation/venues`;
     `POST`/`PUT /manage/venues` accept real `lat`/`lng` (`400 OUTSIDE_CAMPUS`, `connectToNearest`,
@@ -689,3 +694,52 @@ These are the codes the server actually returns:
 > There is no `BAD_CREDENTIALS` code — it is `INVALID_CREDENTIALS`. There is no
 > `FORBIDDEN` (403) response: authorisation failures surface as `AUTH_REQUIRED`
 > or `AUTH_INVALID_TOKEN` with 401.
+
+## 6c. Help desk and event announcements (1.6.0)
+All additive; migration 009 (`support_tickets`, `support_messages`).
+
+Shapes (camelCase):
+
+```
+Ticket  = { id, eventId, eventTitle, userId, userName, subject, status: "open"|"closed",
+            createdAt, updatedAt, lastMessageAt,
+            lastMessage: { body, senderRole, createdAt } | null, messageCount }
+Message = { id, ticketId, senderId, senderName, senderRole: "user"|"manager", body, createdAt, clientId? }
+```
+
+### `GET /api/events/:id/announcements` (public)
+`200 { announcements: [ { id, room, message, at, eventId, sentBy, global } ] }` newest first (max 100): rows for
+`:id` plus global announcements (`room: "all"`, `global: true`, `eventId: null`). Never another event's.
+`404 EVENT_NOT_FOUND`.
+
+### Attendee API `/api/support/*` (JWT; every role may use it as a user)
+| Request | Success | Errors |
+| --- | --- | --- |
+| `GET /support/tickets?eventId=` | `200 { tickets }` own tickets only, newest activity first | `401` |
+| `POST /support/tickets` `{ eventId, subject(1..120), message(1..1000), clientId? }` | `201 { ticket, message }` (same `clientId` resent: `200`, existing) | `400 VALIDATION_ERROR`, `403 NOT_REGISTERED` (event not bookmarked), `404 EVENT_NOT_FOUND`, `429 RATE_LIMITED` |
+| `GET /support/tickets/:id/messages` | `200 { ticket, messages }` oldest first | `404 TICKET_NOT_FOUND` (also for another user's ticket) |
+| `POST /support/tickets/:id/messages` `{ body(1..1000), clientId? }` | `201 { message }`; same `clientId`: `200` existing; a closed ticket is reopened (`status: "open"`) | `404 TICKET_NOT_FOUND`, `409 DUPLICATE_CLIENT_ID` (clientId used on another ticket), `429 RATE_LIMITED` |
+
+Throttle: 20 support messages / minute / user (creating a ticket counts), `429 RATE_LIMITED`.
+
+### Manager API `/api/manage/support/*` (organizer = events they created, admin = all)
+| Request | Success | Errors |
+| --- | --- | --- |
+| `GET /manage/support/events` | `200 { events: [ { id, title, date, venue, openCount, totalCount, lastMessageAt|null } ] }` every in-scope event incl. 0-chat, sorted by `lastMessageAt` desc nulls last then date | `403` student |
+| `GET /manage/support/tickets?eventId=&status=open\|closed\|all` | `200 { tickets }` (`eventId` required; `status` default `all`) | `400`, `403 FORBIDDEN` (organizer, not their event), `404 EVENT_NOT_FOUND` |
+| `GET /manage/support/tickets/:id/messages` | `200 { ticket, messages }` | `404 TICKET_NOT_FOUND` (also another organizer's ticket) |
+| `POST /manage/support/tickets/:id/messages` `{ body, clientId? }` | `201 { message }` with `senderRole: "manager"`; same `clientId`: `200` | `404`, `429` |
+| `PUT /manage/support/tickets/:id` `{ status: "open"\|"closed" }` | `200 { ticket }` | `400`, `404` |
+
+A manager reply does not reopen a closed ticket; only a user message does.
+
+### Realtime (default namespace `/` and `/announce`)
+On connect with a valid handshake token the server joins the socket to `user:<userId>`; organizers/admins also
+join `managers:<userId>`, admins also `managers:all` (role read from the DB at connect time; clients cannot
+join these rooms via `join`). After every successful write:
+
+- `support:message` `{ ticket: Ticket, message: Message }` -> `user:<ticket owner>`, `managers:<event creator>`, `managers:all`
+- `support:ticket` `{ ticket: Ticket }` (created, reopened by a user message, or status changed) -> same rooms
+
+Existing `event` announcement broadcasts are unchanged. Clients should refetch on these events and fall back
+to polling when the socket is down.

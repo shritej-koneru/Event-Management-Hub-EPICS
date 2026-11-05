@@ -353,3 +353,44 @@ export const adminCreateUserSchema = z.strictObject({
 export const adminUpdateUserSchema = z.strictObject({ role: userRole });
 
 export const userIdParamSchema = z.object({ id: z.string().trim().min(1).max(80) });
+
+
+/* -------------------------------------------------------------------------- */
+/* Help / support desk (/api/support, /api/manage/support)                     */
+/* -------------------------------------------------------------------------- */
+
+const supportClientId = z
+  .string({ error: 'clientId must be a string' })
+  .trim()
+  .min(1, 'clientId must not be empty')
+  .max(64, 'clientId must be at most 64 characters')
+  .optional();
+
+export const supportTicketIdParamSchema = z.object({
+  id: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER)
+});
+
+export const supportTicketQuerySchema = z.object({
+  eventId: eventIdParamSchema.shape.id.optional()
+});
+
+export const createSupportTicketSchema = z.strictObject({
+  eventId: eventIdParamSchema.shape.id,
+  subject: z.string({ error: 'subject is required' }).trim().min(1, 'subject is required').max(120),
+  message: z.string({ error: 'message is required' }).trim().min(1, 'message is required').max(1000),
+  clientId: supportClientId
+});
+
+export const supportMessageSchema = z.strictObject({
+  body: z.string({ error: 'body is required' }).trim().min(1, 'body is required').max(1000),
+  clientId: supportClientId
+});
+
+export const managerSupportTicketsQuerySchema = z.object({
+  eventId: eventIdParamSchema.shape.id,
+  status: z.enum(['open', 'closed', 'all'], { error: 'status must be open, closed or all' }).default('all')
+});
+
+export const supportStatusSchema = z.strictObject({
+  status: z.enum(['open', 'closed'], { error: 'status must be open or closed' })
+});

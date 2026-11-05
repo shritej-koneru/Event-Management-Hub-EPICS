@@ -5,7 +5,7 @@ Android emulator → host: `http://10.0.2.2:3000` (or `adb reverse tcp:3000 tcp:
 
 All errors: `{ "error": "<human message>", "code": "<CODE>" }` with sibling keys.
 
-Contract version reported by `/ping`: `1.5.0`.
+Contract version reported by `/ping`: `1.6.0`.
 
 ---
 
@@ -20,7 +20,7 @@ curl -s http://localhost:3000/ping
 ```
 
 ```json
-{ "status": "ok", "ok": true, "service": "emh-server", "contractVersion": "1.5.0",
+{ "status": "ok", "ok": true, "service": "emh-server", "contractVersion": "1.6.0",
   "database": "connected", "venues": [ { "id": "entrance", "name": "Entrance" } ] }
 ```
 
@@ -344,3 +344,53 @@ Handshake auth: `auth: { token: "<jwt>" }` optional for listening, required for 
 ### Event auto-announcement wording (1.4.0)
 
 `event` socket title: `New event: <title> at <venue>` (created), `Updated: <title>`, `Cancelled: <title>`. The stored message keeps the `[<eventId>]` suffix.
+
+## Help desk and event announcements (1.6.0)
+
+All additive; migration 009 (`support_tickets`, `support_messages`).
+
+Shapes (camelCase):
+
+```
+Ticket  = { id, eventId, eventTitle, userId, userName, subject, status: "open"|"closed",
+            createdAt, updatedAt, lastMessageAt,
+            lastMessage: { body, senderRole, createdAt } | null, messageCount }
+Message = { id, ticketId, senderId, senderName, senderRole: "user"|"manager", body, createdAt, clientId? }
+```
+
+### `GET /api/events/:id/announcements` (public)
+`200 { announcements: [ { id, room, message, at, eventId, sentBy, global } ] }` newest first (max 100): rows for
+`:id` plus global announcements (`room: "all"`, `global: true`, `eventId: null`). Never another event's.
+`404 EVENT_NOT_FOUND`.
+
+### Attendee API `/api/support/*` (JWT; every role may use it as a user)
+| Request | Success | Errors |
+| --- | --- | --- |
+| `GET /support/tickets?eventId=` | `200 { tickets }` own tickets only, newest activity first | `401` |
+| `POST /support/tickets` `{ eventId, subject(1..120), message(1..1000), clientId? }` | `201 { ticket, message }` (same `clientId` resent: `200`, existing) | `400 VALIDATION_ERROR`, `403 NOT_REGISTERED` (event not bookmarked), `404 EVENT_NOT_FOUND`, `429 RATE_LIMITED` |
+| `GET /support/tickets/:id/messages` | `200 { ticket, messages }` oldest first | `404 TICKET_NOT_FOUND` (also for another user's ticket) |
+| `POST /support/tickets/:id/messages` `{ body(1..1000), clientId? }` | `201 { message }`; same `clientId`: `200` existing; a closed ticket is reopened (`status: "open"`) | `404 TICKET_NOT_FOUND`, `409 DUPLICATE_CLIENT_ID` (clientId used on another ticket), `429 RATE_LIMITED` |
+
+Throttle: 20 support messages / minute / user (creating a ticket counts), `429 RATE_LIMITED`.
+
+### Manager API `/api/manage/support/*` (organizer = events they created, admin = all)
+| Request | Success | Errors |
+| --- | --- | --- |
+| `GET /manage/support/events` | `200 { events: [ { id, title, date, venue, openCount, totalCount, lastMessageAt|null } ] }` every in-scope event incl. 0-chat, sorted by `lastMessageAt` desc nulls last then date | `403` student |
+| `GET /manage/support/tickets?eventId=&status=open\|closed\|all` | `200 { tickets }` (`eventId` required; `status` default `all`) | `400`, `403 FORBIDDEN` (organizer, not their event), `404 EVENT_NOT_FOUND` |
+| `GET /manage/support/tickets/:id/messages` | `200 { ticket, messages }` | `404 TICKET_NOT_FOUND` (also another organizer's ticket) |
+| `POST /manage/support/tickets/:id/messages` `{ body, clientId? }` | `201 { message }` with `senderRole: "manager"`; same `clientId`: `200` | `404`, `429` |
+| `PUT /manage/support/tickets/:id` `{ status: "open"\|"closed" }` | `200 { ticket }` | `400`, `404` |
+
+A manager reply does not reopen a closed ticket; only a user message does.
+
+### Realtime (default namespace `/` and `/announce`)
+On connect with a valid handshake token the server joins the socket to `user:<userId>`; organizers/admins also
+join `managers:<userId>`, admins also `managers:all` (role read from the DB at connect time; clients cannot
+join these rooms via `join`). After every successful write:
+
+- `support:message` `{ ticket: Ticket, message: Message }` -> `user:<ticket owner>`, `managers:<event creator>`, `managers:all`
+- `support:ticket` `{ ticket: Ticket }` (created, reopened by a user message, or status changed) -> same rooms
+
+Existing `event` announcement broadcasts are unchanged. Clients should refetch on these events and fall back
+to polling when the socket is down.

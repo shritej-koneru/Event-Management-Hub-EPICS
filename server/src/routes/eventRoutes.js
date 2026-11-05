@@ -3,6 +3,7 @@ import { optionalAuth, requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createEventSchema, updateEventSchema, eventIdSchema, eventListQuerySchema, eventRouteQuerySchema } from '../middleware/validators.js';
 import * as events from '../controllers/eventController.js';
+import * as support from '../controllers/supportController.js';
 
 const router = Router();
 
@@ -44,6 +45,9 @@ router.get(
   validate({ params: eventIdSchema, query: eventRouteQuerySchema }),
   events.details
 );
+
+/** GET /api/events/:id/announcements -> 200 { announcements } (event-specific + global). Public. */
+router.get('/:id/announcements', validate({ params: eventIdSchema }), support.eventAnnouncements);
 
 // GET /api/events/:id -> 200 | 404
 router.get('/:id', optionalAuth, validate({ params: eventIdSchema }), events.detail);

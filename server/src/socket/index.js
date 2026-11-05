@@ -119,11 +119,11 @@ function registerNamespace(namespace) {
   namespace.use((socket, next) => {
     try {
       socket.data = { ...socket.data, ...resolveHandshakeAuth(socket.handshake.auth) };
-      next();
     } catch {
       // A token was supplied and it is not usable.
-      next(Object.assign(new Error('Invalid or expired token'), { data: { code: 'AUTH_INVALID_TOKEN' } }));
+      return next(Object.assign(new Error('Invalid or expired token'), { data: { code: 'AUTH_INVALID_TOKEN' } }));
     }
+    joinSupportRooms(socket).then(() => next(), () => next());
   });
 
   namespace.on('connection', (socket) => {
@@ -404,10 +404,55 @@ export function broadcastMapUpdated(io) {
   return payload;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Help desk realtime (contract 1.6.0)                                         */
+/* -------------------------------------------------------------------------- */
+
+export const userRoom = (userId) => `user:${userId}`;
+export const managersRoom = (userId) => `managers:${userId}`;
+export const MANAGERS_ALL_ROOM = 'managers:all';
+
+/**
+ * Joins the per-user / per-manager rooms from the VERIFIED handshake identity.
+ * The role is read from the database at connect time; the client can never
+ * name these rooms (`join` only accepts venue ids). Anonymous sockets join none.
+ */
+export async function joinSupportRooms(socket) {
+  const userId = socket.data?.userId;
+  if (!userId) return;
+  const user = await findUserById(userId);
+  if (!user) return;
+  socket.join(userRoom(user.id));
+  if (user.role === 'organizer' || user.role === 'admin') socket.join(managersRoom(user.id));
+  if (user.role === 'admin') socket.join(MANAGERS_ALL_ROOM);
+}
+
+function emitSupport(io, ticket, eventCreatedBy, name, payload) {
+  if (!io) return;
+  for (const ns of NAMESPACES) {
+    let target = io.of(ns).to(userRoom(ticket.userId)).to(MANAGERS_ALL_ROOM);
+    if (eventCreatedBy) target = target.to(managersRoom(eventCreatedBy));
+    target.emit(name, payload);
+  }
+}
+
+/** `support:message` { ticket, message } -> ticket owner, event creator, admins. */
+export function broadcastSupportMessage(io, ticket, message, eventCreatedBy) {
+  emitSupport(io, ticket, eventCreatedBy, 'support:message', { ticket, message });
+}
+
+/** `support:ticket` { ticket } (created / status changed). */
+export function broadcastSupportTicket(io, ticket, eventCreatedBy) {
+  emitSupport(io, ticket, eventCreatedBy, 'support:ticket', { ticket });
+}
+
 /** Wires every server -> socket broadcast hook onto `app.locals`. */
 export function bindSocketBroadcasts(app, io) {
   app.locals.io = io;
   app.locals.broadcastEvent = (event, options) => broadcastEventUpdate(io, event, options);
   app.locals.broadcastAnnouncement = (announcement, extra) => broadcastAnnouncement(io, announcement, extra);
   app.locals.broadcastMapUpdated = () => broadcastMapUpdated(io);
+  app.locals.broadcastSupportMessage = (ticket, message, creator) =>
+    broadcastSupportMessage(io, ticket, message, creator);
+  app.locals.broadcastSupportTicket = (ticket, creator) => broadcastSupportTicket(io, ticket, creator);
 }
