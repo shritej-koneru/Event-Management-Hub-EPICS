@@ -29,15 +29,19 @@ object AppContext {
 
 object SessionStore {
 
-    suspend fun token(context: Context): String? =
-        context.dataStore.data.first()[TOKEN_KEY]?.takeIf { it.isNotBlank() }
+    private val cipher by lazy { KeystoreTokenCipher() }
 
-    suspend fun save(context: Context, token: String) {
-        context.dataStore.edit { it[TOKEN_KEY] = token }
-    }
+    private fun vault(context: Context) = TokenVault(
+        cipher,
+        read = { context.dataStore.data.first()[TOKEN_KEY] },
+        // Keeps an empty value for "cleared" because DataStore rejects empty preferences.
+        write = { v -> context.dataStore.edit { it[TOKEN_KEY] = v } }
+    )
 
-    /** Clears the stored session. Keeps an empty value because DataStore rejects empty preferences. */
-    suspend fun clear(context: Context) {
-        context.dataStore.edit { it[TOKEN_KEY] = "" }
-    }
+    suspend fun token(context: Context): String? = vault(context).load()
+
+    suspend fun save(context: Context, token: String) = vault(context).save(token)
+
+    /** Clears the stored session. */
+    suspend fun clear(context: Context) = vault(context).clear()
 }
