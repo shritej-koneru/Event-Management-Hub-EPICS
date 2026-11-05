@@ -1,4 +1,4 @@
-import { CalendarDays, LayoutDashboard, Map, Megaphone, Users } from 'lucide-react'
+import { CalendarDays, LayoutDashboard, LifeBuoy, Map, Megaphone, Users } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 export interface NavItem {
@@ -7,6 +7,8 @@ export interface NavItem {
   icon: LucideIcon
   /** Only shown to admins. */
   adminOnly?: boolean
+  /** Show the open help-desk chat count. */
+  badge?: boolean
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -14,6 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/events', label: 'Events', icon: CalendarDays },
   { to: '/map', label: 'Map', icon: Map },
   { to: '/announcements', label: 'Announcements', icon: Megaphone },
+  { to: '/help-desk', label: 'Help desk', icon: LifeBuoy, badge: true },
   { to: '/accounts', label: 'Accounts', icon: Users, adminOnly: true },
 ]
 

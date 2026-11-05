@@ -105,6 +105,7 @@ export interface ManagedAnnouncement {
   at: string
   eventId?: string | null
   sentBy?: string | null
+  global?: boolean
 }
 
 /** Payload of the Socket.IO `event` broadcast (events and manager announcements). */
@@ -115,4 +116,45 @@ export interface EventBroadcast {
   eventId?: string
   reason?: string
   announcement?: { title?: string; message?: string }
+}
+
+// ---- Help desk / support (contract 1.6.0) --------------------------------
+export type TicketStatus = 'open' | 'closed'
+export type SenderRole = 'user' | 'manager'
+
+export interface SupportMessage {
+  id: number | string
+  ticketId: number | string
+  senderId: string | null
+  senderName: string
+  senderRole: SenderRole
+  body: string
+  createdAt: string
+  clientId?: string | null
+}
+
+export interface SupportTicket {
+  id: number | string
+  eventId: string
+  eventTitle: string
+  userId: string
+  userName: string
+  subject: string
+  status: TicketStatus
+  createdAt: string
+  updatedAt: string
+  lastMessageAt: string
+  lastMessage: { body: string; senderRole: SenderRole; createdAt: string } | null
+  messageCount: number
+}
+
+/** GET /api/manage/support/events item. */
+export interface SupportEventSummary {
+  id: string
+  title: string
+  date: string
+  venue: string
+  openCount: number
+  totalCount: number
+  lastMessageAt: string | null
 }

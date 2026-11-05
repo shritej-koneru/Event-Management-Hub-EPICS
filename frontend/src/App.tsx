@@ -8,6 +8,7 @@ import AccountsPage from '@/pages/AccountsPage'
 import AnnouncementsPage from '@/pages/AnnouncementsPage'
 import DashboardPage from '@/pages/DashboardPage'
 import EventsPage from '@/pages/EventsPage'
+import HelpDeskPage from '@/pages/HelpDeskPage'
 import LoginPage from '@/pages/LoginPage'
 import MapPage from '@/pages/MapPage'
 
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="events" element={<EventsPage />} />
         <Route path="map" element={<MapPage />} />
         <Route path="announcements" element={<AnnouncementsPage />} />
+        <Route path="help-desk" element={<HelpDeskPage />} />
         <Route path="accounts" element={<AdminOnly><AccountsPage /></AdminOnly>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

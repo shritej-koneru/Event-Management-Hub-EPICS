@@ -213,7 +213,10 @@ const CODE_MESSAGES: Record<string, string> = {
   CANNOT_DEMOTE_SELF: 'You cannot change your own role. Ask another admin.',
   EMAIL_TAKEN: 'An account with this email already exists.',
   USER_NOT_FOUND: 'That account no longer exists.',
-  RATE_LIMITED: 'Too many announcements. Wait a minute and try again.',
+  RATE_LIMITED: 'Too many requests. Wait a minute and try again.',
+  NOT_REGISTERED: 'That attendee is not registered for this event.',
+  EVENT_NOT_FOUND: 'That event no longer exists.',
+  TICKET_NOT_FOUND: 'That chat no longer exists.',
   NETWORK_ERROR: 'Cannot reach the server. Check your connection.',
 }
 

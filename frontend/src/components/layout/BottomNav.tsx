@@ -2,10 +2,13 @@ import { NavLink } from 'react-router-dom'
 
 import { useAuth } from '@/auth/useAuth'
 
+import { useSupportBadge } from '@/lib/useSupportBadge'
+
 import { navItemsFor } from './navItems'
 
 export default function BottomNav() {
   const { user } = useAuth()
+  const openChats = useSupportBadge()
   return (
     <nav className="fixed bottom-3 left-1/2 z-40 h-[72px] w-[calc(100%-24px)] max-w-[456px] -translate-x-1/2 rounded-[23px] bg-[rgba(255,255,255,0.97)] px-1.5 pb-[env(safe-area-inset-bottom)] shadow-[0_12px_35px_rgba(20,0,80,0.3)] lg:hidden">
       <div className="flex h-full items-center justify-around">
@@ -15,7 +18,7 @@ export default function BottomNav() {
             to={item.to}
             end={item.to === '/'}
             className={({ isActive }) =>
-              `flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[18px] py-2 text-[9px] font-bold transition-all ${
+              `relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[18px] py-2 text-[9px] font-bold transition-all ${
                 isActive
                   ? 'bg-gradient-to-br from-[#6746f5] to-[#8b4ef5] text-white shadow-[0_7px_17px_rgba(95,60,240,0.3)]'
                   : 'text-[#9995aa] hover:bg-[#f0ecff] hover:text-[#6246ea]'
@@ -24,6 +27,11 @@ export default function BottomNav() {
           >
             <item.icon className="h-[21px] w-[21px]" aria-hidden />
             {item.label}
+            {item.badge && openChats > 0 && (
+              <span className="absolute right-2 top-1 rounded-full bg-red-500 px-1.5 text-[9px] font-bold leading-4 text-white" aria-label={`${openChats} open chats`}>
+                {openChats}
+              </span>
+            )}
           </NavLink>
         ))}
       </div>

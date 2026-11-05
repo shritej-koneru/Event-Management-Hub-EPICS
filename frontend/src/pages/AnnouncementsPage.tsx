@@ -38,6 +38,7 @@ export default function AnnouncementsPage() {
   const [deleting, setDeleting] = useState<ManagedAnnouncement | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
+  const [filterEvent, setFilterEvent] = useState('')
   const [live, setLive] = useState<LiveItem[]>([])
 
   const sent = useFetch(
@@ -121,7 +122,15 @@ export default function AnnouncementsPage() {
     }
   }
 
-  const list = sent.data?.announcements ?? []
+  const all = sent.data?.announcements ?? []
+  const knownTitles = new Map(events.map((e) => [e.id, e.title]))
+  const filterOptions = [
+    ...events.map((e) => ({ id: e.id, label: e.title })),
+    ...[...new Set(all.map((a) => a.eventId).filter((id): id is string => !!id && !knownTitles.has(id)))].map(
+      (id) => ({ id, label: `Event ${id}` }),
+    ),
+  ]
+  const list = filterEvent ? all.filter((a) => a.eventId === filterEvent) : all
 
   return (
     <div className="flex flex-col px-[18px] pb-6 pt-[25px]">
@@ -217,6 +226,17 @@ export default function AnnouncementsPage() {
           <h2 id="sent-heading" className="text-lg font-bold text-[#5c3ce8]">
             Sent announcements
           </h2>
+          <label className="text-xs font-semibold">
+            Event
+            <select className={inputClass} value={filterEvent} onChange={(e) => setFilterEvent(e.target.value)}>
+              <option value="">All events</option>
+              {filterOptions.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
           {isAdmin && (
             <label className="text-xs font-semibold">
               Show
@@ -229,7 +249,9 @@ export default function AnnouncementsPage() {
         </div>
         {sent.error && <ErrorNote>{sent.error}</ErrorNote>}
         {sent.loading && <Loading />}
-        {!sent.loading && !sent.error && list.length === 0 && <Empty>Nothing sent yet.</Empty>}
+        {!sent.loading && !sent.error && list.length === 0 && (
+          <Empty>{filterEvent ? 'No announcements for this event.' : 'Nothing sent yet.'}</Empty>
+        )}
         <ul className="divide-y divide-[#eee9fb]">
           {list.map((a) => (
             <li key={a.id} className="flex items-start justify-between gap-3 py-3 text-sm">

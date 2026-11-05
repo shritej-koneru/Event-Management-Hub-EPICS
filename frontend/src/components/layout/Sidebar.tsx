@@ -2,10 +2,13 @@ import { NavLink } from 'react-router-dom'
 
 import { useAuth } from '@/auth/useAuth'
 
+import { useSupportBadge } from '@/lib/useSupportBadge'
+
 import { navItemsFor } from './navItems'
 
 export default function Sidebar() {
   const { user } = useAuth()
+  const openChats = useSupportBadge()
   return (
     <aside className="fixed bottom-0 left-0 top-16 z-30 hidden w-64 flex-col overflow-y-auto border-r border-gray-200 bg-white px-3 py-6 lg:flex">
       <p className="px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
@@ -27,6 +30,11 @@ export default function Sidebar() {
           >
             <item.icon className="h-5 w-5 shrink-0" aria-hidden />
             {item.label}
+            {item.badge && openChats > 0 && (
+              <span className="ml-auto rounded-full bg-[#6145ef] px-2 py-0.5 text-[11px] font-bold text-white" aria-label={`${openChats} open chats`}>
+                {openChats}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>
