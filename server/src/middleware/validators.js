@@ -6,11 +6,11 @@ import { VENUE_IDS } from '../navigation/venues.js';
 /* -------------------------------------------------------------------------- */
 
 const email = z
-  .string({ required_error: 'email is required' })
+  .string({ error: 'email is required' })
   .trim()
   .min(1, 'email is required')
-  .email('must be a valid email address')
-  .toLowerCase();
+  .pipe(z.email('must be a valid email address'))
+  .transform((v) => v.toLowerCase());
 
 const interestList = z.array(z.string().trim().min(1)).max(20, 'at most 20 interests');
 
@@ -23,7 +23,7 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   email,
-  password: z.string({ required_error: 'password is required' }).min(1, 'password is required')
+  password: z.string({ error: 'password is required' }).min(1, 'password is required')
 });
 
 export const interestsSchema = z.object({
@@ -81,9 +81,17 @@ export const createEventBase = z.object({
 export const createEventSchema = createEventBase;
 
 /** PUT /api/events/:id — any subset of the create fields (at least one). */
-export const updateEventSchema = createEventBase
-  .partial()
-  .strict()
+// zod 4 applies `.default()` even inside `.partial()`, which would silently
+// overwrite untouched columns on PUT. Unwrap defaults so omitted fields stay omitted.
+const updateShape = Object.fromEntries(
+  Object.entries(createEventBase.shape).map(([key, schema]) => [
+    key,
+    schema instanceof z.ZodDefault ? schema.unwrap().optional() : schema.optional()
+  ])
+);
+
+export const updateEventSchema = z
+  .strictObject(updateShape)
   .refine((body) => Object.keys(body).length > 0, { message: 'at least one field is required' });
 
 /**
@@ -120,7 +128,7 @@ export const eventListQuerySchema = z
 
 export const aiSearchSchema = z.object({
   query: z
-    .string({ required_error: 'query is required' })
+    .string({ error: 'query is required' })
     .trim()
     .min(1, 'query is required')
     .max(500),

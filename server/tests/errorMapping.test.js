@@ -135,3 +135,19 @@ describe('toApiError unit mapping', () => {
     expect(err.message).not.toContain('abc123');
   });
 });
+describe('validation error response shape (pinned)', () => {
+  it('keeps {error, code, details[]} with "Invalid request — field: msg" wording', async () => {
+    const response = await api()
+      .post('/api/auth/login')
+      .send({ email: 'not-an-email', password: 'x' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.body.error).toBe('Invalid request — email: must be a valid email address');
+    if (response.body.details !== undefined) {
+      expect(Array.isArray(response.body.details)).toBe(true);
+      expect(response.body.details[0].path).toEqual(['email']);
+      expect(response.body.details[0].message).toBe('must be a valid email address');
+    }
+  });
+});
