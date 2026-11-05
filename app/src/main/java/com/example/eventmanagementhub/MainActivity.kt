@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Map
@@ -20,9 +20,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.LocalActivity
 import android.annotation.SuppressLint
+import android.net.Uri
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.eventmanagementhub.ui.screens.ChatViewModel
+import com.example.eventmanagementhub.ui.screens.LiveSocketViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -31,7 +32,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.eventmanagementhub.data.api.AuthProvider
 import com.example.eventmanagementhub.ui.screens.AuthScreen
-import com.example.eventmanagementhub.ui.screens.ChatScreen
+import com.example.eventmanagementhub.ui.screens.AnnouncementsEventsScreen
+import com.example.eventmanagementhub.ui.screens.ChatThreadScreen
+import com.example.eventmanagementhub.ui.screens.EventAnnouncementsScreen
+import com.example.eventmanagementhub.ui.screens.HelpChatsScreen
+import com.example.eventmanagementhub.ui.screens.NewChatScreen
 import com.example.eventmanagementhub.ui.screens.EventDetailScreen
 import com.example.eventmanagementhub.ui.screens.EventsScreen
 import com.example.eventmanagementhub.ui.screens.HomeScreen
@@ -62,15 +67,15 @@ private data class TabItem(
 private fun AppRoot() {
     val navController = rememberNavController()
     val activity = LocalActivity.current as ComponentActivity
-    // Chat socket + thread belong to the signed-in identity; drop them on sign-out/expiry.
+    // Session socket belongs to the signed-in identity; drop them on sign-out/expiry.
     fun dropChatSession() {
-        ViewModelProvider(activity)[ChatViewModel::class.java].onSignedOut()
+        ViewModelProvider(activity)[LiveSocketViewModel::class.java].onSignedOut()
     }
     var authed by remember { mutableStateOf(AuthProvider.token != null) }
     // Keep the socket alive app-wide once signed in so `map:updated` and announcements
-    // arrive on any tab, not just after the Chat tab was opened (start() is idempotent).
+    // arrive on any tab (start() is idempotent).
     LaunchedEffect(authed) {
-        if (authed) ViewModelProvider(activity)[ChatViewModel::class.java].start()
+        if (authed) ViewModelProvider(activity)[LiveSocketViewModel::class.java].start()
     }
 
     /**
@@ -98,7 +103,7 @@ private fun AppRoot() {
         TabItem("home", "Home", Icons.Default.Home),
         TabItem("events", "Events", Icons.Default.List),
         TabItem("map", "Map", Icons.Default.Map),
-        TabItem("chat", "Chat", Icons.Default.Chat),
+        TabItem("announcements", "Announcements", Icons.Default.Campaign),
         TabItem("profile", "Profile", Icons.Default.Person)
     )
 
@@ -121,8 +126,15 @@ private fun AppRoot() {
                     val currentRoute = backStackEntry?.destination?.route
                     tabs.forEach { tab ->
                         NavigationBarItem(
-                            selected = currentRoute == tab.route,
-                            onClick = { openTab(tab.route) },
+                            // Nested routes (announcements/{eventId}/...) keep their tab highlighted.
+                            selected = currentRoute == tab.route ||
+                                currentRoute?.startsWith(tab.route + "/") == true,
+                            onClick = {
+                                // Re-tapping the active tab from a nested screen returns to its root.
+                                if (currentRoute != null && currentRoute.startsWith(tab.route + "/")) {
+                                    navController.popBackStack(tab.route, inclusive = false)
+                                } else openTab(tab.route)
+                            },
                             icon = { Icon(tab.icon, contentDescription = tab.label) },
                             label = { Text(tab.label) },
                             colors = NavigationBarItemDefaults.colors(
@@ -173,8 +185,63 @@ private fun AppRoot() {
                         onTargetConsumed = { mapTargetVenue = null }
                     )
                 }
-                composable("chat") {
-                    ChatScreen()
+                composable("announcements") {
+                    AnnouncementsEventsScreen(onEventClick = { id ->
+                        navController.navigate("announcements/${Uri.encode(id)}")
+                    })
+                }
+                composable(
+                    route = "announcements/{eventId}",
+                    arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+                ) { entry ->
+                    val eventId = entry.arguments?.getString("eventId") ?: ""
+                    EventAnnouncementsScreen(
+                        eventId = eventId,
+                        onBack = { navController.popBackStack() },
+                        onHelp = { navController.navigate("announcements/${Uri.encode(eventId)}/help") }
+                    )
+                }
+                composable(
+                    route = "announcements/{eventId}/help",
+                    arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+                ) { entry ->
+                    val eventId = entry.arguments?.getString("eventId") ?: ""
+                    HelpChatsScreen(
+                        eventId = eventId,
+                        onBack = { navController.popBackStack() },
+                        onOpenTicket = { tid ->
+                            navController.navigate("announcements/${Uri.encode(eventId)}/chat/${Uri.encode(tid)}")
+                        },
+                        onNewChat = { navController.navigate("announcements/${Uri.encode(eventId)}/help/new") }
+                    )
+                }
+                composable(
+                    route = "announcements/{eventId}/help/new",
+                    arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+                ) { entry ->
+                    val eventId = entry.arguments?.getString("eventId") ?: ""
+                    NewChatScreen(
+                        eventId = eventId,
+                        onBack = { navController.popBackStack() },
+                        onCreated = { tid ->
+                            // Replace the form with the new thread; back returns to the chat list.
+                            navController.navigate("announcements/${Uri.encode(eventId)}/chat/${Uri.encode(tid)}") {
+                                popUpTo("announcements/{eventId}/help/new") { inclusive = true }
+                            }
+                        }
+                    )
+                }
+                composable(
+                    route = "announcements/{eventId}/chat/{ticketId}",
+                    arguments = listOf(
+                        navArgument("eventId") { type = NavType.StringType },
+                        navArgument("ticketId") { type = NavType.StringType }
+                    )
+                ) { entry ->
+                    ChatThreadScreen(
+                        ticketId = entry.arguments?.getString("ticketId") ?: "",
+                        onBack = { navController.popBackStack() }
+                    )
                 }
                 composable("profile") {
                     ProfileScreen(

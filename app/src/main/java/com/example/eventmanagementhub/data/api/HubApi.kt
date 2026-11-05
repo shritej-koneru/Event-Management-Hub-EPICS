@@ -7,11 +7,16 @@ import com.example.eventmanagementhub.data.model.AuthResponse
 import com.example.eventmanagementhub.data.model.BookmarkMutationResponse
 import com.example.eventmanagementhub.data.model.BookmarksResponse
 import com.example.eventmanagementhub.data.model.CampusMapResponse
-import com.example.eventmanagementhub.data.model.ChatMessagesResponse
 import com.example.eventmanagementhub.data.model.EventDetailsResponse
 import com.example.eventmanagementhub.data.model.EventListResponse
 import com.example.eventmanagementhub.data.model.EventResponse
+import com.example.eventmanagementhub.data.model.CreateTicketRequest
+import com.example.eventmanagementhub.data.model.CreateTicketResponse
 import com.example.eventmanagementhub.data.model.InterestsRequest
+import com.example.eventmanagementhub.data.model.SendMessageRequest
+import com.example.eventmanagementhub.data.model.SendMessageResponse
+import com.example.eventmanagementhub.data.model.TicketMessagesResponse
+import com.example.eventmanagementhub.data.model.TicketsResponse
 import com.example.eventmanagementhub.data.model.LoginRequest
 import com.example.eventmanagementhub.data.model.PathRequest
 import com.example.eventmanagementhub.data.model.PathResponse
@@ -103,10 +108,23 @@ interface HubApi {
     @GET("api/chat/announcements")
     suspend fun announcements(@Query("eventId") eventId: String? = null): Response<AnnouncementsResponse>
 
-    @GET("api/chat/messages")
-    suspend fun chatMessages(
-        @Query("room") room: String? = null,
-        @Query("before") before: String? = null,
-        @Query("limit") limit: Int? = null
-    ): Response<ChatMessagesResponse>
+    // Event announcements (public read) — contract 1.6.0
+    @GET("api/events/{id}/announcements")
+    suspend fun eventAnnouncements(@Path("id") id: String): Response<AnnouncementsResponse>
+
+    // Attendee help desk (auth required)
+    @GET("api/support/tickets")
+    suspend fun supportTickets(@Query("eventId") eventId: String? = null): Response<TicketsResponse>
+
+    @POST("api/support/tickets")
+    suspend fun createTicket(@Body body: CreateTicketRequest): Response<CreateTicketResponse>
+
+    @GET("api/support/tickets/{id}/messages")
+    suspend fun ticketMessages(@Path("id") id: String): Response<TicketMessagesResponse>
+
+    @POST("api/support/tickets/{id}/messages")
+    suspend fun sendTicketMessage(
+        @Path("id") id: String,
+        @Body body: SendMessageRequest
+    ): Response<SendMessageResponse>
 }

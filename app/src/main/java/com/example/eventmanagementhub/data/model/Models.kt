@@ -183,28 +183,14 @@ data class Announcement(
     val message: String = "",
     val at: String = "",
     /** Null for venue-wide notices; set when the notice is about one event. */
-    val eventId: String? = null
+    val eventId: String? = null,
+    /** Contract 1.6.0: true for notices addressed to every attendee (no single event). */
+    val global: Boolean = false,
+    val sentBy: String? = null
 )
 
 @Serializable
 data class AnnouncementsResponse(val announcements: List<Announcement> = emptyList())
-
-/**
- * One persisted BitChat row from GET /api/chat/messages or the Socket.IO
- * `chat:message` payload (same wire shape).
- */
-@Serializable
-data class ChatMessage(
-    val id: Long = 0,
-    val author: String = "",
-    val text: String = "",
-    val room: String? = null,
-    val bot: Boolean = false,
-    val ts: String = ""
-)
-
-@Serializable
-data class ChatMessagesResponse(val messages: List<ChatMessage> = emptyList())
 
 /** Every backend failure leaves the server as `{ error, code }` per the contract. */
 @Serializable

@@ -10,8 +10,13 @@ import com.example.eventmanagementhub.data.model.AnnouncementsResponse
 import com.example.eventmanagementhub.data.model.AuthResponse
 import com.example.eventmanagementhub.data.model.BookmarkMutationResponse
 import com.example.eventmanagementhub.data.model.CampusMapResponse
-import com.example.eventmanagementhub.data.model.ChatMessagesResponse
+import com.example.eventmanagementhub.data.model.CreateTicketRequest
+import com.example.eventmanagementhub.data.model.CreateTicketResponse
 import com.example.eventmanagementhub.data.model.ErrorBody
+import com.example.eventmanagementhub.data.model.SendMessageRequest
+import com.example.eventmanagementhub.data.model.SupportMessage
+import com.example.eventmanagementhub.data.model.SupportTicket
+import com.example.eventmanagementhub.data.model.TicketMessagesResponse
 import com.example.eventmanagementhub.data.model.Event
 import com.example.eventmanagementhub.data.model.EventChart
 import com.example.eventmanagementhub.data.model.EventDetailsResponse
@@ -47,7 +52,9 @@ sealed interface Result<out T> {
     data class Error(
         val message: String,
         val httpCode: Int? = null,
-        val isAuthError: Boolean = false
+        val isAuthError: Boolean = false,
+        /** Machine-readable backend code (e.g. NOT_REGISTERED), when the server sent one. */
+        val code: String? = null
     ) : Result<Nothing>
 }
 
@@ -353,23 +360,89 @@ class HubRepository(
             }
         }
 
-    /**
-     * Persisted chat history (GET /api/chat/messages). A failed request never
-     * replaces the caller's existing thread with an empty list — the error is
-     * returned so the UI can keep what it already has.
-     */
-    suspend fun chatMessages(
-        room: String? = null,
-        before: String? = null,
-        limit: Int? = null
-    ): Result<ChatMessagesResponse> = withContext(Dispatchers.IO) {
+    // ---- event announcements + help desk (contract 1.6.0) ---------------------------
+
+    /** Error for a support/announcement call: keeps 401 expiry handling, maps codes to readable text. */
+    private fun supportFailure(resp: Response<*>, fallback: String): Result.Error {
+        val base = failure(resp, fallback)
+        if (base.isAuthError) return base
+        val raw = runCatching { resp.errorBody()?.string() }.getOrNull()
+        val parsed = raw?.takeIf { it.isNotBlank() }
+            ?.let { runCatching { json.decodeFromString<ErrorBody>(it) }.getOrNull() }
+        return base.copy(
+            message = SupportErrors.message(resp.code(), parsed?.code, parsed?.error, fallback),
+            code = parsed?.code
+        )
+    }
+
+    private fun supportNetworkError(): Result.Error = Result.Error(SupportErrors.NETWORK_MESSAGE, 0)
+
+    /** GET /api/events/:id/announcements — global notices included (`global = true`). */
+    suspend fun eventAnnouncements(eventId: String): Result<List<Announcement>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val resp = api.eventAnnouncements(eventId)
+                val body = resp.body()
+                if (resp.isSuccessful && body != null) Result.Success(body.announcements)
+                else supportFailure(resp, "Could not load announcements")
+            } catch (e: Exception) {
+                supportNetworkError()
+            }
+        }
+
+    suspend fun supportTickets(eventId: String? = null): Result<List<SupportTicket>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val resp = api.supportTickets(eventId)
+                val body = resp.body()
+                if (resp.isSuccessful && body != null) Result.Success(body.tickets)
+                else supportFailure(resp, "Could not load help chats")
+            } catch (e: Exception) {
+                supportNetworkError()
+            }
+        }
+
+    suspend fun createTicket(
+        eventId: String,
+        subject: String,
+        message: String,
+        clientId: String
+    ): Result<CreateTicketResponse> = withContext(Dispatchers.IO) {
         try {
-            val resp = api.chatMessages(room = room, before = before, limit = limit)
+            val resp = api.createTicket(CreateTicketRequest(eventId, subject.trim(), message.trim(), clientId))
             val body = resp.body()
-            if (resp.isSuccessful && body != null) Result.Success(body)
-            else failure(resp, "Could not load chat history").propagate()
+            if (resp.isSuccessful && body?.ticket != null) Result.Success(body)
+            else supportFailure(resp, "Could not start the chat")
         } catch (e: Exception) {
-            Result.Error(e.message ?: "Could not load chat history", 0)
+            supportNetworkError()
+        }
+    }
+
+    suspend fun ticketMessages(ticketId: String): Result<TicketMessagesResponse> =
+        withContext(Dispatchers.IO) {
+            try {
+                val resp = api.ticketMessages(ticketId)
+                val body = resp.body()
+                if (resp.isSuccessful && body != null) Result.Success(body)
+                else supportFailure(resp, "Could not load the chat")
+            } catch (e: Exception) {
+                supportNetworkError()
+            }
+        }
+
+    /** Retry-safe: resending the same [clientId] returns the already-stored message. */
+    suspend fun sendTicketMessage(
+        ticketId: String,
+        body: String,
+        clientId: String
+    ): Result<SupportMessage> = withContext(Dispatchers.IO) {
+        try {
+            val resp = api.sendTicketMessage(ticketId, SendMessageRequest(body.trim(), clientId))
+            val msg = resp.body()?.message
+            if (resp.isSuccessful && msg != null) Result.Success(msg)
+            else supportFailure(resp, "Message not sent")
+        } catch (e: Exception) {
+            supportNetworkError()
         }
     }
 
