@@ -12,7 +12,15 @@ import {
 import type { EventFormValues } from '@/lib/manage'
 import type { EventItem, MapVenue } from '@/lib/types'
 
-import { compactPrimaryClass, inputClass, smallButtonClass } from './styles'
+import Sheet from './Sheet'
+import {
+  buttonPrimary,
+  buttonSecondary,
+  errorTextClass,
+  inputClass,
+  labelClass,
+  textareaClass,
+} from './styles'
 
 interface EventFormProps {
   /** When set, the form edits this event (PUT); otherwise it creates (POST). */
@@ -60,84 +68,83 @@ export default function EventForm({ event, venues, onSaved, onCancel }: EventFor
   if (form.venue && !names.includes(form.venue)) names.unshift(form.venue)
 
   return (
-    <form
-      onSubmit={submit}
-      aria-label={label}
-      className="mb-5 rounded-[22px] bg-[rgba(255,255,255,0.97)] p-5 text-[#282348] shadow-[0_15px_35px_rgba(20,0,80,0.25)]"
-    >
-      <h2 className="mb-3 text-lg font-bold text-[#5c3ce8]">{label}</h2>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-xs font-semibold sm:col-span-2">
-          Title
-          <input required maxLength={200} className={inputClass} value={form.title} onChange={set('title')} />
-        </label>
-        <label className="text-xs font-semibold">
-          Category
-          <input required maxLength={60} className={inputClass} value={form.category} onChange={set('category')} />
-        </label>
-        <label className="text-xs font-semibold">
-          Venue
-          <select required className={inputClass} value={form.venue} onChange={set('venue')}>
-            {names.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs font-semibold">
-          Date
-          <input required type="date" className={inputClass} value={form.date} onChange={set('date')} />
-        </label>
-        <label className="text-xs font-semibold">
-          Time
-          <input required type="time" className={inputClass} value={form.time} onChange={set('time')} />
-        </label>
-        <label className="text-xs font-semibold">
-          Capacity
-          <input required type="number" min={0} className={inputClass} value={form.capacity} onChange={set('capacity')} />
-        </label>
-        <label className="text-xs font-semibold">
-          Duration (minutes)
-          <input
-            required
-            type="number"
-            min={1}
-            max={1440}
-            className={inputClass}
-            value={form.durationMin}
-            onChange={set('durationMin')}
-          />
-        </label>
-        <label className="text-xs font-semibold sm:col-span-2">
-          Host
-          <input maxLength={120} className={inputClass} value={form.host} onChange={set('host')} />
-        </label>
-        <label className="text-xs font-semibold sm:col-span-2">
-          Description
-          <textarea
-            maxLength={2000}
-            className={`${inputClass} h-24 py-2`}
-            value={form.description}
-            onChange={set('description')}
-          />
-        </label>
-      </div>
+    <Sheet title={label} onClose={onCancel}>
+      <form onSubmit={submit} aria-label={label} className="flex min-h-0 flex-1 flex-col">
+        <div className="grid flex-1 content-start gap-4 overflow-y-auto px-5 py-4 sm:grid-cols-2">
+          <label className={`${labelClass} sm:col-span-2`}>
+            Title
+            <input required maxLength={200} className={inputClass} value={form.title} onChange={set('title')} />
+          </label>
+          <label className={labelClass}>
+            Category
+            <input required maxLength={60} className={inputClass} value={form.category} onChange={set('category')} />
+          </label>
+          <label className={labelClass}>
+            Venue
+            <select required className={inputClass} value={form.venue} onChange={set('venue')}>
+              {names.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={labelClass}>
+            Date
+            <input required type="date" className={inputClass} value={form.date} onChange={set('date')} />
+          </label>
+          <label className={labelClass}>
+            Time
+            <input required type="time" className={inputClass} value={form.time} onChange={set('time')} />
+          </label>
+          <label className={labelClass}>
+            Capacity
+            <input required type="number" min={0} className={inputClass} value={form.capacity} onChange={set('capacity')} />
+          </label>
+          <label className={labelClass}>
+            Duration (minutes)
+            <input
+              required
+              type="number"
+              min={1}
+              max={1440}
+              className={inputClass}
+              value={form.durationMin}
+              onChange={set('durationMin')}
+            />
+          </label>
+          <label className={`${labelClass} sm:col-span-2`}>
+            Host
+            <input maxLength={120} className={inputClass} value={form.host} onChange={set('host')} />
+          </label>
+          <label className={`${labelClass} sm:col-span-2`}>
+            Description
+            <textarea
+              maxLength={2000}
+              rows={4}
+              className={textareaClass}
+              value={form.description}
+              onChange={set('description')}
+            />
+          </label>
+        </div>
 
-      {error && (
-        <p role="alert" className="mt-3 text-sm text-red-600">
-          {error}
-        </p>
-      )}
-
-      <div className="mt-4 flex gap-3">
-        <button type="submit" disabled={busy} className={compactPrimaryClass}>
-          {busy ? 'Saving...' : event ? 'Save changes' : 'Create event'}
-        </button>
-        <button type="button" onClick={onCancel} className={smallButtonClass}>
-          Cancel
-        </button>
-      </div>
-    </form>
+        <div className="border-t border-line px-5 py-3">
+          {error && (
+            <p role="alert" className={`${errorTextClass} mb-3`}>
+              {error}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onCancel} className={buttonSecondary}>
+              Cancel
+            </button>
+            <button type="submit" disabled={busy} className={buttonPrimary}>
+              {busy ? 'Saving...' : event ? 'Save changes' : 'Create event'}
+            </button>
+          </div>
+        </div>
+      </form>
+    </Sheet>
   )
 }

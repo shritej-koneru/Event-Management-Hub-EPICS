@@ -4,9 +4,20 @@ import { ArrowLeft, Lock, LockOpen, Send } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useAuth } from '@/auth/useAuth'
-import { Empty, ErrorNote, Loading, PageHeading } from '@/components/Feedback'
-import { compactPrimaryClass, inputClass, smallButtonClass } from '@/components/styles'
+import { Empty, ErrorNote, Loading } from '@/components/Feedback'
+import PageContainer from '@/components/layout/PageContainer'
+import {
+  badgeClass,
+  buttonIcon,
+  buttonPrimary,
+  buttonSecondary,
+  chipClass,
+  errorTextClass,
+  inputClass,
+  textareaClass,
+} from '@/components/styles'
 import { api } from '@/lib/api'
+import { formatDate, formatDateTime } from '@/lib/format'
 import { apiErrorMessage } from '@/lib/manage'
 import {
   REPLY_MAX,
@@ -25,10 +36,11 @@ import type { SupportEventSummary, SupportMessage, SupportTicket, TicketStatus }
 import { useFetch } from '@/lib/useFetch'
 import { useSocket } from '@/realtime/context'
 
-const paneClass = 'min-h-0 rounded-[22px] bg-[rgba(255,255,255,0.97)] p-3 text-[#282348] shadow-[0_15px_35px_rgba(20,0,80,0.25)]'
 const rowClass = (active: boolean) =>
-  `block w-full cursor-pointer rounded-[14px] border px-3 py-2.5 text-left text-sm transition ${
-    active ? 'border-[#6145ef] bg-[#f0ecff]' : 'border-transparent hover:bg-[#f7f5ff]'
+  `relative block w-full cursor-pointer border-b border-line px-4 py-3 text-left transition-colors duration-150 ease-out ${
+    active
+      ? 'bg-accent-soft before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent'
+      : 'hover:bg-paper'
   }`
 
 export default function HelpDeskPage() {
@@ -183,26 +195,28 @@ export default function HelpDeskPage() {
   const paneVis = (visibleOnMobile: boolean) => (visibleOnMobile ? 'flex' : 'hidden lg:flex')
 
   return (
-    <div className="flex flex-col px-[18px] pb-6 pt-[25px]">
-      <PageHeading title="Help desk" subtitle="Chats from attendees, grouped by your events" />
-
-      <div className="grid gap-4 lg:h-[calc(100vh-190px)] lg:grid-cols-[260px_300px_minmax(0,1fr)]">
+    <PageContainer title="Help desk" description="Chats from attendees, grouped by your events">
+      <div className="grid grid-cols-1 h-[calc(100dvh-17rem)] min-h-[420px] overflow-hidden rounded-card border border-line bg-surface lg:h-[calc(100vh-14rem)] lg:grid-cols-[260px_300px_minmax(0,1fr)] lg:divide-x lg:divide-line">
         {/* Events */}
-        <section aria-label="Events" className={`${paneClass} ${paneVis(showEvents)} flex-col gap-2 overflow-hidden`}>
-          <input
-            type="search"
-            aria-label="Search events"
-            placeholder="Search events"
-            className={inputClass}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
-            {events.error && <ErrorNote>{events.error}</ErrorNote>}
-            {events.loading && <Loading />}
-            {!events.loading && !events.error && eventList.length === 0 && (
-              <p className="py-6 text-center text-sm text-[#77758b]">No events found.</p>
+        <section aria-label="Events" className={`${paneVis(showEvents)} min-h-0 flex-col overflow-hidden`}>
+          <div className="border-b border-line p-3">
+            <input
+              type="search"
+              aria-label="Search events"
+              placeholder="Search events"
+              className={inputClass}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {events.error && (
+              <div className="p-3 pb-0">
+                <ErrorNote>{events.error}</ErrorNote>
+              </div>
             )}
+            {events.loading && <Loading />}
+            {!events.loading && !events.error && eventList.length === 0 && <Empty>No events found.</Empty>}
             {eventList.map((ev) => (
               <button
                 key={ev.id}
@@ -212,22 +226,19 @@ export default function HelpDeskPage() {
                 onClick={() => go({ event: ev.id, ticket: null })}
               >
                 <span className="flex items-start justify-between gap-2">
-                  <span className="font-bold">{ev.title}</span>
+                  <span className="text-body font-medium text-ink">{ev.title}</span>
                   {ev.openCount > 0 && (
-                    <span
-                      className="shrink-0 rounded-full bg-[#6145ef] px-2 py-0.5 text-[11px] font-bold text-white"
-                      aria-label={`${ev.openCount} open`}
-                    >
+                    <span className={`${badgeClass} shrink-0`} aria-label={`${ev.openCount} open`}>
                       {ev.openCount}
                     </span>
                   )}
                 </span>
-                <span className="block text-xs text-[#77758b]">
-                  {ev.date} - {ev.venue}
+                <span className="block text-small text-ink-2">
+                  {formatDate(ev.date)} · {ev.venue}
                 </span>
-                <span className="block text-xs text-[#77758b]">
+                <span className="block text-caption font-medium text-ink-3">
                   {ev.openCount} open / {ev.totalCount} total
-                  {ev.lastMessageAt ? ` - ${relativeTime(ev.lastMessageAt)}` : ''}
+                  {ev.lastMessageAt ? ` · ${relativeTime(ev.lastMessageAt)}` : ''}
                 </span>
               </button>
             ))}
@@ -235,42 +246,52 @@ export default function HelpDeskPage() {
         </section>
 
         {/* Chats of the selected event */}
-        <section aria-label="Chats" className={`${paneClass} ${paneVis(showTickets)} flex-col gap-2 overflow-hidden`}>
+        <section aria-label="Chats" className={`${paneVis(showTickets)} min-h-0 flex-col overflow-hidden`}>
           {!sel.event ? (
-            <p className="py-10 text-center text-sm text-[#77758b]">Select an event to see its chats.</p>
+            <Empty>Select an event to see its chats.</Empty>
           ) : (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 border-b border-line p-3">
                 <button
                   type="button"
-                  className={`${smallButtonClass} lg:hidden`}
+                  className={`${buttonIcon} lg:hidden`}
                   aria-label="Back to events"
                   onClick={() => go({ event: null, ticket: null })}
                 >
-                  <ArrowLeft className="h-4 w-4" aria-hidden />
+                  <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
                 </button>
-                <h2 className="truncate text-base font-bold text-[#5c3ce8]">
-                  {selectedEvent?.title ?? 'Event'}
-                </h2>
+                <h2 className="truncate text-heading font-semibold text-ink">{selectedEvent?.title ?? 'Event'}</h2>
               </div>
-              <div role="group" aria-label="Filter chats" className="flex gap-1">
-                {STATUS_FILTERS.map((f: StatusFilter) => (
-                  <button
-                    key={f}
-                    type="button"
-                    aria-pressed={sel.status === f}
-                    className={`${smallButtonClass} flex-1 capitalize ${sel.status === f ? 'bg-[#f0ecff]' : ''}`}
-                    onClick={() => go({ status: f, ticket: null })}
-                  >
-                    {f}
-                  </button>
-                ))}
+              <div className="border-b border-line p-3">
+                <div
+                  role="group"
+                  aria-label="Filter chats"
+                  className="flex divide-x divide-line-strong overflow-hidden rounded-control border border-line-strong"
+                >
+                  {STATUS_FILTERS.map((f: StatusFilter) => (
+                    <button
+                      key={f}
+                      type="button"
+                      aria-pressed={sel.status === f}
+                      className={`h-8 flex-1 text-small font-medium capitalize transition-colors duration-150 ease-out pointer-coarse:h-11 ${
+                        sel.status === f ? 'bg-accent-soft text-accent' : 'bg-surface text-ink-2 hover:bg-paper'
+                      }`}
+                      onClick={() => go({ status: f, ticket: null })}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
-                {tickets.error && <ErrorNote>{tickets.error}</ErrorNote>}
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {tickets.error && (
+                  <div className="p-3 pb-0">
+                    <ErrorNote>{tickets.error}</ErrorNote>
+                  </div>
+                )}
                 {tickets.loading && <Loading />}
                 {!tickets.loading && !tickets.error && ticketList.length === 0 && (
-                  <p className="py-6 text-center text-sm text-[#77758b]">No {sel.status === 'all' ? '' : sel.status} chats.</p>
+                  <Empty>No {sel.status === 'all' ? '' : sel.status} chats.</Empty>
                 )}
                 {ticketList.map((t) => {
                   const active = String(t.id) === sel.ticket
@@ -280,22 +301,21 @@ export default function HelpDeskPage() {
                       key={t.id}
                       type="button"
                       aria-current={active ? 'true' : undefined}
-                      className={`${rowClass(active)} ${unread ? 'border-l-4 !border-l-[#f59e0b] bg-amber-50' : ''}`}
+                      className={`${rowClass(active)} ${unread ? 'bg-warning-soft before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-warning' : ''}`}
                       onClick={() => go({ ticket: String(t.id) })}
                     >
                       <span className="flex items-center justify-between gap-2">
-                        <span className={`truncate ${unread ? 'font-extrabold' : 'font-bold'}`}>{t.userName}</span>
-                        <span className="shrink-0 text-xs text-[#77758b]">{relativeTime(t.lastMessageAt)}</span>
+                        <span className={`truncate text-body text-ink ${unread ? 'font-semibold' : 'font-medium'}`}>
+                          {t.userName}
+                          {unread && <span className="sr-only"> (needs a reply)</span>}
+                        </span>
+                        <span className="shrink-0 text-caption font-medium text-ink-3">{relativeTime(t.lastMessageAt)}</span>
                       </span>
-                      <span className="block truncate text-xs font-semibold">{t.subject}</span>
-                      <span className="block truncate text-xs text-[#77758b]">
+                      <span className="block truncate text-small font-medium text-ink">{t.subject}</span>
+                      <span className="block truncate text-small text-ink-2">
                         {t.lastMessage ? `${t.lastMessage.senderRole === 'manager' ? 'You: ' : ''}${t.lastMessage.body}` : 'No messages'}
                       </span>
-                      <span
-                        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-                          t.status === 'open' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'
-                        }`}
-                      >
+                      <span className={`${chipClass(t.status === 'open' ? 'success' : 'neutral')} mt-1.5 capitalize`}>
                         {t.status}
                       </span>
                     </button>
@@ -307,122 +327,126 @@ export default function HelpDeskPage() {
         </section>
 
         {/* Thread */}
-        <section
-          aria-label="Conversation"
-          className={`${paneClass} ${paneVis(!!sel.ticket)} min-w-0 flex-col gap-2 overflow-hidden`}
-        >
+        <section aria-label="Conversation" className={`${paneVis(!!sel.ticket)} min-h-0 min-w-0 flex-col overflow-hidden`}>
           {!sel.ticket ? (
-            <p className="py-10 text-center text-sm text-[#77758b]">Select a chat to read and reply.</p>
+            <Empty>Select a chat to read and reply.</Empty>
           ) : (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 border-b border-line p-3">
                 <button
                   type="button"
-                  className={`${smallButtonClass} lg:hidden`}
+                  className={`${buttonIcon} lg:hidden`}
                   aria-label="Back to chats"
                   onClick={() => go({ ticket: null })}
                 >
-                  <ArrowLeft className="h-4 w-4" aria-hidden />
+                  <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
                 </button>
                 <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-base font-bold text-[#5c3ce8]">
+                  <h2 className="truncate text-heading font-semibold text-ink">
                     {threadData?.ticket.subject ?? 'Chat'}
                   </h2>
                   {threadData && (
-                    <p className="truncate text-xs text-[#77758b]">
-                      {threadData.ticket.userName} - {threadData.ticket.eventTitle} - {threadData.ticket.status}
+                    <p className="flex items-center gap-2 text-small text-ink-2">
+                      <span className="truncate">
+                        {threadData.ticket.userName} · {threadData.ticket.eventTitle}
+                      </span>
+                      <span className={`${chipClass(threadData.ticket.status === 'open' ? 'success' : 'neutral')} capitalize`}>
+                        {threadData.ticket.status}
+                      </span>
                     </p>
                   )}
                 </div>
                 {threadData && (
                   <button
                     type="button"
-                    className={smallButtonClass}
+                    className={buttonSecondary}
                     disabled={busy}
                     onClick={() => setStatus(threadData.ticket.status === 'open' ? 'closed' : 'open')}
                   >
                     {threadData.ticket.status === 'open' ? (
                       <>
-                        <Lock className="h-3.5 w-3.5" aria-hidden /> Close
+                        <Lock className="h-4 w-4" strokeWidth={1.75} aria-hidden /> Close
                       </>
                     ) : (
                       <>
-                        <LockOpen className="h-3.5 w-3.5" aria-hidden /> Reopen
+                        <LockOpen className="h-4 w-4" strokeWidth={1.75} aria-hidden /> Reopen
                       </>
                     )}
                   </button>
                 )}
               </div>
 
-              <div className="min-h-[240px] flex-1 space-y-2 overflow-y-auto rounded-[14px] bg-[#f7f5ff] p-3" aria-live="polite">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-paper p-4" aria-live="polite">
                 {thread.error && <ErrorNote>{thread.error}</ErrorNote>}
                 {!threadData && !thread.error && <Loading />}
                 {threadData && messages.length === 0 && <Empty>No messages yet.</Empty>}
                 {messages.map((m) => {
                   const mine = m.senderRole === 'manager'
                   return (
-                    <div key={m.clientId ?? m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                    <div key={m.clientId ?? m.id} className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
+                      <p className="mb-1 max-w-[80%] text-caption font-medium text-ink-3">
+                        {mine ? m.senderName || 'Manager' : m.senderName}
+                        {' · '}
+                        {m.failed ? (
+                          <button type="button" className="font-medium text-danger underline" onClick={() => void postReply(m)}>
+                            Failed - retry
+                          </button>
+                        ) : m.pending ? (
+                          'Sending...'
+                        ) : (
+                          formatDateTime(m.createdAt)
+                        )}
+                      </p>
                       <div
-                        className={`max-w-[80%] rounded-[16px] px-3 py-2 text-sm ${
-                          mine ? 'bg-[#6145ef] text-white' : 'bg-white text-[#282348] shadow'
-                        } ${m.failed ? 'ring-2 ring-red-500' : ''} ${m.pending ? 'opacity-70' : ''}`}
+                        className={`max-w-[80%] rounded-card border px-3 py-2 text-body text-ink ${
+                          mine ? 'rounded-br-[2px] border-accent/20 bg-accent-soft' : 'rounded-bl-[2px] border-line bg-surface'
+                        } ${m.failed ? 'border-danger' : ''} ${m.pending ? 'opacity-70' : ''}`}
                       >
-                        <p className={`text-[11px] font-bold ${mine ? 'text-white/80' : 'text-[#77758b]'}`}>
-                          {mine ? m.senderName || 'Manager' : m.senderName}
-                        </p>
                         <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                        <p className={`mt-0.5 text-[10px] ${mine ? 'text-white/70' : 'text-[#77758b]'}`}>
-                          {m.failed ? (
-                            <button type="button" className="underline" onClick={() => void postReply(m)}>
-                              Failed - retry
-                            </button>
-                          ) : m.pending ? (
-                            'Sending...'
-                          ) : (
-                            new Date(m.createdAt).toLocaleString()
-                          )}
-                        </p>
                       </div>
                     </div>
                   )
                 })}
               </div>
 
-              {actionError && (
-                <p role="alert" className="text-sm text-red-600">
-                  {actionError}
-                </p>
-              )}
-              <div className="flex items-end gap-2">
-                <label className="min-w-0 flex-1 text-xs font-semibold">
-                  <span className="sr-only">Reply</span>
-                  <textarea
-                    className={`${inputClass} h-20 resize-none py-2`}
-                    placeholder="Write a reply (Enter to send, Shift+Enter for a new line)"
-                    maxLength={REPLY_MAX}
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onKeyDown={onKeyDown}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className={compactPrimaryClass}
-                  disabled={!draft.trim() || !threadData}
-                  onClick={send}
+              <div className="border-t border-line bg-surface p-3">
+                {actionError && (
+                  <p role="alert" className={`${errorTextClass} mb-2`}>
+                    {actionError}
+                  </p>
+                )}
+                <div className="flex items-end gap-2">
+                  <label className="min-w-0 flex-1">
+                    <span className="sr-only">Reply</span>
+                    <textarea
+                      className={`${textareaClass} h-[72px] min-h-0 resize-none`}
+                      placeholder="Write a reply (Enter to send, Shift+Enter for a new line)"
+                      maxLength={REPLY_MAX}
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onKeyDown={onKeyDown}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className={`${buttonPrimary} w-9 px-0! pointer-coarse:w-11`}
+                    aria-label="Send"
+                    disabled={!draft.trim() || !threadData}
+                    onClick={send}
+                  >
+                    <Send className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                  </button>
+                </div>
+                <p
+                  className={`mt-1 text-right text-caption font-medium ${REPLY_MAX - draft.length < 50 ? 'text-danger' : 'text-ink-3'}`}
                 >
-                  <Send className="h-4 w-4" aria-hidden />
-                  Send
-                </button>
+                  {draft.length}/{REPLY_MAX}
+                </p>
               </div>
-              <p className={`text-right text-xs ${REPLY_MAX - draft.length < 50 ? 'text-red-600' : 'text-[#77758b]'}`}>
-                {draft.length}/{REPLY_MAX}
-              </p>
             </>
           )}
         </section>
       </div>
-    </div>
+    </PageContainer>
   )
 }
-

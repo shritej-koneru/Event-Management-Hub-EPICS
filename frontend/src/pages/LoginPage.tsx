@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { LogIn } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 
 import { NotManagerError } from '@/auth/context'
 import { useAuth } from '@/auth/useAuth'
-import { inputClass, primaryButtonClass } from '@/components/styles'
+import { buttonPrimary, errorTextClass, inputClass, labelClass, panelClass } from '@/components/styles'
 import { apiErrorMessage } from '@/lib/manage'
 
 /** Organizer / admin sign-in. Student accounts are rejected (no session kept). */
@@ -34,23 +33,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#24106f] via-[#5420d8] to-[#7b35ed] px-[18px] pt-12">
-      <div className="mx-auto w-full max-w-md">
-        <h1 className="mb-1 text-[25px] font-bold text-white">EventHub Manager</h1>
-        <p className="mb-4 text-[13px] text-white/70">
-          Sign in with your organizer or admin account. Accounts are created by an administrator.
-        </p>
-        <form
-          onSubmit={submit}
-          aria-label="Sign in"
-          className="rounded-[24px] bg-[rgba(255,255,255,0.97)] p-6 text-[#282348] shadow-[0_15px_35px_rgba(20,0,80,0.25)]"
-        >
-          <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-[#5c3ce8]">
-            <LogIn className="h-5 w-5" aria-hidden />
-            Sign in
-          </h2>
-          <div className="flex flex-col gap-3">
-            <label className="text-xs font-semibold">
+    <div className="flex min-h-screen items-center justify-center bg-paper px-4 py-10">
+      <div className="w-full max-w-[360px]">
+        <div className="mb-4 flex items-center gap-2.5">
+          <span aria-hidden className="h-4 w-[3px] bg-accent" />
+          <span className="text-heading font-semibold text-ink">EventHub</span>
+        </div>
+        <form onSubmit={submit} aria-label="Sign in" className={`${panelClass} p-6`}>
+          <h1 className="text-title font-semibold text-ink">Sign in</h1>
+          <p className="mb-5 mt-1 text-small text-ink-2">
+            Use your organizer or admin account. Accounts are created by an administrator.
+          </p>
+          <div className="flex flex-col gap-4">
+            <label className={labelClass}>
               Email
               <input
                 required
@@ -61,7 +56,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </label>
-            <label className="text-xs font-semibold">
+            <label className={labelClass}>
               Password
               <input
                 required
@@ -74,12 +69,12 @@ export default function LoginPage() {
             </label>
           </div>
           {error && (
-            <p role="alert" className="mt-3 text-sm text-red-600">
+            <p role="alert" className={`${errorTextClass} mt-3`}>
               {error}
             </p>
           )}
-          <button type="submit" disabled={busy} className={`${primaryButtonClass} mt-4`}>
-            {busy ? 'SIGNING IN...' : 'SIGN IN'}
+          <button type="submit" disabled={busy} className={`${buttonPrimary} mt-5 w-full`}>
+            {busy ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
       </div>

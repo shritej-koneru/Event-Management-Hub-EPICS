@@ -3,15 +3,30 @@ import type { FormEvent } from 'react'
 import { UserPlus } from 'lucide-react'
 
 import { useAuth } from '@/auth/useAuth'
-import { Empty, ErrorNote, Loading, PageHeading } from '@/components/Feedback'
-import { cardClass, compactPrimaryClass, inputClass } from '@/components/styles'
+import { Empty, ErrorNote, Loading, SuccessNote } from '@/components/Feedback'
+import PageContainer from '@/components/layout/PageContainer'
+import {
+  buttonPrimary,
+  chipClass,
+  inputClass,
+  labelClass,
+  noticeClass,
+  panelClass,
+  panelHeader,
+  panelTitle,
+  tableClass,
+  tdClass,
+  theadClass,
+  thClass,
+  trClass,
+} from '@/components/styles'
 import { api, ApiError } from '@/lib/api'
+import { formatDate } from '@/lib/format'
 import { apiErrorMessage } from '@/lib/manage'
 import type { ManagedUser, Role } from '@/lib/types'
 import { useFetch } from '@/lib/useFetch'
 
 const ROLES: Role[] = ['organizer', 'admin', 'student']
-const label = 'block text-xs font-semibold'
 
 function accountsError(err: unknown): string {
   if (err instanceof ApiError && err.status === 403) return 'Only admins can manage accounts.'
@@ -70,21 +85,17 @@ export default function AccountsPage() {
   const list = users.data?.users ?? []
 
   return (
-    <div className="flex flex-col px-[18px] pb-6 pt-[25px]">
-      <PageHeading title="Accounts" subtitle="Create accounts and change roles (admins only)" />
+    <PageContainer title="Accounts" description="Create accounts and change roles (admins only)">
+      {notice && <SuccessNote>{notice}</SuccessNote>}
 
-      {notice && (
-        <p role="status" className="mb-3 rounded-[14px] bg-green-500/25 px-4 py-3 text-sm text-white">
-          {notice}
-        </p>
-      )}
-
-      <section aria-labelledby="create-account" className={cardClass}>
-        <h2 id="create-account" className="mb-3 text-lg font-bold text-[#5c3ce8]">
-          Create account
-        </h2>
-        <form onSubmit={create} aria-label="Create account" className="grid gap-3 md:grid-cols-2">
-          <label className={label}>
+      <section aria-labelledby="create-account" className={panelClass}>
+        <div className={panelHeader}>
+          <h2 id="create-account" className={panelTitle}>
+            Create account
+          </h2>
+        </div>
+        <form onSubmit={create} aria-label="Create account" className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
+          <label className={labelClass}>
             Name
             <input
               required
@@ -93,7 +104,7 @@ export default function AccountsPage() {
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </label>
-          <label className={label}>
+          <label className={labelClass}>
             Email
             <input
               required
@@ -104,7 +115,7 @@ export default function AccountsPage() {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
           </label>
-          <label className={label}>
+          <label className={labelClass}>
             Password (min 8 characters)
             <input
               required
@@ -116,10 +127,10 @@ export default function AccountsPage() {
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
           </label>
-          <label className={label}>
+          <label className={labelClass}>
             Role
             <select
-              className={inputClass}
+              className={`${inputClass} capitalize`}
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
             >
@@ -131,54 +142,63 @@ export default function AccountsPage() {
             </select>
           </label>
           {error && (
-            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 md:col-span-2">
+            <p role="alert" className={`${noticeClass('danger')} md:col-span-2`}>
               {error}
             </p>
           )}
           <div className="md:col-span-2">
-            <button type="submit" disabled={busy} className={compactPrimaryClass}>
-              <UserPlus className="h-4 w-4" aria-hidden />
+            <button type="submit" disabled={busy} className={buttonPrimary}>
+              <UserPlus className="h-4 w-4" strokeWidth={1.75} aria-hidden />
               Create account
             </button>
           </div>
         </form>
       </section>
 
-      <section aria-labelledby="user-list" className={`${cardClass} mt-5`}>
-        <h2 id="user-list" className="mb-2 text-lg font-bold text-[#5c3ce8]">
-          Users ({list.length})
-        </h2>
+      <section aria-labelledby="user-list" className={`${panelClass} mt-6`}>
+        <div className={panelHeader}>
+          <h2 id="user-list" className={panelTitle}>
+            Users ({list.length})
+          </h2>
+        </div>
         {rowError && (
-          <p role="alert" className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {rowError}
-          </p>
+          <div className="p-4 pb-0">
+            <p role="alert" className={noticeClass('danger')}>
+              {rowError}
+            </p>
+          </div>
         )}
-        {users.error && <ErrorNote>{users.error}</ErrorNote>}
+        {users.error && (
+          <div className="p-4 pb-0">
+            <ErrorNote>{users.error}</ErrorNote>
+          </div>
+        )}
         {users.loading && <Loading />}
         {!users.loading && !users.error && list.length === 0 && <Empty>No accounts.</Empty>}
         {list.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="text-xs uppercase text-[#77758b]">
-                  <th scope="col" className="py-2 pr-3">Name</th>
-                  <th scope="col" className="py-2 pr-3">Email</th>
-                  <th scope="col" className="py-2 pr-3">Role</th>
-                  <th scope="col" className="py-2">Created</th>
+          <div className="relative overflow-x-auto">
+            <table className={`${tableClass} min-w-[560px]`}>
+              <caption className="sr-only">Users</caption>
+              <thead className={theadClass}>
+                <tr>
+                  <th scope="col" className={thClass}>Name</th>
+                  <th scope="col" className={thClass}>Email</th>
+                  <th scope="col" className={thClass}>Role</th>
+                  <th scope="col" className={thClass}>Created</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#eee9fb]">
+              <tbody>
                 {list.map((u) => (
-                  <tr key={u.id}>
-                    <td className="py-2 pr-3">
+                  <tr key={u.id} className={trClass}>
+                    <td className={`${tdClass} font-medium`}>
                       {u.name}
-                      {u.id === me?.id && <span className="ml-1 text-xs text-[#77758b]">(you)</span>}
+                      {u.id === me?.id && <span className={`${chipClass('accent')} ml-2`}>You</span>}
                     </td>
-                    <td className="py-2 pr-3 break-all">{u.email}</td>
-                    <td className="py-2 pr-3">
+                    <td className={`${tdClass} break-all text-ink-2`}>{u.email}</td>
+                    <td className={tdClass}>
                       <select
                         aria-label={`Role for ${u.name}`}
-                        className="h-9 rounded-[11px] border border-[#ddd8ef] bg-white px-2 text-sm"
+                        className={`${inputClass} w-auto capitalize`}
                         value={u.role}
                         disabled={rowBusy === u.id}
                         onChange={(e) => void changeRole(u, e.target.value as Role)}
@@ -190,7 +210,9 @@ export default function AccountsPage() {
                         ))}
                       </select>
                     </td>
-                    <td className="py-2 whitespace-nowrap">{new Date(u.createdAt).toLocaleDateString()}</td>
+                    <td className={`${tdClass} whitespace-nowrap text-ink-2`}>
+                      {formatDate(u.createdAt.slice(0, 10))}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -198,6 +220,6 @@ export default function AccountsPage() {
           </div>
         )}
       </section>
-    </div>
+    </PageContainer>
   )
 }

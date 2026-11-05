@@ -4,12 +4,26 @@ import { Send, Trash2 } from 'lucide-react'
 
 import { useAuth } from '@/auth/useAuth'
 import ConfirmDialog from '@/components/Dialog'
-import { Empty, ErrorNote, Loading, PageHeading } from '@/components/Feedback'
-import { cardClass, compactPrimaryClass, dangerButtonClass, inputClass } from '@/components/styles'
+import { Empty, ErrorNote, Loading } from '@/components/Feedback'
+import PageContainer from '@/components/layout/PageContainer'
+import {
+  buttonIconDanger,
+  buttonPrimary,
+  chipClass,
+  errorTextClass,
+  inputClass,
+  labelClass,
+  panelClass,
+  panelHeader,
+  panelTitle,
+  textareaClass,
+} from '@/components/styles'
 import { api } from '@/lib/api'
+import { cleanAnnouncement, formatDate, formatDateTime, roomLabel } from '@/lib/format'
 import { apiErrorMessage } from '@/lib/manage'
 import type { CampusMap, EventBroadcast, ManagedAnnouncement, ManagedEvent } from '@/lib/types'
 import { useFetch } from '@/lib/useFetch'
+import { useVenueNames } from '@/lib/useVenueNames'
 import { useSocket } from '@/realtime/context'
 
 const MAX = 280
@@ -54,6 +68,7 @@ export default function AnnouncementsPage() {
     api<{ events: ManagedEvent[] }>('/manage/events', { query: { scope: 'mine' }, signal }),
   )
 
+  const venueNames = useVenueNames()
   const reloadSent = sent.reload
 
   // Live feed: manager announcements and event notices share the `event` socket message.
@@ -133,27 +148,33 @@ export default function AnnouncementsPage() {
   const list = filterEvent ? all.filter((a) => a.eventId === filterEvent) : all
 
   return (
-    <div className="flex flex-col px-[18px] pb-6 pt-[25px]">
-      <PageHeading title="Announcements" subtitle="Broadcast to attendees' phones in real time" />
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <form onSubmit={submit} aria-label="Send announcement" className={cardClass}>
-          <h2 className="mb-3 text-lg font-bold text-[#5c3ce8]">Send announcement</h2>
-          <div className="flex flex-col gap-3">
-            <label className="text-xs font-semibold">
-              Message
-              <textarea
-                required
-                maxLength={MAX}
-                className={`${inputClass} h-28 py-2`}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-            </label>
-            <p className={`text-right text-xs ${left < 20 ? 'text-red-600' : 'text-[#77758b]'}`} aria-live="polite">
-              {message.length}/{MAX} characters
-            </p>
-            <label className="text-xs font-semibold">
+    <PageContainer title="Announcements" description="Broadcast to attendees' phones in real time">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <form onSubmit={submit} aria-label="Send announcement" className={`${panelClass} min-w-0`}>
+          <div className={panelHeader}>
+            <h2 className={panelTitle}>Send announcement</h2>
+          </div>
+          <div className="flex flex-col gap-4 p-4">
+            <div>
+              <label className={labelClass}>
+                Message
+                <textarea
+                  required
+                  maxLength={MAX}
+                  rows={5}
+                  className={textareaClass}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                />
+              </label>
+              <p
+                className={`mt-1 text-right text-caption font-medium ${left < 20 ? 'text-danger' : 'text-ink-3'}`}
+                aria-live="polite"
+              >
+                {message.length}/{MAX} characters
+              </p>
+            </div>
+            <label className={labelClass}>
               Send to
               <select className={inputClass} value={target} onChange={(e) => setTarget(e.target.value as Target)}>
                 <option value="all">Everyone</option>
@@ -162,7 +183,7 @@ export default function AnnouncementsPage() {
               </select>
             </label>
             {target === 'venue' && (
-              <label className="text-xs font-semibold">
+              <label className={labelClass}>
                 Venue
                 <select className={inputClass} value={venueId} onChange={(e) => setVenueId(e.target.value)}>
                   <option value="">Select a venue</option>
@@ -175,103 +196,126 @@ export default function AnnouncementsPage() {
               </label>
             )}
             {target === 'event' && (
-              <label className="text-xs font-semibold">
+              <label className={labelClass}>
                 Event
                 <select className={inputClass} value={eventId} onChange={(e) => setEventId(e.target.value)}>
                   <option value="">Select an event</option>
                   {events.map((ev) => (
                     <option key={ev.id} value={ev.id}>
-                      {ev.title} ({ev.date})
+                      {ev.title} ({formatDate(ev.date)})
                     </option>
                   ))}
                 </select>
               </label>
             )}
+            {error && (
+              <p role="alert" className={errorTextClass}>
+                {error}
+              </p>
+            )}
+            {notice && (
+              <p role="status" className="text-small text-success">
+                {notice}
+              </p>
+            )}
+            <div>
+              <button type="submit" disabled={busy} className={buttonPrimary}>
+                <Send className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                {busy ? 'Sending...' : 'Send announcement'}
+              </button>
+            </div>
           </div>
-          {error && (
-            <p role="alert" className="mt-3 text-sm text-red-600">
-              {error}
-            </p>
-          )}
-          {notice && (
-            <p role="status" className="mt-3 text-sm text-green-700">
-              {notice}
-            </p>
-          )}
-          <button type="submit" disabled={busy} className={`${compactPrimaryClass} mt-4`}>
-            <Send className="h-4 w-4" aria-hidden />
-            {busy ? 'Sending...' : 'Send announcement'}
-          </button>
         </form>
 
-        <section aria-labelledby="live-heading" className={cardClass}>
-          <h2 id="live-heading" className="mb-1 text-lg font-bold text-[#5c3ce8]">
-            Live feed
-          </h2>
-          <p className="mb-3 text-xs text-[#77758b]">Socket: {status}</p>
-          {live.length === 0 && <p className="py-4 text-sm text-[#77758b]">Waiting for announcements...</p>}
-          <ul aria-live="polite" className="divide-y divide-[#eee9fb]">
+        <section aria-labelledby="live-heading" className={`${panelClass} min-w-0`}>
+          <div className={panelHeader}>
+            <h2 id="live-heading" className={panelTitle}>
+              Live feed
+            </h2>
+            <span className={chipClass(status === 'connected' ? 'success' : 'neutral')}>Socket: {status}</span>
+          </div>
+          {live.length === 0 && <Empty>Waiting for announcements...</Empty>}
+          <ul aria-live="polite">
             {live.map((l) => (
-              <li key={l.key} className="py-2 text-sm">
+              <li key={l.key} className="border-t border-line px-4 py-3 text-body first:border-t-0">
                 {l.text}
-                <span className="block text-xs text-[#77758b]">{new Date(l.at).toLocaleTimeString()}</span>
+                <span className="block text-caption font-medium text-ink-3">{formatDateTime(l.at)}</span>
               </li>
             ))}
           </ul>
         </section>
       </div>
 
-      <section aria-labelledby="sent-heading" className={`${cardClass} mt-5`}>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h2 id="sent-heading" className="text-lg font-bold text-[#5c3ce8]">
+      <section aria-labelledby="sent-heading" className={`${panelClass} mt-6`}>
+        <div className={`${panelHeader} flex-wrap`}>
+          <h2 id="sent-heading" className={panelTitle}>
             Sent announcements
           </h2>
-          <label className="text-xs font-semibold">
-            Event
-            <select className={inputClass} value={filterEvent} onChange={(e) => setFilterEvent(e.target.value)}>
-              <option value="">All events</option>
-              {filterOptions.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {isAdmin && (
-            <label className="text-xs font-semibold">
-              Show
-              <select className={inputClass} value={scope} onChange={(e) => setScope(e.target.value as Scope)}>
-                <option value="mine">Mine</option>
-                <option value="all">All</option>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className={labelClass}>
+              Event
+              <select
+                className={`${inputClass} w-auto`}
+                value={filterEvent}
+                onChange={(e) => setFilterEvent(e.target.value)}
+              >
+                <option value="">All events</option>
+                {filterOptions.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
               </select>
             </label>
-          )}
+            {isAdmin && (
+              <label className={labelClass}>
+                Show
+                <select
+                  className={`${inputClass} w-auto`}
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value as Scope)}
+                >
+                  <option value="mine">Mine</option>
+                  <option value="all">All</option>
+                </select>
+              </label>
+            )}
+          </div>
         </div>
-        {sent.error && <ErrorNote>{sent.error}</ErrorNote>}
+        {sent.error && (
+          <div className="p-4 pb-0">
+            <ErrorNote>{sent.error}</ErrorNote>
+          </div>
+        )}
         {sent.loading && <Loading />}
         {!sent.loading && !sent.error && list.length === 0 && (
           <Empty>{filterEvent ? 'No announcements for this event.' : 'Nothing sent yet.'}</Empty>
         )}
-        <ul className="divide-y divide-[#eee9fb]">
+        <ul>
           {list.map((a) => (
-            <li key={a.id} className="flex items-start justify-between gap-3 py-3 text-sm">
-              <div>
-                <p>{a.message}</p>
-                <p className="text-xs text-[#77758b]">
-                  {new Date(a.at).toLocaleString()} - {a.room}
+            <li
+              key={a.id}
+              className="flex items-start justify-between gap-3 border-t border-line px-4 py-3 first:border-t-0"
+            >
+              <div className="min-w-0">
+                <p className="whitespace-pre-wrap break-words text-body">{cleanAnnouncement(a.message)}</p>
+                <p className="mt-1 flex flex-wrap items-center gap-2 text-caption font-medium text-ink-3">
+                  {formatDateTime(a.at)}
+                  <span className={chipClass(a.global ? 'info' : 'neutral')}>
+                    {roomLabel(a.room, venueNames, a.global)}
+                  </span>
                 </p>
               </div>
               <button
                 type="button"
-                className={dangerButtonClass}
+                className={buttonIconDanger}
                 aria-label={`Delete announcement: ${a.message.slice(0, 40)}`}
                 onClick={() => {
                   setDeleteError(null)
                   setDeleting(a)
                 }}
               >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                Delete
+                <Trash2 className="h-4 w-4" strokeWidth={1.75} aria-hidden />
               </button>
             </li>
           ))}
@@ -290,6 +334,6 @@ export default function AnnouncementsPage() {
           This removes it from the history. Phones that already received it keep their copy.
         </ConfirmDialog>
       )}
-    </div>
+    </PageContainer>
   )
 }

@@ -2,36 +2,45 @@ import { NavLink } from 'react-router-dom'
 
 import { useAuth } from '@/auth/useAuth'
 
-import { useSupportBadge } from '@/lib/useSupportBadge'
-
 import { navItemsFor } from './navItems'
 
-export default function BottomNav() {
+/** Mobile bottom bar (below 1024px): 56px, hairline on top, active = accent text + 2px top bar. */
+export default function BottomNav({ openChats }: { openChats: number }) {
   const { user } = useAuth()
-  const openChats = useSupportBadge()
   return (
-    <nav className="fixed bottom-3 left-1/2 z-40 h-[72px] w-[calc(100%-24px)] max-w-[456px] -translate-x-1/2 rounded-[23px] bg-[rgba(255,255,255,0.97)] px-1.5 pb-[env(safe-area-inset-bottom)] shadow-[0_12px_35px_rgba(20,0,80,0.3)] lg:hidden">
-      <div className="flex h-full items-center justify-around">
+    <nav
+      aria-label="Main"
+      className="fixed inset-x-0 bottom-0 z-40 h-14 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] box-content lg:hidden"
+    >
+      <div className="flex h-14 items-stretch">
         {navItemsFor(user?.role).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.to === '/'}
             className={({ isActive }) =>
-              `relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[18px] py-2 text-[9px] font-bold transition-all ${
+              `relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-caption font-medium transition-colors duration-150 ease-out ${
                 isActive
-                  ? 'bg-gradient-to-br from-[#6746f5] to-[#8b4ef5] text-white shadow-[0_7px_17px_rgba(95,60,240,0.3)]'
-                  : 'text-[#9995aa] hover:bg-[#f0ecff] hover:text-[#6246ea]'
+                  ? 'text-accent before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-accent'
+                  : 'text-ink-2 hover:text-ink'
               }`
             }
           >
-            <item.icon className="h-[21px] w-[21px]" aria-hidden />
-            {item.label}
-            {item.badge && openChats > 0 && (
-              <span className="absolute right-2 top-1 rounded-full bg-red-500 px-1.5 text-[9px] font-bold leading-4 text-white" aria-label={`${openChats} open chats`}>
-                {openChats}
-              </span>
-            )}
+            <span className="relative">
+              <item.icon className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
+              {item.badge && openChats > 0 && (
+                <span
+                  className="absolute -right-3 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-control bg-accent px-1 text-overline font-semibold text-on-accent"
+                  aria-label={`${openChats} open chats`}
+                >
+                  {openChats}
+                </span>
+              )}
+            </span>
+            <span aria-hidden className="max-w-full truncate px-0.5">
+              {item.short}
+            </span>
+            <span className="sr-only">{item.label}</span>
           </NavLink>
         ))}
       </div>

@@ -7,8 +7,19 @@ import { Plus, Save, Trash2 } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 import ConfirmDialog from '@/components/Dialog'
-import { cardClass, compactPrimaryClass, dangerButtonClass, inputClass, smallButtonClass } from '@/components/styles'
+import {
+  buttonDanger,
+  buttonPrimary,
+  buttonSecondary,
+  chipClass,
+  inputClass,
+  labelClass,
+  noticeClass,
+  panelPadded,
+  textareaClass,
+} from '@/components/styles'
 import { api } from '@/lib/api'
+import { colorToken } from '@/lib/tokens'
 import {
   DESCRIPTION_MAX,
   KIND_OPTIONS,
@@ -57,16 +68,16 @@ const dot = (style: string) =>
     iconSize: [18, 18],
     iconAnchor: [9, 9],
   })
-const placedIcon = dot('background:#5c3ce8;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)')
-const derivedIcon = dot('background:#fff;border:3px dashed #77758b;box-shadow:0 1px 4px rgba(0,0,0,.4)')
-const newIcon = dot('background:#f59e0b;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)')
+// Colours reference the design tokens (index.css) so the markers follow the theme.
+// Placed = solid accent; approximate = hollow ink-3 ring; unsaved = dashed accent.
+const placedIcon = dot('background:var(--color-accent);border:3px solid var(--color-surface);outline:1px solid var(--color-accent)')
+const derivedIcon = dot('background:transparent;border:3px solid var(--color-ink-3);outline:1px solid var(--color-surface)')
+const newIcon = dot('background:var(--color-accent-soft);border:2px dashed var(--color-accent);outline:1px solid var(--color-surface)')
 
 function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void }) {
   useMapEvents({ click: (e) => onClick(e.latlng.lat, e.latlng.lng) })
   return null
 }
-
-const label = 'block text-xs font-semibold'
 
 export default function CampusMapView({ map, bounds, reload }: Props) {
   const [panel, setPanel] = useState<Panel>({ type: 'none' })
@@ -196,9 +207,9 @@ export default function CampusMapView({ map, bounds, reload }: Props) {
   ]
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
-      <div className={cardClass}>
-        <div className="h-[460px] w-full overflow-hidden rounded-[14px]" data-testid="campus-map">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+      <div className={panelPadded}>
+        <div className="h-[460px] w-full overflow-hidden rounded-control border border-line" data-testid="campus-map">
           <MapContainer
             center={[bounds.center.lat, bounds.center.lng]}
             zoom={17}
@@ -211,7 +222,7 @@ export default function CampusMapView({ map, bounds, reload }: Props) {
               attribution="&copy; OpenStreetMap contributors"
               maxZoom={19}
             />
-            <Rectangle bounds={rect} pathOptions={{ color: '#5c3ce8', weight: 2, fill: false, dashArray: '6 6' }} />
+            <Rectangle bounds={rect} pathOptions={{ color: colorToken('accent'), weight: 2, fill: false, dashArray: '6 6' }} />
             <ClickHandler onClick={onMapClick} />
             {map.edges.map((ed) => {
               const a = byId.get(ed.from)
@@ -223,7 +234,7 @@ export default function CampusMapView({ map, bounds, reload }: Props) {
                 <Polyline
                   key={`${ed.from}|${ed.to}`}
                   positions={[pa, pb]}
-                  pathOptions={{ color: '#6145ef', weight: 3, opacity: 0.7 }}
+                  pathOptions={{ color: colorToken('walkway'), weight: 3, opacity: 1 }}
                 >
                   <Tooltip sticky>{ed.distanceM} m</Tooltip>
                 </Polyline>
@@ -265,51 +276,73 @@ export default function CampusMapView({ map, bounds, reload }: Props) {
             )}
           </MapContainer>
         </div>
-        <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-[#4a4660]" aria-label="Map legend">
+        <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-small text-ink-2" aria-label="Map legend">
           <li className="flex items-center gap-1.5">
-            <span aria-hidden className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white bg-[#5c3ce8] shadow" />
+            <span aria-hidden className="inline-block h-4 w-4 rounded-full border-2 border-surface bg-accent outline outline-1 outline-accent" />
             Placed on the map
           </li>
           <li className="flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="inline-block h-3.5 w-3.5 rounded-full border-2 border-dashed border-[#77758b] bg-white"
-            />
+            <span aria-hidden className="inline-block h-4 w-4 rounded-full border-2 border-ink-3 bg-transparent" />
             Approximate position from the graph
           </li>
           <li className="flex items-center gap-1.5">
-            <span aria-hidden className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white bg-[#f59e0b] shadow" />
+            <span aria-hidden className="inline-block h-4 w-4 rounded-full border-2 border-dashed border-accent bg-accent-soft" />
             New place (unsaved)
           </li>
         </ul>
-        <p className="mt-2 text-xs text-[#77758b]">
+        <p className="mt-2 text-small text-ink-2">
           Click inside the dashed rectangle to add a place. Select a marker to edit it, then drag it to move it.
         </p>
       </div>
 
-      <div className={cardClass} aria-live="polite">
+      <div className={panelPadded} aria-live="polite">
         {notice && (
-          <p role="status" className="mb-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+          <p role="status" className={`${noticeClass('success')} mb-3`}>
             {notice}
           </p>
         )}
         {error && (
-          <p role="alert" className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className={`${noticeClass('danger')} mb-3`}>
             {error}
           </p>
         )}
 
         {panel.type === 'none' && (
-          <p className="text-sm text-[#77758b]">Click the map to add a new place, or select a marker to edit it.</p>
+          <div>
+            <p className="text-body text-ink-2">Click the map to add a new place, or select a marker to edit it.</p>
+            <h2 className="mb-1 mt-4 text-overline font-semibold uppercase tracking-[0.06em] text-ink-3">
+              Places ({map.venues.length})
+            </h2>
+            <ul aria-label="Places" className="max-h-[320px] overflow-y-auto rounded-control border border-line">
+              {map.venues.map((v) => (
+                <li key={v.id} className="border-t border-line first:border-t-0">
+                  <button
+                    type="button"
+                    disabled={!pos(v)}
+                    onClick={() => selectVenue(v)}
+                    className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-1.5 text-left hover:bg-paper disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-body font-medium text-ink">{v.name}</span>
+                      {v.kind && <span className="block truncate text-caption font-medium text-ink-3">{v.kind}</span>}
+                    </span>
+                    <span className={`${chipClass(v.geoPlaced ? 'accent' : 'neutral')} shrink-0`}>
+                      {v.geoPlaced ? 'Placed' : 'Approximate'}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {panel.type === 'new' && (
           <form onSubmit={createPlace} aria-label="New place" className="flex flex-col gap-3">
-            <h2 className="text-lg font-bold text-[#5c3ce8]">New place</h2>
-            <p className="text-xs text-[#77758b]">
+            <h2 className="text-heading font-semibold text-ink">New place</h2>
+            <p className="text-small text-ink-2">
               Lat {panel.draft.lat.toFixed(6)}, Lng {panel.draft.lng.toFixed(6)}
             </p>
-            <label className={label}>
+            <label className={labelClass}>
               Name
               <input
                 required
@@ -325,7 +358,7 @@ export default function CampusMapView({ map, bounds, reload }: Props) {
                 }}
               />
             </label>
-            <label className={label}>
+            <label className={labelClass}>
               Id (permanent slug)
               <input
                 required
@@ -344,9 +377,10 @@ export default function CampusMapView({ map, bounds, reload }: Props) {
               onKind={(kind) => setPanel({ type: 'new', draft: { ...panel.draft, kind } })}
               onDescription={(description) => setPanel({ type: 'new', draft: { ...panel.draft, description } })}
             />
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex min-h-9 items-center gap-2 text-body">
               <input
                 type="checkbox"
+                className="h-4 w-4 accent-accent"
                 checked={panel.draft.connectToNearest}
                 onChange={(e) =>
                   setPanel({ type: 'new', draft: { ...panel.draft, connectToNearest: e.target.checked } })
@@ -355,11 +389,11 @@ export default function CampusMapView({ map, bounds, reload }: Props) {
               Connect to nearest place
             </label>
             <div className="flex gap-2">
-              <button type="submit" disabled={busy} className={compactPrimaryClass}>
+              <button type="submit" disabled={busy} className={buttonPrimary}>
                 <Plus className="h-4 w-4" aria-hidden />
                 Create place
               </button>
-              <button type="button" className={smallButtonClass} onClick={closePanel}>
+              <button type="button" className={buttonSecondary} onClick={closePanel}>
                 Cancel
               </button>
             </div>
@@ -368,12 +402,12 @@ export default function CampusMapView({ map, bounds, reload }: Props) {
 
         {edit && (
           <form onSubmit={saveEdit} aria-label="Edit place" className="flex flex-col gap-3">
-            <h2 className="text-lg font-bold text-[#5c3ce8]">Edit place</h2>
-            <p className="text-xs text-[#77758b]">
-              Id: <code>{edit.id}</code> (permanent). Lat {edit.lat.toFixed(6)}, Lng {edit.lng.toFixed(6)}
+            <h2 className="text-heading font-semibold text-ink">Edit place</h2>
+            <p className="text-small text-ink-2">
+              Id: <code className="rounded-control bg-surface-sunken px-1">{edit.id}</code> (permanent). Lat {edit.lat.toFixed(6)}, Lng {edit.lng.toFixed(6)}
               {edit.moved && ' (moved, not saved yet)'}
             </p>
-            <label className={label}>
+            <label className={labelClass}>
               Name
               <input
                 required
@@ -390,13 +424,13 @@ export default function CampusMapView({ map, bounds, reload }: Props) {
               onDescription={(description) => setPanel({ type: 'edit', draft: { ...edit, description } })}
             />
             <div className="flex flex-wrap gap-2">
-              <button type="submit" disabled={busy} className={compactPrimaryClass}>
+              <button type="submit" disabled={busy} className={buttonPrimary}>
                 <Save className="h-4 w-4" aria-hidden />
                 Save place
               </button>
               <button
                 type="button"
-                className={dangerButtonClass}
+                className={buttonDanger}
                 onClick={() => {
                   const v = byId.get(edit.id)
                   if (v) {
@@ -405,10 +439,10 @@ export default function CampusMapView({ map, bounds, reload }: Props) {
                   }
                 }}
               >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                <Trash2 className="h-4 w-4" aria-hidden />
                 Delete place
               </button>
-              <button type="button" className={smallButtonClass} onClick={closePanel}>
+              <button type="button" className={buttonSecondary} onClick={closePanel}>
                 Close
               </button>
             </div>
@@ -440,7 +474,7 @@ function KindDescription(props: {
 }) {
   return (
     <>
-      <label className={label}>
+      <label className={labelClass}>
         Kind
         <input
           list="campus-kinds"
@@ -455,12 +489,12 @@ function KindDescription(props: {
           ))}
         </datalist>
       </label>
-      <label className={label}>
+      <label className={labelClass}>
         Description
         <textarea
           maxLength={DESCRIPTION_MAX}
           rows={3}
-          className={`${inputClass} h-auto py-2`}
+          className={textareaClass}
           value={props.description}
           onChange={(e) => props.onDescription(e.target.value)}
         />

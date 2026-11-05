@@ -88,11 +88,18 @@ export default function MapCanvas({
       viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
       role="group"
       aria-label="Campus map editor. Venues are circles, paths are lines. Use the lists below for keyboard editing."
-      className={`aspect-[4/3] w-full touch-none select-none rounded-[14px] border border-[#ddd8ef] bg-[#f7f5ff] ${
+      className={`aspect-[4/3] w-full touch-none select-none rounded-card border border-line bg-surface ${
         placing ? 'cursor-crosshair' : ''
       }`}
       onPointerDown={onCanvasClick}
     >
+      <defs>
+        <pattern id="map-grid" width={GRID} height={GRID} patternUnits="userSpaceOnUse">
+          <path d={`M ${GRID} 0 L 0 0 0 ${GRID}`} fill="none" className="stroke-line" strokeOpacity={0.4} strokeWidth={1} />
+        </pattern>
+      </defs>
+      <rect width={CANVAS_W} height={CANVAS_H} fill="url(#map-grid)" pointerEvents="none" />
+
       {edges.map((edge) => {
         const a = byId.get(edge.from)
         const b = byId.get(edge.to)
@@ -110,34 +117,31 @@ export default function MapCanvas({
             tabIndex={0}
             aria-label={`Path ${a.name} to ${b.name}, ${edge.distanceM} metres`}
             aria-pressed={selected}
-            className="cursor-pointer outline-none focus-visible:[&>line:first-child]:stroke-[#6145ef]"
+            className="group cursor-pointer outline-none"
             onPointerDown={(e) => {
               e.stopPropagation()
               select()
             }}
             onKeyDown={(e) => keySelect(e, select)}
           >
-            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="transparent" strokeWidth={18} />
             <line
               x1={x1}
               y1={y1}
               x2={x2}
               y2={y2}
-              stroke={selected ? '#6145ef' : '#a8a2c8'}
-              strokeWidth={selected ? 5 : 3}
+              strokeWidth={18}
+              className="stroke-transparent group-focus-visible:stroke-accent/25"
             />
-            <text
-              x={(x1 + x2) / 2}
-              y={(y1 + y2) / 2 - 6}
-              textAnchor="middle"
-              fontSize={14}
-              fill="#4b476b"
-              stroke="#f7f5ff"
-              strokeWidth={4}
-              paintOrder="stroke"
-            >
-              {edge.distanceM} m
-            </text>
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              strokeWidth={3}
+              strokeLinecap="round"
+              className={selected ? 'stroke-accent' : 'stroke-walkway'}
+            />
+            <MapLabel x={(x1 + x2) / 2} y={(y1 + y2) / 2} text={`${edge.distanceM} m`} />
           </g>
         )
       })}
@@ -153,7 +157,7 @@ export default function MapCanvas({
             tabIndex={0}
             aria-label={`Venue ${v.name}`}
             aria-pressed={selected}
-            className="cursor-grab outline-none focus-visible:[&>circle]:stroke-[#ff9f1c]"
+            className="group cursor-grab outline-none"
             onPointerDown={(e) => startDrag(e, v.id)}
             onPointerMove={drag}
             onPointerUp={endDrag}
@@ -163,24 +167,19 @@ export default function MapCanvas({
             <circle
               cx={cx}
               cy={cy}
-              r={selected ? 15 : 12}
-              fill={selected ? '#6145ef' : '#9a51ff'}
-              stroke="#fff"
-              strokeWidth={3}
+              r={selected ? 17 : 14}
+              fill="none"
+              strokeWidth={2}
+              className="stroke-accent opacity-0 group-focus-visible:opacity-100"
             />
-            <text
-              x={cx}
-              y={cy - 20}
-              textAnchor="middle"
-              fontSize={15}
-              fontWeight={600}
-              fill="#282348"
-              stroke="#f7f5ff"
-              strokeWidth={4}
-              paintOrder="stroke"
-            >
-              {v.name}
-            </text>
+            <circle
+              cx={cx}
+              cy={cy}
+              r={selected ? 10 : 8}
+              strokeWidth={selected ? 3 : 2}
+              className={selected ? 'fill-accent stroke-surface' : 'fill-surface stroke-ink'}
+            />
+            <MapLabel x={cx} y={cy - 24} text={v.name} />
           </g>
         )
       })}
@@ -190,23 +189,41 @@ export default function MapCanvas({
           <circle
             cx={fractionToCanvas(ghost.x, CANVAS_W)}
             cy={fractionToCanvas(ghost.y, CANVAS_H)}
-            r={13}
-            fill="rgba(97,69,239,0.15)"
-            stroke="#6145ef"
-            strokeWidth={3}
-            strokeDasharray="5 4"
+            r={10}
+            strokeWidth={2}
+            strokeDasharray="4 3"
+            className="fill-accent-soft stroke-accent"
           />
-          <text
+          <MapLabel
             x={fractionToCanvas(ghost.x, CANVAS_W)}
-            y={fractionToCanvas(ghost.y, CANVAS_H) - 20}
-            textAnchor="middle"
-            fontSize={15}
-            fill="#6145ef"
-          >
-            {ghost.name || 'New venue'}
-          </text>
+            y={fractionToCanvas(ghost.y, CANVAS_H) - 24}
+            text={ghost.name || 'New venue'}
+           
+          />
         </g>
       )}
     </svg>
+  )
+}
+
+const GRID = 24
+
+/** Small 500 ink label on a surface chip with a 1px line and 4px radius. */
+function MapLabel({ x, y, text }: { x: number; y: number; text: string }) {
+  const w = Math.max(24, text.length * 7.4 + 12)
+  return (
+    <g pointerEvents="none">
+      <rect x={x - w / 2} y={y - 10} width={w} height={20} rx={4} strokeWidth={1} className="fill-surface stroke-line" />
+      <text
+        x={x}
+        y={y + 4}
+        textAnchor="middle"
+        fontSize={13}
+        fontWeight={500}
+        className="fill-ink"
+      >
+        {text}
+      </text>
+    </g>
   )
 }

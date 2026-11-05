@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 
-import { dangerSolidClass, smallButtonClass } from './styles'
+import { buttonDangerSolid, buttonSecondary, errorTextClass, overlayClass } from './styles'
 
 interface ConfirmDialogProps {
   title: string
@@ -40,27 +40,27 @@ export default function ConfirmDialog({
   }, [])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
       <div
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
-        className="w-full max-w-sm rounded-[22px] bg-white p-5 text-[#282348] shadow-xl"
+        className={`${overlayClass} w-full max-w-sm p-5`}
       >
-        <h2 id="confirm-title" className="mb-2 text-lg font-bold">
+        <h2 id="confirm-title" className="mb-2 text-heading font-semibold text-ink">
           {title}
         </h2>
-        <div className="text-sm text-[#4b476b]">{children}</div>
+        <div className="text-body text-ink-2">{children}</div>
         {error && (
-          <p role="alert" className="mt-3 text-sm text-red-600">
+          <p role="alert" className={`${errorTextClass} mt-3`}>
             {error}
           </p>
         )}
-        <div className="mt-4 flex justify-end gap-2">
-          <button ref={cancelRef} type="button" className={smallButtonClass} onClick={onCancel}>
+        <div className="mt-5 flex justify-end gap-2">
+          <button ref={cancelRef} type="button" className={buttonSecondary} onClick={onCancel}>
             Cancel
           </button>
-          <button type="button" className={dangerSolidClass} disabled={busy} onClick={onConfirm}>
+          <button type="button" className={buttonDangerSolid} disabled={busy} onClick={onConfirm}>
             {busy ? 'Working...' : confirmLabel}
           </button>
         </div>

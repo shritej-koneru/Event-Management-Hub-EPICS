@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
 
+import { noticeClass } from './styles'
+
 export function Loading({ label = 'Loading...' }: { label?: string }) {
   return (
-    <p role="status" className="py-10 text-center text-sm text-white/70">
+    <p role="status" className="py-8 text-center text-small text-ink-2">
       {label}
     </p>
   )
@@ -10,21 +12,27 @@ export function Loading({ label = 'Loading...' }: { label?: string }) {
 
 export function ErrorNote({ children }: { children: ReactNode }) {
   return (
-    <p role="alert" className="rounded-[14px] bg-red-500/25 px-4 py-3 text-sm text-white">
+    <p role="alert" className={`${noticeClass('danger')} mb-3`}>
       {children}
     </p>
   )
 }
 
-export function Empty({ children }: { children: ReactNode }) {
-  return <p className="py-10 text-center text-sm text-white/60">{children}</p>
+/** Positive confirmation (role=status so screen readers announce it). */
+export function SuccessNote({ children }: { children: ReactNode }) {
+  return (
+    <p role="status" className={`${noticeClass('success')} mb-3`}>
+      {children}
+    </p>
+  )
 }
 
-export function PageHeading({ title, subtitle }: { title: string; subtitle?: string }) {
+/** One line of ink-2, optionally followed by a Quiet action. */
+export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <>
-      <h1 className="mb-1.5 text-[25px] font-bold text-white">{title}</h1>
-      {subtitle && <p className="mb-5 text-[13px] text-white/70">{subtitle}</p>}
-    </>
+    <div className="flex flex-col items-center gap-1 px-4 py-8 text-center">
+      <p className="text-body text-ink-2">{children}</p>
+      {action}
+    </div>
   )
 }

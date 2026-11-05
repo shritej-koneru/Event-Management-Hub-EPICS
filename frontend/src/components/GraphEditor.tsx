@@ -5,11 +5,15 @@ import { Plus, Save, Trash2 } from 'lucide-react'
 import ConfirmDialog from '@/components/Dialog'
 import MapCanvas from '@/components/MapCanvas'
 import {
-  cardClass,
-  compactPrimaryClass,
-  dangerButtonClass,
+  buttonDanger,
+  buttonPrimary,
+  buttonQuiet,
+  buttonSecondary,
   inputClass,
-  smallButtonClass,
+  labelClass,
+  noticeClass,
+  panelPadded,
+  textareaClass,
 } from '@/components/styles'
 import { api } from '@/lib/api'
 import {
@@ -223,16 +227,15 @@ export default function GraphEditor({
 
   const selectedVenueId = mode.kind === 'venue' ? mode.draft.id : null
   const selectedEdge = mode.kind === 'edge' ? mode.draft : null
-  const label = 'block text-xs font-semibold'
 
   return (
     <div className="flex flex-col">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-white">Graph editor</h2>
+        <h2 className="text-heading font-semibold text-ink">Graph editor</h2>
         <div className="flex gap-2">
           <button
             type="button"
-            className={compactPrimaryClass}
+            className={buttonPrimary}
             onClick={() =>
               start({
                 kind: 'addVenue',
@@ -245,7 +248,7 @@ export default function GraphEditor({
           </button>
           <button
             type="button"
-            className={compactPrimaryClass}
+            className={buttonPrimary}
             disabled={venues.length < 2}
             onClick={() =>
               start({
@@ -260,19 +263,19 @@ export default function GraphEditor({
         </div>
       </div>
 
-      <p className="mb-4 rounded-[14px] bg-white/15 px-4 py-3 text-xs text-white">
+      <p className={`${noticeClass('info')} mb-4`}>
         Venue ids are permanent and shared with the mobile app and event data. They cannot be changed after a venue is
         created. Names and positions can be edited at any time.
       </p>
 
       {notice && (
-        <p role="status" className="mb-3 rounded-[14px] bg-green-500/25 px-4 py-3 text-sm text-white">
+        <p role="status" className={`${noticeClass('success')} mb-3`}>
           {notice}
         </p>
       )}
       {map.data && (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
-          <div className={cardClass}>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+          <div className={panelPadded}>
             <MapCanvas
               venues={drawn}
               edges={edges}
@@ -295,33 +298,33 @@ export default function GraphEditor({
                 )
               }
             />
-            <p className="mt-2 text-xs text-[#77758b]">
+            <p className="mt-2 text-small text-ink-2">
               {mode.kind === 'addVenue'
                 ? 'Click the map to place the new venue.'
                 : 'Select a venue or path. Drag a venue to move it, then save.'}
             </p>
           </div>
 
-          <div className={cardClass} aria-live="polite">
+          <div className={panelPadded} aria-live="polite">
             {error && (
-              <p role="alert" className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p role="alert" className={`${noticeClass('danger')} mb-3`}>
                 {error}
               </p>
             )}
 
             {mode.kind === 'none' && (
-              <p className="text-sm text-[#77758b]">
+              <p className="text-body text-ink-2">
                 Nothing selected. Choose a venue or path on the map or from the lists below.
               </p>
             )}
 
             {mode.kind === 'venue' && (
               <form onSubmit={saveVenue} aria-label="Edit venue" className="flex flex-col gap-3">
-                <h2 className="text-lg font-bold text-[#5c3ce8]">Edit venue</h2>
-                <p className="text-xs text-[#77758b]">
-                  Id: <code>{mode.draft.id}</code> (permanent)
+                <h2 className="text-heading font-semibold text-ink">Edit venue</h2>
+                <p className="text-small text-ink-2">
+                  Id: <code className="rounded-control bg-surface-sunken px-1">{mode.draft.id}</code> (permanent)
                 </p>
-                <label className={label}>
+                <label className={labelClass}>
                   Name
                   <input
                     required
@@ -331,7 +334,7 @@ export default function GraphEditor({
                     onChange={(e) => setMode({ kind: 'venue', draft: { ...mode.draft, name: e.target.value } })}
                   />
                 </label>
-                <label className={label}>
+                <label className={labelClass}>
                   Kind
                   <input
                     list="venue-kinds"
@@ -346,18 +349,18 @@ export default function GraphEditor({
                     ))}
                   </datalist>
                 </label>
-                <label className={label}>
+                <label className={labelClass}>
                   Description
                   <textarea
                     maxLength={500}
                     rows={3}
-                    className={`${inputClass} h-auto py-2`}
+                    className={textareaClass}
                     value={mode.draft.description}
                     onChange={(e) => setMode({ kind: 'venue', draft: { ...mode.draft, description: e.target.value } })}
                   />
                 </label>
                 <div className="grid grid-cols-2 gap-3">
-                  <label className={label}>
+                  <label className={labelClass}>
                     X (0-1)
                     <input
                       required
@@ -370,7 +373,7 @@ export default function GraphEditor({
                       onChange={(e) => setMode({ kind: 'venue', draft: { ...mode.draft, x: e.target.value } })}
                     />
                   </label>
-                  <label className={label}>
+                  <label className={labelClass}>
                     Y (0-1)
                     <input
                       required
@@ -385,13 +388,13 @@ export default function GraphEditor({
                   </label>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button type="submit" disabled={busy} className={compactPrimaryClass}>
+                  <button type="submit" disabled={busy} className={buttonPrimary}>
                     <Save className="h-4 w-4" aria-hidden />
                     Save venue
                   </button>
                   <button
                     type="button"
-                    className={dangerButtonClass}
+                    className={buttonDanger}
                     onClick={() => {
                       const v = venues.find((x) => x.id === mode.draft.id)
                       if (v) {
@@ -400,7 +403,7 @@ export default function GraphEditor({
                       }
                     }}
                   >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    <Trash2 className="h-4 w-4" aria-hidden />
                     Delete venue
                   </button>
                 </div>
@@ -409,8 +412,8 @@ export default function GraphEditor({
 
             {mode.kind === 'addVenue' && (
               <form onSubmit={createVenue} aria-label="Add venue" className="flex flex-col gap-3">
-                <h2 className="text-lg font-bold text-[#5c3ce8]">Add venue</h2>
-                <label className={label}>
+                <h2 className="text-heading font-semibold text-ink">Add venue</h2>
+                <label className={labelClass}>
                   Name
                   <input
                     required
@@ -426,7 +429,7 @@ export default function GraphEditor({
                     }}
                   />
                 </label>
-                <label className={label}>
+                <label className={labelClass}>
                   Id (permanent slug)
                   <input
                     required
@@ -438,11 +441,11 @@ export default function GraphEditor({
                       setMode({ kind: 'addVenue', draft: { ...mode.draft, id: e.target.value, idTouched: true } })
                     }
                   />
-                  <span className="mt-1 block font-normal text-[#77758b]">
-                    Lowercase letters, digits and hyphens, e.g. <code>main-hall</code>. Cannot be changed later.
+                  <span className="mt-1 block text-small font-normal text-ink-2">
+                    Lowercase letters, digits and hyphens, e.g. <code className="rounded-control bg-surface-sunken px-1">main-hall</code>. Cannot be changed later.
                   </span>
                 </label>
-                <label className={label}>
+                <label className={labelClass}>
                   Kind
                   <input
                     list="venue-kinds"
@@ -457,18 +460,18 @@ export default function GraphEditor({
                     ))}
                   </datalist>
                 </label>
-                <label className={label}>
+                <label className={labelClass}>
                   Description
                   <textarea
                     maxLength={500}
                     rows={3}
-                    className={`${inputClass} h-auto py-2`}
+                    className={textareaClass}
                     value={mode.draft.description}
                     onChange={(e) => setMode({ kind: 'addVenue', draft: { ...mode.draft, description: e.target.value } })}
                   />
                 </label>
                 <div className="grid grid-cols-2 gap-3">
-                  <label className={label}>
+                  <label className={labelClass}>
                     X (0-1)
                     <input
                       type="number"
@@ -480,7 +483,7 @@ export default function GraphEditor({
                       onChange={(e) => setMode({ kind: 'addVenue', draft: { ...mode.draft, x: e.target.value } })}
                     />
                   </label>
-                  <label className={label}>
+                  <label className={labelClass}>
                     Y (0-1)
                     <input
                       type="number"
@@ -494,11 +497,11 @@ export default function GraphEditor({
                   </label>
                 </div>
                 <div className="flex gap-2">
-                  <button type="submit" disabled={busy} className={compactPrimaryClass}>
+                  <button type="submit" disabled={busy} className={buttonPrimary}>
                     <Plus className="h-4 w-4" aria-hidden />
                     Create venue
                   </button>
-                  <button type="button" className={smallButtonClass} onClick={() => start({ kind: 'none' })}>
+                  <button type="button" className={buttonSecondary} onClick={() => start({ kind: 'none' })}>
                     Cancel
                   </button>
                 </div>
@@ -507,11 +510,11 @@ export default function GraphEditor({
 
             {mode.kind === 'edge' && (
               <form onSubmit={saveEdge} aria-label="Edit path" className="flex flex-col gap-3">
-                <h2 className="text-lg font-bold text-[#5c3ce8]">Edit path</h2>
-                <p className="text-sm">
+                <h2 className="text-heading font-semibold text-ink">Edit path</h2>
+                <p className="text-body">
                   {nameOf(mode.draft.from)} &harr; {nameOf(mode.draft.to)}
                 </p>
-                <label className={label}>
+                <label className={labelClass}>
                   Distance (metres)
                   <input
                     required
@@ -525,13 +528,13 @@ export default function GraphEditor({
                   />
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  <button type="submit" disabled={busy} className={compactPrimaryClass}>
+                  <button type="submit" disabled={busy} className={buttonPrimary}>
                     <Save className="h-4 w-4" aria-hidden />
                     Save path
                   </button>
                   <button
                     type="button"
-                    className={dangerButtonClass}
+                    className={buttonDanger}
                     onClick={() => {
                       const d = mode.draft
                       const edge = edges.find((x) => sameEdge(x, d))
@@ -541,7 +544,7 @@ export default function GraphEditor({
                       }
                     }}
                   >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    <Trash2 className="h-4 w-4" aria-hidden />
                     Delete path
                   </button>
                 </div>
@@ -550,8 +553,8 @@ export default function GraphEditor({
 
             {mode.kind === 'addPath' && (
               <form onSubmit={createPath} aria-label="Add path" className="flex flex-col gap-3">
-                <h2 className="text-lg font-bold text-[#5c3ce8]">Add path</h2>
-                <label className={label}>
+                <h2 className="text-heading font-semibold text-ink">Add path</h2>
+                <label className={labelClass}>
                   From venue
                   <select
                     className={inputClass}
@@ -565,7 +568,7 @@ export default function GraphEditor({
                     ))}
                   </select>
                 </label>
-                <label className={label}>
+                <label className={labelClass}>
                   To venue
                   <select
                     className={inputClass}
@@ -582,7 +585,7 @@ export default function GraphEditor({
                       ))}
                   </select>
                 </label>
-                <label className={label}>
+                <label className={labelClass}>
                   Metres per canvas unit
                   <input
                     type="number"
@@ -591,11 +594,11 @@ export default function GraphEditor({
                     value={metresPerUnit}
                     onChange={(e) => setMetresPerUnit(e.target.value)}
                   />
-                  <span className="mt-1 block font-normal text-[#77758b]">
+                  <span className="mt-1 block text-small font-normal text-ink-2">
                     Used to suggest a distance (1 unit = map height). Default {DEFAULT_METRES_PER_UNIT}.
                   </span>
                 </label>
-                <label className={label}>
+                <label className={labelClass}>
                   Distance (metres)
                   <input
                     required
@@ -609,11 +612,11 @@ export default function GraphEditor({
                   />
                 </label>
                 <div className="flex gap-2">
-                  <button type="submit" disabled={busy} className={compactPrimaryClass}>
+                  <button type="submit" disabled={busy} className={buttonPrimary}>
                     <Plus className="h-4 w-4" aria-hidden />
                     Create path
                   </button>
-                  <button type="button" className={smallButtonClass} onClick={() => start({ kind: 'none' })}>
+                  <button type="button" className={buttonSecondary} onClick={() => start({ kind: 'none' })}>
                     Cancel
                   </button>
                 </div>
@@ -624,23 +627,23 @@ export default function GraphEditor({
       )}
 
       {map.data && (
-        <div className="mt-5 grid gap-5 md:grid-cols-2">
-          <section aria-labelledby="venue-list" className={cardClass}>
-            <h2 id="venue-list" className="mb-2 text-lg font-bold text-[#5c3ce8]">
+        <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <section aria-labelledby="venue-list" className={panelPadded}>
+            <h2 id="venue-list" className="mb-2 text-heading font-semibold text-ink">
               Venues ({venues.length})
             </h2>
-            <ul className="divide-y divide-[#eee9fb]">
+            <ul className="divide-y divide-line">
               {venues.map((v) => (
-                <li key={v.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+                <li key={v.id} className="flex items-center justify-between gap-2 py-2 text-body">
                   <span>
                     {v.name}
-                    <span className="block text-xs text-[#77758b]">
+                    <span className="block text-small text-ink-2">
                       {v.id} ({roundFraction(v.x)}, {roundFraction(v.y)})
                     </span>
                   </span>
                   <button
                     type="button"
-                    className={smallButtonClass}
+                    className={buttonQuiet}
                     aria-label={`Edit venue ${v.name}`}
                     onClick={() => selectVenue(v.id)}
                   >
@@ -650,20 +653,20 @@ export default function GraphEditor({
               ))}
             </ul>
           </section>
-          <section aria-labelledby="edge-list" className={cardClass}>
-            <h2 id="edge-list" className="mb-2 text-lg font-bold text-[#5c3ce8]">
+          <section aria-labelledby="edge-list" className={panelPadded}>
+            <h2 id="edge-list" className="mb-2 text-heading font-semibold text-ink">
               Paths ({edges.length})
             </h2>
-            <ul className="divide-y divide-[#eee9fb]">
+            <ul className="divide-y divide-line">
               {edges.map((e) => (
-                <li key={`${e.from}|${e.to}`} className="flex items-center justify-between gap-2 py-2 text-sm">
+                <li key={`${e.from}|${e.to}`} className="flex items-center justify-between gap-2 py-2 text-body">
                   <span>
                     {nameOf(e.from)} &harr; {nameOf(e.to)}
-                    <span className="block text-xs text-[#77758b]">{e.distanceM} m</span>
+                    <span className="block text-small text-ink-2">{e.distanceM} m</span>
                   </span>
                   <button
                     type="button"
-                    className={smallButtonClass}
+                    className={buttonQuiet}
                     aria-label={`Edit path ${nameOf(e.from)} to ${nameOf(e.to)}`}
                     onClick={() => selectEdge(e)}
                   >
