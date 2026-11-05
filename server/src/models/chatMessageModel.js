@@ -14,14 +14,37 @@ const DEFAULT_RETURNED = 50;
  * @returns {Promise<object>} `{ id, author, text, room, bot, ts }`
  */
 export async function insertChatMessage({ author, text, userId = null, room = null, bot = false }) {
+  const { message } = await insertChatMessageIdempotent({ author, text, userId, room, bot });
+  return message;
+}
+
+/**
+ * Like insertChatMessage, but honours an optional client-generated `clientId`.
+ * A resend with the same (userId, clientId) returns the stored row with
+ * `duplicate: true` instead of inserting again.
+ *
+ * @returns {Promise<{ message: object, duplicate: boolean }>}
+ */
+export async function insertChatMessageIdempotent({
+  author, text, userId = null, room = null, bot = false, clientId = null
+}) {
   const pool = getPool();
+  const cid = userId && clientId ? clientId : null;
   const { rows } = await pool.query(
-    `INSERT INTO chat_messages (author, user_id, room, text, bot)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO chat_messages (author, user_id, room, text, bot, client_id)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (user_id, client_id) WHERE client_id IS NOT NULL DO NOTHING
      RETURNING id, author, room, text, bot, at`,
-    [author, userId || null, room || null, text, Boolean(bot)]
+    [author, userId || null, room || null, text, Boolean(bot), cid]
   );
-  return serialize(rows[0]);
+  if (rows[0]) return { message: serialize(rows[0]), duplicate: false };
+
+  const existing = await pool.query(
+    `SELECT id, author, room, text, bot, at FROM chat_messages
+      WHERE user_id = $1 AND client_id = $2`,
+    [userId, cid]
+  );
+  return { message: serialize(existing.rows[0]), duplicate: true };
 }
 
 /**

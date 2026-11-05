@@ -5,20 +5,22 @@ Android emulator → host: `http://10.0.2.2:3000` (or `adb reverse tcp:3000 tcp:
 
 All errors: `{ "error": "<human message>", "code": "<CODE>" }` with sibling keys.
 
-Contract version reported by `/ping`: `1.1.0`.
+Contract version reported by `/ping`: `1.3.0`.
 
 ---
 
 ## GET /ping
 
-Health + venue catalogue. No auth.
+Health + venue catalogue. No auth. `databaseName` is no longer returned to remote
+clients: it appears only for loopback callers outside production (used by the verify scripts). `databaseName` is no longer returned to remote
+clients: it appears only for loopback callers outside production (used by the verify scripts).
 
 ```bash
 curl -s http://localhost:3000/ping
 ```
 
 ```json
-{ "status": "ok", "ok": true, "service": "emh-server", "contractVersion": "1.1.0",
+{ "status": "ok", "ok": true, "service": "emh-server", "contractVersion": "1.3.0",
   "database": "connected", "venues": [ { "id": "entrance", "name": "Entrance" } ] }
 ```
 
@@ -49,7 +51,8 @@ Demo user (dev seed only): `alice@uni.edu` / `secret123`.
 
 ## GET /api/auth/me · PUT /api/auth/me/interests
 
-Bearer required. `PUT` body: `{ "interests": ["Tech", ...] }` (max 20).
+Bearer required. The returned `user` now includes `role` (`student` | `organizer` | `admin`; default
+`student`; additive). `PUT` body: `{ "interests": ["Tech", ...] }` (max 20).
 
 ## Bookmarks
 
@@ -79,8 +82,23 @@ curl -s 'http://localhost:3000/api/events?category=Tech&pageSize=5'
 
 ## POST /api/events
 
-Bearer required. Body matches contract Event create schema (`title`, `category`,
-`venue` display name, `date`, `time`, `capacity`, …). Venue must be a graph node.
+Bearer + role `organizer` or `admin` required (`403 FORBIDDEN` for a `student`). Body matches contract
+Event create schema (`title`, `category`, `venue` display name, `date`, `time`, `capacity`, …). Venue must
+be a graph node. `400 PAST_DATE` if `date` is before today (UTC); `409 DUPLICATE_EVENT` if an event with
+the same title (case-insensitive), date and venue exists. The creator is stored as `created_by`.
+
+## PUT /api/events/:id · DELETE /api/events/:id
+
+Bearer + role `organizer`/`admin`, and the caller must be the event creator or an `admin` (`403 FORBIDDEN`
+otherwise; `404 EVENT_NOT_FOUND`). Seeded events have no creator, so only admins can change them.
+`PUT` takes any subset of the create fields (at least one, else `400`) → `200 { event }` and broadcasts
+`event` with `reason: "updated"`. `DELETE` → `200 { deleted: true, eventId }` and broadcasts `event` with
+`reason: "deleted"` (relayed live, not persisted as an announcement).
+
+## Auth on optional-auth routes
+
+A request with **no** `Authorization` header is anonymous. A header that IS present but invalid/expired
+now returns `401 INVALID_TOKEN` (previously silently anonymous). JWTs are signed and verified as HS256 only.
 
 ## GET /api/events/:id · /details · /route
 
@@ -103,7 +121,8 @@ curl -s -X POST http://localhost:3000/api/ai/search \
 
 ## GET /api/ai/recommendations
 
-Bearer required → ranked events from interests + bookmarks + search history.
+Mounted with `optionalAuth`, but the controller still answers `401 AUTH_REQUIRED` when there is no
+valid Bearer, so a login is effectively required. Ranks events from interests + bookmarks + search history.
 
 ---
 
@@ -136,7 +155,7 @@ curl -s 'http://localhost:3000/api/navigation/venues/Room%20204/map'
 
 ## POST /api/navigation/path
 
-Body: `{ "from": "Entrance", "to": "Room 204" }` → nodes, steps, totalDistanceM.
+`POST` (not GET), no auth. `POST` (not GET), no auth. Body: `{ "from": "Entrance", "to": "Room 204" }` → nodes, steps, totalDistanceM.
 
 ---
 
@@ -174,7 +193,11 @@ curl -s 'http://localhost:3000/api/chat/messages?limit=20'
 
 ## POST /api/chat/join
 
-Body: `{ "venueId": "room-204" }` → `{ "ok": true, "room": "announce:room-204" }`
+Body: `{ "venueId": "room-204" }` → `{ "ok": true, "room": "announce:room-204" }`.
+Stateless echo: validates the venue is a real graph node (`400 UNKNOWN_VENUE`) but does not join anything.
+Real membership is established by the Socket.IO `join` event..
+Stateless echo: validates the venue is a real graph node (`400 UNKNOWN_VENUE`) but does not join anything.
+Real membership is established by the Socket.IO `join` event.
 
 ---
 
@@ -190,10 +213,11 @@ Path `/socket.io`, namespaces `/` and `/announce`.
 | `events:for` | client → server | venue events; ack `{ ok, events }` |
 | `event` | server → room | announcement relay payload |
 | `chat:message` | both | see below |
+| `chat:error` | server → client | `{ code, message }` for rejected chat posts |
 
 ### chat:message
 
-Client: `socket.emit("chat:message", { text, room? }, ack)`
+Client: `socket.emit("chat:message", { text, room?, clientId? }, ack)`
 
 Server **persists then broadcasts**. Payload:
 
@@ -201,9 +225,19 @@ Server **persists then broadcasts**. Payload:
 { "id": 42, "author": "Guest", "text": "hi", "room": null, "bot": false, "ts": "..." }
 ```
 
-Ack success: `{ "ok": true, "message": { ... } }`  
-Ack failures: `BAD_CHAT_MESSAGE` (empty / >500 chars), `CHAT_PERSIST_FAILED` (DB write failed — not broadcast).
+**Posting requires a valid handshake token** (`AUTH_REQUIRED` otherwise; listening stays anonymous).
+`author` is the signed-in user's name. Delivery is room-scoped: a message with `room` goes to sockets that
+joined `announce:<room>` plus the sender; a message without `room` goes to every connected socket
+(auto-joined to the global room `chat:global`). Per-socket throttle: 5 messages / 5 s, excess is dropped
+with `RATE_LIMITED`. Optional `clientId` (string, ≤64 chars) makes resends idempotent per user.
+
+Ack success: `{ "ok": true, "message": { ... } }`; a resend of a known `clientId` acks
+`{ "ok": true, "message": { ... }, "duplicate": true }` and is NOT re-broadcast.
+Ack failures: `AUTH_REQUIRED`, `RATE_LIMITED`, `BAD_CHAT_MESSAGE` (empty / >500 chars / bad clientId),
+`CHAT_PERSIST_FAILED` (DB write failed — not broadcast). Rejections other than persist failures are also
+emitted as `chat:error` `{ code, message }`.
 
 Assistant auto-replies after ~500 ms with `bot: true` (also persisted).
 
-Handshake auth: `auth: { token: "<jwt>" }` optional. Invalid token → `connect_error` `AUTH_INVALID_TOKEN`.
+Socket.IO CORS uses the same `CORS_ORIGINS` allowlist as Express (reflect-origin in dev, none in production when unset).
+Handshake auth: `auth: { token: "<jwt>" }` optional for listening, required for posting. Invalid token → `connect_error` `AUTH_INVALID_TOKEN`.

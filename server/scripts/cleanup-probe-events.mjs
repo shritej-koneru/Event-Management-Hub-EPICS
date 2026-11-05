@@ -9,6 +9,7 @@
  *
  * Usage: node scripts/cleanup-probe-events.mjs [--dry-run]
  */
+import './lib/devEnv.mjs';
 import { resolveDatabaseUrl } from '../src/config/index.js';
 import { initPool, query, closePool } from '../src/db/pool.js';
 

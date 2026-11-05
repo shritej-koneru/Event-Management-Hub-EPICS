@@ -4,7 +4,8 @@ import { isValidVenueId } from '../navigation/venues.js';
 import { listEvents } from '../models/eventModel.js';
 import { findUserById } from '../models/userModel.js';
 import { recordAnnouncement, stripRoomPrefix } from '../models/announcementModel.js';
-import { insertChatMessage } from '../models/chatMessageModel.js';
+import { insertChatMessage, insertChatMessageIdempotent } from '../models/chatMessageModel.js';
+import { config } from '../config/index.js';
 
 /**
  * BitChat: announcements relay + interactive chat.
@@ -29,9 +30,35 @@ import { insertChatMessage } from '../models/chatMessageModel.js';
  *     rejected with `connect_error` rather than silently downgrading to
  *     anonymous, so a client with a stale token learns to re-authenticate;
  *   - no token means anonymous, and `socket.data.userId` stays undefined.
- * Chat authorship follows the same rule: a valid token names the user, no token
- * means the message is attributed to `Guest`.
+ * POSTING chat requires a valid token (ack/`chat:error` code AUTH_REQUIRED);
+ * listening and joining stay anonymous. Posting is throttled per socket
+ * (CHAT_THROTTLE_MAX messages / CHAT_THROTTLE_WINDOW_MS), excess is dropped with
+ * a RATE_LIMITED error. Messages are delivered only to the message's room:
+ * `announce:<room>` for a venue message (plus the sender), or the global
+ * `chat:global` room (every connected socket auto-joins it) when no room is set.
+ * An optional `clientId` makes a resend idempotent (acked, not re-broadcast).
  */
+
+/** Room every socket joins so room-less (global) chat reaches all clients. */
+export const GLOBAL_CHAT_ROOM = 'chat:global';
+export const CHAT_THROTTLE_MAX = 5;
+export const CHAT_THROTTLE_WINDOW_MS = 5000;
+
+/** Socket.IO CORS origin: the same allowlist Express uses (config.corsOrigins). */
+export function socketCorsOrigin() {
+  if (config.corsOrigins.length) return config.corsOrigins;
+  return config.isProd ? false : true;
+}
+
+/** Sliding-window limiter: returns true when the call is allowed. */
+function allowChat(socket, now = Date.now()) {
+  const hits = (socket.data.chatHits ??= []);
+  while (hits.length && now - hits[0] >= CHAT_THROTTLE_WINDOW_MS) hits.shift();
+  if (hits.length >= CHAT_THROTTLE_MAX) return false;
+  hits.push(now);
+  return true;
+}
+
 
 /** Socket.io room name for a venue node. */
 export const roomForVenue = (venueId) => `announce:${venueId}`;
@@ -100,6 +127,8 @@ function registerNamespace(namespace) {
   });
 
   namespace.on('connection', (socket) => {
+    socket.join(GLOBAL_CHAT_ROOM);
+
     socket.on('join', (rooms, ack) => {
       const requested = Array.isArray(rooms) ? rooms : [rooms];
       const joined = [];
@@ -146,6 +175,20 @@ function registerNamespace(namespace) {
     // namespace (sender included). A failed write is never broadcast — the
     // ack carries CHAT_PERSIST_FAILED so the UI can retry.
     socket.on('chat:message', async (payload = {}, ack) => {
+      const fail = (code, message) => {
+        socket.emit('chat:error', { code, message });
+        if (typeof ack === 'function') ack({ ok: false, error: { code, message } });
+      };
+
+      if (!socket.data.userId) {
+        fail('AUTH_REQUIRED', 'Sign in to send chat messages');
+        return;
+      }
+      if (!allowChat(socket)) {
+        fail('RATE_LIMITED', 'You are sending messages too fast. Slow down.');
+        return;
+      }
+
       const text = typeof payload === 'object' && payload !== null
         ? String(payload.text ?? '').trim()
         : '';
@@ -162,23 +205,39 @@ function registerNamespace(namespace) {
         return;
       }
 
-      let author = 'Guest';
-      if (socket.data.userId) {
-        const user = await findUserById(socket.data.userId).catch(() => null);
-        author = (user && (user.name || user.email)) || 'Guest';
+      const rawClientId = payload?.clientId;
+      if (rawClientId !== undefined && rawClientId !== null &&
+          (typeof rawClientId !== 'string' || !rawClientId.trim() || rawClientId.length > 64)) {
+        fail('BAD_CHAT_MESSAGE', 'clientId must be a non-empty string of at most 64 characters');
+        return;
       }
+      const clientId = typeof rawClientId === 'string' ? rawClientId.trim() : null;
 
-      const room = normalizeRoom(payload.room);
+      const user = await findUserById(socket.data.userId).catch(() => null);
+      if (!user) {
+        fail('AUTH_REQUIRED', 'Account no longer exists');
+        return;
+      }
+      const author = user.name || user.email || 'Guest';
+
+      const room = normalizeRoom(payload?.room);
 
       let message;
       try {
-        message = await insertChatMessage({
+        const stored = await insertChatMessageIdempotent({
           author,
           text,
-          userId: socket.data.userId || null,
+          userId: socket.data.userId,
           room,
-          bot: false
+          bot: false,
+          clientId
         });
+        message = stored.message;
+        if (stored.duplicate) {
+          // Resend of a message we already hold: ack it, do not re-broadcast.
+          if (typeof ack === 'function') ack({ ok: true, message, duplicate: true });
+          return;
+        }
       } catch {
         if (typeof ack === 'function') {
           ack({
@@ -189,7 +248,9 @@ function registerNamespace(namespace) {
         return;
       }
 
-      namespace.emit('chat:message', message);
+      // Deliver only to the message's room (plus the sender's own socket).
+      const target = room ? roomForVenue(room) : GLOBAL_CHAT_ROOM;
+      namespace.to(target).to(socket.id).emit('chat:message', message);
       if (typeof ack === 'function') ack({ ok: true, message });
 
       // Built-in assistant: reply automatically to the sender shortly after the
@@ -222,7 +283,7 @@ function registerNamespace(namespace) {
  * Attaches Socket.IO to the HTTP server.
  * @returns {SocketIOServer}
  */
-export function attachSocketServer(httpServer, { corsOrigin = true } = {}) {
+export function attachSocketServer(httpServer, { corsOrigin = socketCorsOrigin() } = {}) {
   const io = new SocketIOServer(httpServer, {
     path: '/socket.io',
     cors: { origin: corsOrigin, credentials: true }
@@ -256,19 +317,25 @@ export async function broadcastEventUpdate(io, event, { reason = 'updated' } = {
     title:
       reason === 'created'
         ? `New event at ${event.venue}`
-        : `${event.title} updated at ${event.venue}`,
+        : reason === 'deleted'
+          ? `${event.title} was cancelled at ${event.venue}`
+          : `${event.title} updated at ${event.venue}`,
     venueId: event.venueId,
     eventId: event.id
   };
 
-  const { created, announcement: persisted } = await recordAnnouncement(
-    event.venueId,
-    // Keep the id in the stored text so distinct events never collide.
-    `${announcement.title} [${event.id}]`,
-    // And store it as a real column so the announcement can be looked up by
-    // EVENT, not merely by venue: two events can share a venue.
-    event.id
-  );
+  // A deleted event no longer exists, so announcements.event_id (FK) could not
+  // reference it: the notice is relayed live but not persisted.
+  const { created, announcement: persisted } = reason === 'deleted'
+    ? { created: false, announcement: null }
+    : await recordAnnouncement(
+        event.venueId,
+        // Keep the id in the stored text so distinct events never collide.
+        `${announcement.title} [${event.id}]`,
+        // And store it as a real column so the announcement can be looked up by
+        // EVENT, not merely by venue: two events can share a venue.
+        event.id
+      );
 
   if (io) {
     const payload = {
@@ -278,7 +345,8 @@ export async function broadcastEventUpdate(io, event, { reason = 'updated' } = {
       title: announcement.title,
       venue: event.venue,
       venueId: event.venueId,
-      eventId: event.id
+      eventId: event.id,
+      reason
     };
     for (const namespace of ['/', '/announce']) {
       io.of(namespace).to(room).emit('event', payload);

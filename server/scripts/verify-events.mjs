@@ -38,12 +38,27 @@ const get = async (path) => {
   return { status: res.status, body };
 };
 
-async function verifierToken() {
+/** A brand-new student (no bookmarks) for the per-user checks. */
+async function freshUserToken() {
   const email = `event-verify-${Date.now().toString(36)}@uni.edu`;
   const res = await fetch(`${base}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: 'Event Verifier', email, password: 'secret123' })
+  });
+  return (await res.json()).token;
+}
+
+async function verifierToken() {
+  // Creating events needs an organizer/admin: use the seeded demo admin
+  // (override with VERIFY_ORGANIZER_EMAIL / VERIFY_ORGANIZER_PASSWORD).
+  const res = await fetch(`${base}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: process.env.VERIFY_ORGANIZER_EMAIL || 'alice@uni.edu',
+      password: process.env.VERIFY_ORGANIZER_PASSWORD || 'secret123'
+    })
   });
   const body = await res.json();
   if (!body.token) throw new Error(`could not mint verifier token: ${JSON.stringify(body)}`);
@@ -248,7 +263,7 @@ check('unfiltered feed carries no eventId key', wide.body && wide.body.eventId =
 /* -------------------------------------------------------------------------- */
 
 try {
-  const token = await verifierToken();
+  const token = await freshUserToken();
   const res = await fetch(`${base}/api/events/${events[0].id}/details`, {
     headers: { Authorization: `Bearer ${token}` }
   });

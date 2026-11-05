@@ -22,17 +22,24 @@ export function keyGenerator(req) {
  * Exported as a factory so tests can mount a deliberately tight limiter
  * instead of exhausting the production budget.
  *
- * `skipSuccessfulRequests` is enabled so a legitimate user who logs in
- * repeatedly is never locked out by their own successes.
+ * `skipSuccessfulRequests` is opt-in: only the auth limiter uses it, so a
+ * legitimate user who logs in repeatedly is never locked out by their own
+ * successes. The general API limiter counts every request.
  */
-export function buildRateLimiter({ windowMs, max, code = 'RATE_LIMITED', message = 'Too many requests' }) {
+export function buildRateLimiter({
+  windowMs,
+  max,
+  code = 'RATE_LIMITED',
+  message = 'Too many requests',
+  skipSuccessfulRequests = false
+}) {
   return rateLimit({
     windowMs,
     limit: max,
     keyGenerator,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    skipSuccessfulRequests: true,
+    skipSuccessfulRequests,
     // Same envelope as the central error handler and contract §7:
     // `{ "error": "<message>", "code": "<CODE>" }`.
     handler: (req, res) => {
@@ -46,6 +53,7 @@ export const authRateLimit = buildRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: config.isTest ? 1_000 : 20,
   code: 'RATE_LIMITED',
+  skipSuccessfulRequests: true,
   message: 'Too many authentication attempts. Try again later.'
 });
 

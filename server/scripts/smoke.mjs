@@ -108,8 +108,15 @@ check('register leaks no hash', !JSON.stringify(reg.json).match(/\$2[aby]\$/));
 const anonCreate = await req('POST', '/api/events', { body: { title: 'Anon', category: 'Tech', venue: 'Room 205', date: '2028-01-01', capacity: 5 } });
 check('anonymous event creation -> 401', anonCreate.status === 401 && anonCreate.json.code === 'AUTH_REQUIRED');
 
-const created = await req('POST', '/api/events', {
+const studentCreate = await req('POST', '/api/events', {
   token,
+  body: { title: 'Student attempt', category: 'Tech', venue: 'Room 205', date: '2028-01-01', capacity: 5 }
+});
+check('student event creation -> 403', studentCreate.status === 403 && studentCreate.json.code === 'FORBIDDEN');
+
+const orgLogin = await req('POST', '/api/auth/login', { body: { email: 'alice@uni.edu', password: 'secret123' } });
+const created = await req('POST', '/api/events', {
+  token: orgLogin.json.token,
   body: { title: `Live Event ${Date.now().toString(36)}`, category: 'Tech', venue: 'Room 205', date: '2028-01-01', capacity: 5 }
 });
 check('authenticated creation -> 201', created.status === 201, created.json?.error ?? '');

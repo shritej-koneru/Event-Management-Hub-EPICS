@@ -273,3 +273,28 @@ afterAll(async () => {
     await pool().query('DELETE FROM users WHERE id = $1', [userId]);
   }
 });
+describe('migration 006 (roles, ownership, chat client id)', () => {
+  it('adds users.role with a student default and a role check', async () => {
+    const { rows } = await pool().query(
+      "SELECT column_default FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'role'"
+    );
+    expect(rows[0].column_default).toContain('student');
+    await expect(
+      pool().query(
+        "INSERT INTO users (id, name, email, password_hash, role) VALUES ($1, 'x', $2, 'h', 'root')",
+        [unique('usr'), `${unique('r')}@x.io`]
+      )
+    ).rejects.toThrow(/users_role_check|violates/i);
+  });
+
+  it('adds events.created_by and a partial unique index on chat client ids', async () => {
+    const col = await pool().query(
+      "SELECT 1 FROM information_schema.columns WHERE table_name = 'events' AND column_name = 'created_by'"
+    );
+    expect(col.rowCount).toBe(1);
+    const idx = await pool().query(
+      "SELECT indexdef FROM pg_indexes WHERE indexname = 'uq_chat_messages_user_client'"
+    );
+    expect(idx.rows[0].indexdef).toMatch(/UNIQUE.*\(user_id, client_id\).*WHERE \(client_id IS NOT NULL\)/);
+  });
+});

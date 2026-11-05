@@ -56,7 +56,7 @@ export const eventIdRouteParamsSchema = z.object({
  * the navigation graph in the controller so an unmappable venue produces a
  * clear UNKNOWN_VENUE error instead of an unroutable event.
  */
-export const createEventSchema = z.object({
+export const createEventBase = z.object({
   title: z.string().trim().min(1, 'title is required').max(200),
   category: z.string().trim().min(1, 'category is required').max(60),
   venue: z.string().trim().min(1, 'venue is required').max(80),
@@ -77,6 +77,14 @@ export const createEventSchema = z.object({
   tags: z.array(z.string().trim().min(1)).max(20).default([]),
   icon: z.string().trim().max(8).default('🎫')
 });
+
+export const createEventSchema = createEventBase;
+
+/** PUT /api/events/:id — any subset of the create fields (at least one). */
+export const updateEventSchema = createEventBase
+  .partial()
+  .strict()
+  .refine((body) => Object.keys(body).length > 0, { message: 'at least one field is required' });
 
 /**
  * Event list query.

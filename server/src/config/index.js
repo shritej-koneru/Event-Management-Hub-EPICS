@@ -57,6 +57,20 @@ export function resolveSeedDemoUser(envLike = {}, prod = false) {
   return !prod;
 }
 
+/** Minimum JWT_SECRET length enforced in production. */
+export const MIN_PROD_SECRET_LENGTH = 32;
+
+function resolveJwtSecret() {
+  if (isTest && !(env.JWT_SECRET || '').trim()) return 'test-only-secret';
+  const secret = requiredSecret('JWT_SECRET');
+  if (isProd && secret.length < MIN_PROD_SECRET_LENGTH) {
+    throw new Error(
+      `JWT_SECRET must be at least ${MIN_PROD_SECRET_LENGTH} characters when NODE_ENV=production.`
+    );
+  }
+  return secret;
+}
+
 export const config = {
   env: env.NODE_ENV || 'development',
   isProd,
@@ -73,10 +87,13 @@ export const config = {
   // response shape changed.
   // 1.2.0 added GET /navigation/map and GET /navigation/venues/:venueId/map
   // (stored canvas layout + edges). Additive only — no existing shape changed.
-  contractVersion: '1.2.0',
+  // 1.3.0 added users.role (auth responses), role-gated POST /events,
+  // PUT/DELETE /events/:id, chat auth/room delivery/clientId, and 401 for an
+  // invalid bearer token on optional-auth routes.
+  contractVersion: '1.3.0',
 
   jwt: {
-    secret: isTest && !(env.JWT_SECRET || '').trim() ? 'test-only-secret' : requiredSecret('JWT_SECRET'),
+    secret: resolveJwtSecret(),
     expiresIn: (env.JWT_EXPIRES_IN || '').trim() || '7d'
   },
 
@@ -95,6 +112,9 @@ export const config = {
    * seeding. Off by default in production - see resolveSeedDemoUser().
    */
   seedDemoUser: resolveSeedDemoUser(env, isProd),
+
+  /** Force the idempotent seed on every boot (otherwise only on an empty DB). */
+  seedOnBoot: bool('SEED_ON_BOOT', false),
 
   /** Comma-separated CORS allowlist. Empty means "reflect the request origin". */
   corsOrigins: (env.CORS_ORIGINS || '')

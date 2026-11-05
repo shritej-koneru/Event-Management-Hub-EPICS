@@ -48,7 +48,7 @@ Verify:
 
 ```bash
 curl http://localhost:3000/ping
-# {"status":"ok","ok":true,"service":"emh-server","contractVersion":"1.1.0",
+# {"status":"ok","ok":true,"service":"emh-server","contractVersion":"1.3.0",
 #  "contract":"contract/API-CONTRACT.md","database":"connected",
 #  "venues":[{"id":"entrance","name":"Entrance"}, ...]}
 ```

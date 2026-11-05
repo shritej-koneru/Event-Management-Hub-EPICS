@@ -17,6 +17,7 @@
  */
 
 import { request } from 'node:http';
+import './devEnv.mjs';
 import { resolveDatabaseName } from '../../src/config/index.js';
 
 /** Names that are never a valid verification target. */

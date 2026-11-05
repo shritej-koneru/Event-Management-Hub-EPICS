@@ -21,6 +21,8 @@ export const DEMO_USER = {
   password:
     (process.env.DEMO_USER_PASSWORD || '').trim() ||
     (process.env.NODE_ENV === 'production' ? '' : 'secret123'),
+  /** Demo account can create events so demos keep working. */
+  role: 'admin',
   interests: ['tech', 'ai', 'android']
 };
 

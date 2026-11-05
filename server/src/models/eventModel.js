@@ -142,8 +142,8 @@ export async function insertEvent(event) {
   const { rows } = await pool.query(
     `INSERT INTO events
        (id, title, category, venue_id, date, time, duration_min,
-        capacity, registered, host, description, tags, icon)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13)
+        capacity, registered, host, description, tags, icon, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14)
      RETURNING id`,
     [
       event.id,
@@ -158,10 +158,58 @@ export async function insertEvent(event) {
       event.host,
       event.description,
       JSON.stringify(event.tags),
-      event.icon
+      event.icon,
+      event.createdBy ?? null
     ]
   );
   return findEventById(rows[0].id);
+}
+
+/** Owner of an event (created_by is not part of the public Event JSON). */
+export async function findEventOwner(id) {
+  const { rows } = await getPool().query('SELECT created_by FROM events WHERE id = $1', [id]);
+  return rows[0] ? { exists: true, createdBy: rows[0].created_by } : { exists: false, createdBy: null };
+}
+
+/** Id of an event with the same title (case-insensitive), date and venue, if any. */
+export async function findDuplicateEvent({ title, date, venueId, excludeId = null }) {
+  const { rows } = await getPool().query(
+    `SELECT id FROM events
+      WHERE lower(title) = lower($1) AND date = $2::date AND venue_id = $3
+        AND ($4::text IS NULL OR id <> $4)
+      LIMIT 1`,
+    [title, date, venueId, excludeId]
+  );
+  return rows[0]?.id ?? null;
+}
+
+const UPDATABLE = {
+  title: 'title', category: 'category', venueId: 'venue_id', date: 'date', time: 'time',
+  durationMin: 'duration_min', capacity: 'capacity', registered: 'registered',
+  host: 'host', description: 'description', icon: 'icon'
+};
+
+/** Partial update; only keys present in `patch` change. Returns the Event or null. */
+export async function updateEventRow(id, patch) {
+  const sets = [];
+  const values = [id];
+  for (const [key, column] of Object.entries(UPDATABLE)) {
+    if (patch[key] === undefined) continue;
+    values.push(patch[key]);
+    sets.push(`${column} = $${values.length}`);
+  }
+  if (patch.tags !== undefined) {
+    values.push(JSON.stringify(patch.tags));
+    sets.push(`tags = $${values.length}::jsonb`);
+  }
+  if (!sets.length) return findEventById(id);
+  const { rowCount } = await getPool().query(`UPDATE events SET ${sets.join(', ')} WHERE id = $1`, values);
+  return rowCount ? findEventById(id) : null;
+}
+
+export async function deleteEventRow(id) {
+  const { rowCount } = await getPool().query('DELETE FROM events WHERE id = $1', [id]);
+  return rowCount > 0;
 }
 
 export async function countEvents() {

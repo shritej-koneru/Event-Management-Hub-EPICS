@@ -7,7 +7,8 @@ export function toPublicUser(row, { bookmarks } = {}) {
     id: row.id,
     name: row.name,
     email: row.email,
-    interests: Array.isArray(row.interests) ? row.interests : []
+    interests: Array.isArray(row.interests) ? row.interests : [],
+    role: row.role || 'student'
   };
   if (bookmarks !== undefined) user.bookmarks = bookmarks;
   return user;
@@ -32,6 +33,10 @@ export async function insertUser({ id, name, email, passwordHash, interests = []
     [id, name, email, passwordHash, JSON.stringify(interests)]
   );
   return rows[0];
+}
+
+export async function setUserRole(id, role) {
+  await getPool().query('UPDATE users SET role = $2 WHERE id = $1', [id, role]);
 }
 
 export async function updateInterests(userId, interests) {

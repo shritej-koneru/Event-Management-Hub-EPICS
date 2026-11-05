@@ -4,8 +4,9 @@ import { createApp } from './app.js';
 import { ensureDatabase, releaseDatabase } from './db/bootstrap.js';
 import { migrate } from './db/migrate.js';
 import { seed } from './db/seeds/index.js';
+import { countEvents } from './models/eventModel.js';
 import { validateGraph } from './navigation/graph.js';
-import { attachSocketServer, broadcastEventUpdate } from './socket/index.js';
+import { attachSocketServer, broadcastEventUpdate, socketCorsOrigin } from './socket/index.js';
 import { closePool } from './db/pool.js';
 
 /**
@@ -25,14 +26,21 @@ async function start() {
   const { applied, total } = await migrate();
   console.log(`  migrations: ${applied} applied / ${total} total`);
 
-  await seed();
+  // Seed only into an empty database (or when SEED_ON_BOOT=true). Re-seeding on
+  // every boot would resurrect events an organizer deleted. The seed itself is
+  // idempotent, so forcing it is always safe.
+  if (config.seedOnBoot || (await countEvents()) === 0) {
+    await seed();
+  } else {
+    console.log('  seed: skipped (database already populated; set SEED_ON_BOOT=true to force)');
+  }
 
   const graph = validateGraph();
   console.log(`  venues: ${graph.venueCount} graph nodes, all reachable`);
 
   const app = createApp();
   const server = http.createServer(app);
-  const io = attachSocketServer(server);
+  const io = attachSocketServer(server, { corsOrigin: socketCorsOrigin() });
 
   app.locals.broadcastEvent = (event, options) => broadcastEventUpdate(io, event, options);
 
@@ -60,7 +68,9 @@ function printRoutes(port) {
     ['POST', '/api/auth/me/bookmarks/:eventId', 'Bearer'],
     ['DELETE', '/api/auth/me/bookmarks/:eventId', 'Bearer'],
     ['GET', '/api/events', 'optional + filter/paginate'],
-    ['POST', '/api/events', 'Bearer'],
+    ['POST', '/api/events', 'Bearer + organizer/admin'],
+    ['PUT', '/api/events/:id', 'Bearer + creator/admin'],
+    ['DELETE', '/api/events/:id', 'Bearer + creator/admin'],
 ['GET', '/api/events/:id', 'optional'],
   ['GET', '/api/events/:id/details', 'optional'],
   ['GET', '/api/events/:id/route', 'optional'],

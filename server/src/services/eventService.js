@@ -2,6 +2,10 @@ import {
   listEvents,
   findEventById,
   insertEvent,
+  findEventOwner,
+  findDuplicateEvent,
+  updateEventRow,
+  deleteEventRow,
   countEvents,
   countEventsByCategory
 } from '../models/eventModel.js';
@@ -60,7 +64,8 @@ export async function getEvent(id) {
  * navigation graph node. An unmappable venue is a 400 UNKNOWN_VENUE rather than
  * a silently stored event that navigation could never route to.
  */
-export async function createEvent(payload) {
+export async function createEvent(payload, { createdBy = null } = {}) {
+  assertNotPast(payload.date);
   const venueId = resolveVenue(payload.venue);
   if (!venueId) {
     throw ApiError.badRequest(
@@ -73,6 +78,10 @@ export async function createEvent(payload) {
   const registered = Math.min(payload.registered ?? 0, payload.capacity);
   if ((payload.registered ?? 0) > payload.capacity) {
     throw ApiError.badRequest('registered cannot exceed capacity', 'VALIDATION_ERROR');
+  }
+
+  if (await findDuplicateEvent({ title: payload.title, date: payload.date, venueId })) {
+    throw ApiError.conflict('An event with this title, date and venue already exists', 'DUPLICATE_EVENT');
   }
 
   return insertEvent({
@@ -88,8 +97,68 @@ export async function createEvent(payload) {
     host: payload.host ?? '',
     description: payload.description ?? '',
     tags: payload.tags ?? [],
-    icon: payload.icon ?? '🎫'
+    icon: payload.icon ?? '🎫',
+    createdBy
   });
+}
+
+/** Today as YYYY-MM-DD (UTC), the same day basis used by event details. */
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
+function assertNotPast(date) {
+  if (date < todayIso()) {
+    throw ApiError.badRequest('Event date cannot be in the past', 'PAST_DATE');
+  }
+}
+
+/** Loads the event owner and enforces creator-or-admin. */
+async function assertCanModify(id, user) {
+  const { exists, createdBy } = await findEventOwner(id);
+  if (!exists) throw ApiError.notFound(`Event not found: ${id}`, 'EVENT_NOT_FOUND');
+  if (user.role !== 'admin' && createdBy !== user.id) {
+    throw ApiError.forbidden('Only the event creator or an admin can modify this event', 'FORBIDDEN');
+  }
+}
+
+/** PUT /api/events/:id — partial update restricted to the creator or an admin. */
+export async function updateEvent(id, patch, user) {
+  await assertCanModify(id, user);
+  const current = await findEventById(id);
+
+  const next = { ...patch };
+  if (patch.date !== undefined && patch.date !== current.date) assertNotPast(patch.date);
+  if (patch.venue !== undefined) {
+    const venueId = resolveVenue(patch.venue);
+    if (!venueId) {
+      throw ApiError.badRequest(`Unknown venue: "${patch.venue}".`, 'UNKNOWN_VENUE');
+    }
+    next.venueId = venueId;
+  }
+  const capacity = next.capacity ?? current.capacity;
+  const registered = next.registered ?? current.registered;
+  if (registered > capacity) {
+    throw ApiError.badRequest('registered cannot exceed capacity', 'VALIDATION_ERROR');
+  }
+
+  const dup = await findDuplicateEvent({
+    title: next.title ?? current.title,
+    date: next.date ?? current.date,
+    venueId: next.venueId ?? current.venueId,
+    excludeId: id
+  });
+  if (dup) {
+    throw ApiError.conflict('An event with this title, date and venue already exists', 'DUPLICATE_EVENT');
+  }
+
+  return updateEventRow(id, next);
+}
+
+/** DELETE /api/events/:id — restricted to the creator or an admin. Returns the removed event. */
+export async function removeEvent(id, user) {
+  await assertCanModify(id, user);
+  const event = await findEventById(id);
+  await deleteEventRow(id);
+  return event;
 }
 
 /**

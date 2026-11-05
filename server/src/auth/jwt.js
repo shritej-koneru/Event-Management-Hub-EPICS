@@ -11,13 +11,13 @@ export function signToken(user) {
   return jwt.sign(
     { uid: user.id, email: user.email, name: user.name },
     config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
+    { algorithm: 'HS256', expiresIn: config.jwt.expiresIn }
   );
 }
 
 /** @returns the decoded payload, or throws on an invalid/expired token. */
 export function verifyToken(token) {
-  return jwt.verify(token, config.jwt.secret);
+  return jwt.verify(token, config.jwt.secret, { algorithms: ['HS256'] });
 }
 
 /** Extracts a bearer token from an Authorization header, if present. */

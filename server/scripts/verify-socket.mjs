@@ -29,11 +29,15 @@ const announcements = async () => (await fetch(`${base}/api/chat/announcements`)
 
 /** `POST /api/events` requires a JWT, so mint a throwaway verifier account. */
 async function verifierToken() {
-  const email = `socket-verify-${Date.now().toString(36)}@uni.edu`;
-  const res = await fetch(`${base}/api/auth/register`, {
+  // Creating events needs an organizer/admin: use the seeded demo admin
+  // (override with VERIFY_ORGANIZER_EMAIL / VERIFY_ORGANIZER_PASSWORD).
+  const res = await fetch(`${base}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'Socket Verifier', email, password: 'secret123' })
+    body: JSON.stringify({
+      email: process.env.VERIFY_ORGANIZER_EMAIL || 'alice@uni.edu',
+      password: process.env.VERIFY_ORGANIZER_PASSWORD || 'secret123'
+    })
   });
   const body = await res.json();
   if (!body.token) throw new Error(`could not mint verifier token: ${JSON.stringify(body)}`);

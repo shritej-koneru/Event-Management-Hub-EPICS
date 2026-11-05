@@ -19,7 +19,7 @@ import { healthcheck } from './db/pool.js';
  * Native Android clients send no Origin header, so they are unaffected either
  * way.
  */
-function corsOriginDelegate() {
+export function corsOriginDelegate() {
   const allowlist = config.corsOrigins;
   if (!allowlist.length) {
     if (config.isProd) return false; // no configured allowlist => no browser access
@@ -29,6 +29,12 @@ function corsOriginDelegate() {
     if (!origin || allowlist.includes(origin)) return callback(null, true);
     return callback(new Error('Origin not allowed by CORS policy'));
   };
+}
+
+/** True when the TCP peer is the local machine. */
+function isLoopback(req) {
+  const addr = req.socket?.remoteAddress || '';
+  return addr === '::1' || addr === '127.0.0.1' || addr === '::ffff:127.0.0.1';
 }
 
 /**
@@ -72,10 +78,10 @@ export function createApp(deps = {}) {
         contractVersion: config.contractVersion,
         contract: 'contract/API-CONTRACT.md',
         database: await healthcheck() ? 'connected' : 'unavailable',
-        // Which database this instance is actually serving, so the live verifier
-        // scripts can refuse to run against a real development database. Omitted
-        // in production, where naming it would be needless disclosure.
-        ...(config.isProd ? {} : { databaseName: resolveDatabaseName() }),
+        // The database name is only disclosed to loopback callers outside
+        // production (the live verifier scripts run on the same host and use it
+        // to refuse real databases). LAN / emulator / internet clients never see it.
+        ...(!config.isProd && isLoopback(req) ? { databaseName: resolveDatabaseName() } : {}),
         venues: VENUES.map((venue) => ({ id: venue.id, name: venue.name }))
       });
     } catch (err) {

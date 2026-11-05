@@ -16,6 +16,7 @@
  *   SCRATCH_DATABASE  database to build in (default emh_migration_check)
  */
 
+import './lib/devEnv.mjs';
 import { config } from '../src/config/index.js';
 
 const ALLOWED = /^[a-z][a-z0-9_]*$/;
@@ -78,13 +79,14 @@ try {
 check('cold build succeeds', buildError === null, buildError ? buildError.message : '');
 
 const applied = migrationLog.filter((l) => /applied/.test(l));
-check('all five migrations applied', applied.length === 5, `${applied.length}: ${applied.join(' | ')}`);
+check('all six migrations applied', applied.length === 6, `${applied.length}: ${applied.join(' | ')}`);
 for (const file of [
   '001_init.sql',
   '002_integrity_and_retention.sql',
   '003_announcements_event_id.sql',
   '004_chat_messages.sql',
-  '005_venue_map.sql'
+  '005_venue_map.sql',
+  '006_roles_and_ownership.sql'
 ]) {
   check(`${file} ran`, migrationLog.some((l) => l.includes(file)));
 }
@@ -109,7 +111,7 @@ for (const table of [
 
 // The `migrations` ledger must record every file so a re-run skips cleanly.
 const recorded = (await query(`SELECT count(*)::int AS n FROM migrations`)).rows[0].n;
-check('migrations ledger records every file', Number(recorded) === 5, `${recorded} rows`);
+check('migrations ledger records every file', Number(recorded) === 6, `${recorded} rows`);
 
 // Map layout (005): coordinates seeded in range, one row per undirected edge.
 const mapRow = (await query(

@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { optionalAuth, requireAuth } from '../middleware/auth.js';
+import { optionalAuth, requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { createEventSchema, eventIdSchema, eventListQuerySchema, eventRouteQuerySchema } from '../middleware/validators.js';
+import { createEventSchema, updateEventSchema, eventIdSchema, eventListQuerySchema, eventRouteQuerySchema } from '../middleware/validators.js';
 import * as events from '../controllers/eventController.js';
 
 const router = Router();
@@ -51,10 +51,35 @@ router.get('/:id', optionalAuth, validate({ params: eventIdSchema }), events.det
 /**
  * POST /api/events -> 201
  *
- * Creating events mutates shared data, so it requires a JWT. This matches
+ * Creating events mutates shared data, so it requires a JWT and an organizer
+ * or admin role (students get 403 FORBIDDEN). This matches
  * contract/API-CONTRACT.md, which exempts only /ping, /auth/login,
  * /auth/register, GET /events, GET /events/:id and GET /navigation/venues.
  */
-router.post('/', requireAuth, validate({ body: createEventSchema }), events.create);
+router.post(
+  '/',
+  requireAuth,
+  requireRole('organizer', 'admin'),
+  validate({ body: createEventSchema }),
+  events.create
+);
+
+/** PUT /api/events/:id -> 200 { event }. Creator or admin only. Broadcasts `updated`. */
+router.put(
+  '/:id',
+  requireAuth,
+  requireRole('organizer', 'admin'),
+  validate({ params: eventIdSchema, body: updateEventSchema }),
+  events.update
+);
+
+/** DELETE /api/events/:id -> 200 { deleted, eventId }. Creator or admin only. Broadcasts `deleted`. */
+router.delete(
+  '/:id',
+  requireAuth,
+  requireRole('organizer', 'admin'),
+  validate({ params: eventIdSchema }),
+  events.remove
+);
 
 export default router;

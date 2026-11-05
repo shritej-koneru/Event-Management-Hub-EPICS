@@ -7,7 +7,7 @@ import { validateGraph } from '../../navigation/graph.js';
 import { isValidVenueId, assertMapIntegrity } from '../../navigation/venues.js';
 import { upsertVenues, upsertVenueEdges, countVenues } from '../../models/venueModel.js';
 import { insertEvent, countEvents } from '../../models/eventModel.js';
-import { findUserByEmail, insertUser, countUsers } from '../../models/userModel.js';
+import { findUserByEmail, insertUser, countUsers, setUserRole } from '../../models/userModel.js';
 import { addBookmark, listBookmarkIds } from '../../models/bookmarkModel.js';
 import { recentQueries, recordSearch } from '../../models/searchHistoryModel.js';
 import { recordAnnouncement, countAnnouncements } from '../../models/announcementModel.js';
@@ -76,6 +76,8 @@ export async function seed({ log = console.log, demoUser = config.seedDemoUser }
       });
       log(`  demo user: ${DEMO_USER.email} created`);
     }
+    // Idempotent: also promotes a demo user created before roles existed.
+    await setUserRole(DEMO_USER.id, DEMO_USER.role);
 
     for (const eventId of DEMO_PERSONALIZATION.bookmarks) {
       await addBookmark(DEMO_USER.id, eventId);

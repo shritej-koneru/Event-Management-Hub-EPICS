@@ -4,7 +4,13 @@
 > against these shapes and names. If a field changes here, update this file FIRST,
 > then bump `contractVersion` in the `/ping` response.
 
-- **Contract version: `1.2.0`** (`/ping` -> `contractVersion`; previously `1.1.0`).
+- **Contract version: `1.3.0`** (`/ping` -> `contractVersion`; previously `1.2.0`).
+  - **1.3.0 adds (additive for Android):** `role` on the `user` object; `POST /events`
+    now needs an `organizer`/`admin` role (`403 FORBIDDEN`) and rejects past dates
+    (`400 PAST_DATE`) / duplicates (`409 DUPLICATE_EVENT`); `PUT` and `DELETE /events/:id`
+    (creator or admin); chat posting needs a JWT, is room-scoped, throttled and accepts
+    an optional `clientId`; an invalid bearer token on an optional-auth route is `401`
+    instead of silently anonymous; `/ping` no longer returns `databaseName` to remote callers.
   - **1.2.0 adds, and breaks nothing:** `GET /navigation/map` and
     `GET /navigation/venues/:venueId/map` (campus canvas layout + stored graph
     edges, both additive).
@@ -19,11 +25,14 @@
 **Auth model.** An endpoint is either **public** (no credential needed) or
 **authenticated** (valid JWT required; missing/invalid -> `401`). A JWT is always
 *accepted* when present on any endpoint and used for personalisation when
-relevant; it is never required merely to read data.
+relevant; it is never required merely to read data. **Exception (1.3.0):** if an
+`Authorization` header IS sent but the token is invalid or expired, the server answers
+`401 INVALID_TOKEN` instead of treating the caller as anonymous; omit the header (or
+re-authenticate) to continue. JWTs are HS256 only.
 
 | Public | Authenticated |
 | --- | --- |
-| `GET /ping`, `GET /navigation/venues`, `GET /navigation/map`, `GET /navigation/venues/:venueId/map`, `GET /navigation/path`, `GET /events`, `GET /events/:id`, `GET /events/:id/route`, `GET /events/:id/details`, `GET /chat/announcements`, `POST /auth/login`, `POST /auth/register` | `POST /events`, `GET /auth/me`, `POST /auth/me/bookmarks/:eventId`, `DELETE /auth/me/bookmarks/:eventId` |
+| `GET /ping`, `POST /navigation/path`, `POST /ai/search` (optional auth), `GET /navigation/venues`, `GET /navigation/map`, `GET /navigation/venues/:venueId/map`, `GET /events`, `GET /events/:id`, `GET /events/:id/route`, `GET /events/:id/details`, `GET /chat/announcements`, `POST /auth/login`, `POST /auth/register` | `POST /events` (organizer/admin), `PUT /events/:id` and `DELETE /events/:id` (creator or admin), `GET /auth/me`, `POST /auth/me/bookmarks/:eventId`, `DELETE /auth/me/bookmarks/:eventId` |
 
 > **Correction from 1.0.0.** The old note read "all auth endpoints except
 > `/ping`, `/auth/login`, `/auth/register`, `GET /events`, `GET /events/:id`,
@@ -231,8 +240,19 @@ Each chart's `data` sums to its own `total`. Data points are `{ label, value }`.
 
 ### `POST /events`
 
-**Requires a JWT** (`Authorization: Bearer <jwt>`). This is the only mutating event
-endpoint, and it is not in the optional-auth exemption list in §1.
+**Requires a JWT** (`Authorization: Bearer <jwt>`) **and a `role` of `organizer` or
+`admin`** (`403 FORBIDDEN` for `student`, the default role of self-registered users).
+It is not in the optional-auth exemption list in §1. The creator is recorded and used for
+`PUT`/`DELETE`. Errors: `400 PAST_DATE` (date before today, UTC), `409 DUPLICATE_EVENT`
+(same title case-insensitive + date + venue), `400 UNKNOWN_VENUE`.
+
+### `PUT /events/:id` and `DELETE /events/:id` (1.3.0)
+
+JWT + `organizer`/`admin` role, and the caller must be the event's creator or an `admin`
+(`403 FORBIDDEN`; `404 EVENT_NOT_FOUND`). Seeded events have no creator (admin only).
+`PUT` accepts any non-empty subset of the create body and returns `200 { "event": {...} }`;
+`DELETE` returns `200 { "deleted": true, "eventId": "evt_..." }`. Both broadcast `event` to the
+venue room (`reason: "updated"` / `"deleted"` in the payload; a delete is not stored as an announcement).
 
 ```json
 // 201 response
@@ -248,7 +268,7 @@ endpoint, and it is not in the optional-auth exemption list in §1.
 // request
 { "name": "Alice", "email": "alice@uni.edu", "password": "secret123" }
 // 201 response
-{ "token": "<jwt>", "user": { "id": "usr_001", "name": "Alice", "email": "alice@uni.edu" } }
+{ "token": "<jwt>", "user": { "id": "usr_001", "name": "Alice", "email": "alice@uni.edu", "role": "student" } }
 ```
 
 ### `POST /auth/login`
@@ -256,8 +276,10 @@ endpoint, and it is not in the optional-auth exemption list in §1.
 // request
 { "email": "alice@uni.edu", "password": "secret123" }
 // 200 response
-{ "token": "<jwt>", "user": { "id": "usr_001", "name": "Alice", "email": "alice@uni.edu" } }
+{ "token": "<jwt>", "user": { "id": "usr_001", "name": "Alice", "email": "alice@uni.edu", "role": "student" } }
 ```
+
+`role` is `student` (default) | `organizer` | `admin`; it is also returned by `GET /auth/me`.
 
 Send as `Authorization: Bearer <jwt>` on authenticated calls.
 
@@ -315,7 +337,7 @@ never admits an event on its own, so a query that matches nothing returns
 `score` is in `[0,1]` and uses a saturating curve, so strong matches remain
 distinguishable and never all pin to `1`.
 
-### `GET /ai/recommendations` (user-aware, requires JWT)
+### `GET /ai/recommendations` (user-aware; mounted with optionalAuth, but anonymous callers get `401 AUTH_REQUIRED`)
 ```json
 // response
 {
@@ -455,17 +477,23 @@ send a message and the server broadcasts it back to **every** client in the name
 `chat_messages` before the broadcast; a failed write is never broadcast
 (`CHAT_PERSIST_FAILED` ack).
 
-  - Client → server: `socket.emit("chat:message", { text }, ack)` — `room` is optional and,
-    when present, must be a bare venue id (e.g. `"room-204"`); it is informational, the
-    broadcast still reaches everyone.
+  - **1.3.0:** posting requires a valid handshake token (`AUTH_REQUIRED` otherwise); anonymous
+    sockets can still listen. Delivery is room-scoped: with `room` the message goes to sockets that
+    joined `announce:<room>` plus the sender; without `room` it goes to every connected socket
+    (each is auto-joined to `chat:global`). Per-socket throttle 5 msgs / 5 s; excess is dropped with
+    `RATE_LIMITED`. Rejections are also emitted as `chat:error { code, message }`.
+  - Client → server: `socket.emit("chat:message", { text, room?, clientId? }, ack)` — `room`, when
+    present, must be a bare venue id (e.g. `"room-204"`). `clientId` (string, <=64 chars) is an
+    optional idempotency key: a resend by the same user returns
+    `{ ok: true, message, duplicate: true }` and is not stored or broadcast again.
   - Server → clients (all, on the same namespace): `chat:message` payload
     ```json
     { "id": 42, "author": "Alice Wang", "text": "hi everyone", "room": null, "bot": false, "ts": "2026-10-07T18:30:00.000Z" }
     ```
     `id` is the database identity (JSON number). Clients should treat it as an opaque
     dedupe key (stringify if needed).
-  - `author` is the identity from the handshake: a valid `auth.token` resolves to the user's
-    name, otherwise `"Guest"`.
+  - `author` is the identity from the handshake token (the user's name). `"Guest"` remains only
+    for legacy rows.
   - ack: `{ ok: true, message: { ... } }`, or `{ ok: false, error: { code: "BAD_CHAT_MESSAGE", message } }`
     when `text` is missing/blank or longer than 500 characters, or
     `{ code: "CHAT_PERSIST_FAILED", message }` when the database write failed.

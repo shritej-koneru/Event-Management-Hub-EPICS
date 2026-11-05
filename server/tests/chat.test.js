@@ -60,7 +60,7 @@ function emitAck(socket, event, payload) {
 describe('chat:message persistence (Socket.IO)', () => {
   it('acks ok, stores the row, and broadcasts the same message', async () => {
     const marker = unique('hello');
-    const socket = connect();
+    const socket = connect(token);
     await waitFor(socket, 'connect');
 
     const broadcast = waitFor(socket, 'chat:message');
@@ -69,7 +69,7 @@ describe('chat:message persistence (Socket.IO)', () => {
 
     expect(ack.ok).toBe(true);
     expect(ack.message.text).toBe(marker);
-    expect(ack.message.author).toBe('Guest');
+    expect(ack.message.author).not.toBe('Guest');
     expect(ack.message.id).toBeDefined();
     expect(ack.message.ts).toBeDefined();
     expect(echoed).toEqual(ack.message);
@@ -91,7 +91,7 @@ describe('chat:message persistence (Socket.IO)', () => {
 
   it('stores a room-scoped message and filters history by that room', async () => {
     const marker = unique('roomed');
-    const socket = connect();
+    const socket = connect(token);
     await waitFor(socket, 'connect');
 
     const ack = await emitAck(socket, 'chat:message', { text: marker, room: 'library' });
@@ -107,7 +107,7 @@ describe('chat:message persistence (Socket.IO)', () => {
 
   it('rejects an empty message without writing a row', async () => {
     const before = await countChatMessages();
-    const socket = connect();
+    const socket = connect(token);
     await waitFor(socket, 'connect');
 
     const ack = await emitAck(socket, 'chat:message', { text: '   ' });
@@ -117,7 +117,7 @@ describe('chat:message persistence (Socket.IO)', () => {
   });
 
   it('rejects a message longer than 500 characters', async () => {
-    const socket = connect();
+    const socket = connect(token);
     await waitFor(socket, 'connect');
 
     const ack = await emitAck(socket, 'chat:message', { text: 'x'.repeat(501) });
@@ -127,7 +127,7 @@ describe('chat:message persistence (Socket.IO)', () => {
 
   it('persists the assistant auto-reply so it survives reconnect', async () => {
     const marker = unique('botseed');
-    const socket = connect();
+    const socket = connect(token);
     await waitFor(socket, 'connect');
 
     const ack = await emitAck(socket, 'chat:message', { text: `${marker} hello` });
@@ -178,7 +178,7 @@ describe('GET /api/chat/messages history', () => {
   it('paginates with the before cursor', async () => {
     const a = unique('pageA');
     const b = unique('pageB');
-    const socket = connect();
+    const socket = connect(token);
     await waitFor(socket, 'connect');
     await emitAck(socket, 'chat:message', { text: a });
     await new Promise((resolve) => setTimeout(resolve, 25));

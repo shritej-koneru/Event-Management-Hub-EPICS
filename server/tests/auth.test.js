@@ -379,8 +379,21 @@ it('attaches rate limit headers to the login endpoint', async () => {
     expect(limited.headers['retry-after']).toBeDefined();
   });
 
-  it('does not count successful requests against the budget', async () => {
+  it('counts successful requests by default (general API limiter)', async () => {
     const limiter = buildRateLimiter({ windowMs: 60 * 1000, max: 2 });
+    const app = express();
+    app.get('/probe', limiter, (req, res) => res.json({ ok: true }));
+
+    const statuses = [];
+    for (let i = 0; i < 4; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      statuses.push((await supertest(app).get('/probe')).status);
+    }
+    expect(statuses).toEqual([200, 200, 429, 429]);
+  });
+
+  it('skips successful requests only when opted in (auth limiter)', async () => {
+    const limiter = buildRateLimiter({ windowMs: 60 * 1000, max: 2, skipSuccessfulRequests: true });
     const app = express();
     app.get('/probe', limiter, (req, res) => res.json({ ok: true }));
 

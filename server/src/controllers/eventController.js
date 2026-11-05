@@ -1,6 +1,6 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/errors.js';
-import { createEvent, getEvent, getEventDetails, getEventRoute, getEvents } from '../services/eventService.js';
+import { createEvent, updateEvent, removeEvent, getEvent, getEventDetails, getEventRoute, getEvents } from '../services/eventService.js';
 import { validatedQuery } from '../middleware/validate.js';
 
 /**
@@ -42,9 +42,23 @@ export const detail = asyncHandler(async (req, res) => {
  * Triggers the BitChat announcement relay via app.locals.broadcastEvent.
  */
 export const create = asyncHandler(async (req, res) => {
-  const event = await createEvent(req.body);
+  const event = await createEvent(req.body, { createdBy: req.user.id });
   await req.app.locals.broadcastEvent?.(event, { reason: 'created' });
   res.status(201).json({ event });
+});
+
+/** PUT /api/events/:id -> 200 { event } (creator or admin); broadcasts `updated`. */
+export const update = asyncHandler(async (req, res) => {
+  const event = await updateEvent(req.params.id, req.body, req.user);
+  await req.app.locals.broadcastEvent?.(event, { reason: 'updated' });
+  res.json({ event });
+});
+
+/** DELETE /api/events/:id -> 200 { deleted, eventId } (creator or admin); broadcasts `deleted`. */
+export const remove = asyncHandler(async (req, res) => {
+  const event = await removeEvent(req.params.id, req.user);
+  await req.app.locals.broadcastEvent?.(event, { reason: 'deleted' });
+  res.json({ deleted: true, eventId: event.id });
 });
 
 /**
