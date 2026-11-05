@@ -101,7 +101,13 @@ data class MapVenue(
     val name: String = "",
     val x: Double = 0.5,
     val y: Double = 0.5,
-    val neighbors: List<String> = emptyList()
+    val neighbors: List<String> = emptyList(),
+    // Geo fields (contract 1.5.0) — absent on older servers / offline cache.
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val kind: String = "",
+    val description: String = "",
+    val geoPlaced: Boolean = false
 )
 
 /** Undirected walk edge — GET /api/navigation/map. */
@@ -115,7 +121,21 @@ data class MapEdge(
 @Serializable
 data class CampusMapResponse(
     val venues: List<MapVenue> = emptyList(),
-    val edges: List<MapEdge> = emptyList()
+    val edges: List<MapEdge> = emptyList(),
+    val bounds: MapBounds? = null
+)
+
+@Serializable
+data class MapCenter(val lat: Double = 0.0, val lng: Double = 0.0)
+
+/** Campus geo bounds served by the server (contract 1.5.0). */
+@Serializable
+data class MapBounds(
+    val north: Double = 0.0,
+    val south: Double = 0.0,
+    val west: Double = 0.0,
+    val east: Double = 0.0,
+    val center: MapCenter? = null
 )
 
 /** Positioned neighbour — GET /api/navigation/venues/{venueId}/map. */

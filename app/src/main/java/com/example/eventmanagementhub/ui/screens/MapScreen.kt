@@ -53,6 +53,7 @@ import com.example.eventmanagementhub.data.model.Venue
 import com.example.eventmanagementhub.ui.components.CustomSearchBar
 import com.example.eventmanagementhub.ui.navigation.DeviceLocation
 import com.example.eventmanagementhub.ui.navigation.NavigationUiLogic
+import com.example.eventmanagementhub.ui.navigation.OutdoorGeoLogic
 import com.example.eventmanagementhub.ui.theme.*
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
@@ -348,11 +349,25 @@ fun MapScreen(
                                     tint = PrimaryPurple
                                 )
                                 Spacer(Modifier.width(12.dp))
-                                Text(
-                                    v.name,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = NavyText
-                                )
+                                Column {
+                                    Text(
+                                        v.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = NavyText
+                                    )
+                                    val mv = campusMap?.venues?.firstOrNull { it.id == v.id }
+                                    val detail = mv?.let {
+                                        OutdoorGeoLogic.detailLine(it.kind, it.description)
+                                    }.orEmpty()
+                                    if (detail.isNotEmpty()) {
+                                        Text(
+                                            detail,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MutedText,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -387,6 +402,8 @@ fun MapScreen(
 
                 MapMode.Outdoor -> OutdoorMap(
                     myLocation = myLocation,
+                    campusMap = campusMap,
+                    onRouteHere = { id -> selectDestination(id) },
                     controller = outdoorController,
                     modifier = Modifier.fillMaxSize()
                 )
