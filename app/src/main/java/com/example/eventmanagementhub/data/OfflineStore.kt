@@ -15,7 +15,11 @@ data class OfflineCacheData(
     val registered: List<String> = emptyList(),
     val user: UserProfile? = null,
     val announcements: List<Announcement> = emptyList(),
-    val recentQueries: List<String> = emptyList()
+    val recentQueries: List<String> = emptyList(),
+    /** Unsent bookmark edits, oldest first, one per eventId (latest wins). */
+    val pendingBookmarks: List<PendingBookmark> = emptyList(),
+    /** Unsent interests edit (null = nothing pending). */
+    val pendingInterests: List<String>? = null
 )
 
 /**
@@ -131,6 +135,57 @@ object OfflineStore {
         persist()
     }
 
+    // ---- outbox (offline bookmark / interest edits) ----
+
+    /** Applies the edit locally right away and queues it for replay to the server. */
+    @Synchronized
+    fun queueBookmark(eventId: String, add: Boolean) {
+        val op = PendingBookmark(eventId, add)
+        data = data.copy(
+            pendingBookmarks = Outbox.enqueue(data.pendingBookmarks, op),
+            registered = Outbox.mergeBookmarks(data.registered, listOf(op))
+        )
+        persist()
+    }
+
+    @Synchronized
+    fun pendingBookmarks(): List<PendingBookmark> = data.pendingBookmarks
+
+    @Synchronized
+    fun ackBookmark(op: PendingBookmark) {
+        data = data.copy(pendingBookmarks = Outbox.ack(data.pendingBookmarks, op))
+        persist()
+    }
+
+    /** Server bookmark list with any still-pending local edits layered on top. */
+    @Synchronized
+    fun mergePending(server: List<String>): List<String> =
+        Outbox.mergeBookmarks(server, data.pendingBookmarks)
+
+    @Synchronized
+    fun queueInterests(interests: List<String>) {
+        data = data.copy(pendingInterests = interests, user = data.user?.copy(interests = interests))
+        persist()
+    }
+
+    @Synchronized
+    fun pendingInterests(): List<String>? = data.pendingInterests
+
+    /** Clears the pending interests only if they have not been replaced by a newer edit. */
+    @Synchronized
+    fun ackInterests(sent: List<String>) {
+        if (data.pendingInterests == sent) {
+            data = data.copy(pendingInterests = null)
+            persist()
+        }
+    }
+
+    @Synchronized
+    fun clearOutbox() {
+        data = data.copy(pendingBookmarks = emptyList(), pendingInterests = null)
+        persist()
+    }
+
     @Synchronized
     fun isRegistered(id: String): Boolean = data.registered.contains(id)
 
@@ -141,7 +196,7 @@ object OfflineStore {
 
     @Synchronized
     fun clearRegistered() {
-        data = data.copy(registered = emptyList())
+        data = data.copy(registered = emptyList(), pendingBookmarks = emptyList(), pendingInterests = null)
         persist()
     }
 

@@ -58,15 +58,43 @@ class ChatViewModel(
 
     private var socket: Socket? = null
     private var started = false
+    private var startedWithToken: String? = null
+
+    /** Called on sign-out / session expiry so the old identity's socket and thread don't linger. */
+    fun onSignedOut() {
+        if (started) resetForIdentityChange()
+        started = false
+        startedWithToken = null
+    }
+
+    private fun resetForIdentityChange() {
+        socket?.let { it.off(); it.disconnect() }
+        socket = null
+        _connected.value = false
+        _messages.value = emptyList()
+        _announcements.value = emptyList()
+        _draft.value = ""
+        synchronized(seenChatIds) { seenChatIds.clear() }
+        synchronized(ownChatIds) { ownChatIds.clear() }
+        synchronized(seenMessageKeys) { seenMessageKeys.clear() }
+    }
 
     fun onDraftChange(value: String) {
         _draft.value = value.take(500)
     }
 
-    /** Idempotent: first call loads history + connects; later calls are no-ops. */
+    /**
+     * Idempotent for the same signed-in identity: first call loads history + connects.
+     * If the auth token changed since (sign-out / sign-in as someone else, or a fresh
+     * login), the old socket (which carries the old handshake token) is torn down, the
+     * thread and own-message ids are cleared, and everything is recreated.
+     */
     fun start() {
-        if (started) return
+        val token = AuthProvider.token
+        if (started && token == startedWithToken) return
+        if (started) resetForIdentityChange()
         started = true
+        startedWithToken = token
         viewModelScope.launch {
             loadHistory()
             connectSocket()

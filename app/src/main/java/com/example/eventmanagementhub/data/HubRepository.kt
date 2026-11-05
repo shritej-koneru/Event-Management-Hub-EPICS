@@ -91,11 +91,17 @@ class HubRepository(
     /** Turns a non-2xx response into a typed error, expiring the session on 401. */
     private fun failure(resp: Response<*>, fallback: String): Result.Error {
         val isAuth = resp.code() == 401
-        if (isAuth) {
+        // A 401 only means "session expired" when we actually presented a token.
+        // Wrong-password login/register (no Authorization header) is a plain error.
+        val path = resp.raw().request.url.encodedPath
+        val expired = isAuth &&
+            resp.raw().request.header("Authorization") != null &&
+            !path.endsWith("/auth/login") && !path.endsWith("/auth/register")
+        if (expired) {
             AuthProvider.onUnauthorized()
             AppContext.app?.let { ctx -> sessionScope.launch { SessionStore.clear(ctx) } }
         }
-        return Result.Error(errorMessageOf(resp, fallback), resp.code(), isAuth)
+        return Result.Error(errorMessageOf(resp, fallback), resp.code(), expired)
     }
 
     private fun Result.Error.propagate(): Result<Nothing> = this
@@ -131,6 +137,8 @@ class HubRepository(
         }
 
     private fun persistSession(resp: AuthResponse) {
+        // Queued edits belong to whoever made them; never replay them as another user.
+        if (OfflineStore.user()?.id != resp.user.id) OfflineStore.clearOutbox()
         AuthProvider.token = resp.token
         cachedUser = resp.user
         OfflineStore.setUser(resp.user)
@@ -358,15 +366,75 @@ class HubRepository(
         }
     }
 
-    // ---- bookmarks: server is the source of truth, mirrored on device ---------------
+    // ---- bookmarks / interests: server is the source of truth, edits are queued ------
+
+    private class FlushResult(
+        val drained: Boolean,
+        val lastBookmark: BookmarkMutationResponse? = null,
+        val authError: Result.Error? = null
+    )
+
+    /**
+     * Replays queued bookmark ops (in order) and the pending interests edit. Each op is
+     * dropped once the server acks it (or permanently rejects it). Stops at the first
+     * network failure/5xx so ordering is kept; a 401 expires the session and keeps the queue.
+     */
+    private suspend fun flushOutbox(): FlushResult {
+        var last: BookmarkMutationResponse? = null
+        var authError: Result.Error? = null
+        val replay = Outbox.replay(OfflineStore.pendingBookmarks()) { op ->
+            try {
+                val resp = if (op.add) api.addBookmark(op.eventId) else api.removeBookmark(op.eventId)
+                when {
+                    resp.isSuccessful -> {
+                        last = resp.body() ?: last
+                        OfflineStore.ackBookmark(op)
+                        SendOutcome.ACKED
+                    }
+                    resp.code() == 401 -> {
+                        authError = failure(resp, "Could not update bookmark")
+                        SendOutcome.RETRY_LATER
+                    }
+                    resp.code() in 400..499 -> {
+                        OfflineStore.ackBookmark(op)
+                        SendOutcome.REJECTED
+                    }
+                    else -> SendOutcome.RETRY_LATER
+                }
+            } catch (e: Exception) {
+                SendOutcome.RETRY_LATER
+            }
+        }
+        var drained = replay.drained
+        val pendingInterests = OfflineStore.pendingInterests()
+        if (drained && pendingInterests != null) {
+            try {
+                val resp = api.updateInterests(InterestsRequest(pendingInterests))
+                when {
+                    resp.isSuccessful || resp.code() in 400..499 && resp.code() != 401 ->
+                        OfflineStore.ackInterests(pendingInterests)
+                    resp.code() == 401 -> {
+                        authError = failure(resp, "Could not save interests")
+                        drained = false
+                    }
+                    else -> drained = false
+                }
+            } catch (e: Exception) {
+                drained = false
+            }
+        }
+        return FlushResult(drained, last, authError)
+    }
 
     suspend fun bookmarks(): Result<List<String>> = withContext(Dispatchers.IO) {
         OfflineStore.awaitReady()
         try {
+            flushOutbox().authError?.let { return@withContext it }
             val resp = api.bookmarks()
             val body = resp.body()
             if (resp.isSuccessful && body != null) {
-                val ids = body.bookmarks
+                // Edits the server has not acked yet must survive the overwrite.
+                val ids = OfflineStore.mergePending(body.bookmarks)
                 OfflineStore.replaceRegistered(ids)
                 cachedUser = cachedUser?.copy(bookmarks = ids)
                 Result.Success(ids)
@@ -376,48 +444,42 @@ class HubRepository(
         }
     }
 
-    /** Adds/removes a server bookmark and mirrors the authoritative result on device. */
+    /**
+     * Queues the bookmark edit (applied locally at once), then tries to replay the queue.
+     * If the server is unreachable the edit stays queued and is sent on a later call.
+     */
     suspend fun syncBookmark(eventId: String, bookmarked: Boolean): Result<BookmarkMutationResponse> =
         withContext(Dispatchers.IO) {
             OfflineStore.awaitReady()
-            try {
-                val resp = if (bookmarked) api.addBookmark(eventId) else api.removeBookmark(eventId)
-                val body = resp.body()
-                if (resp.isSuccessful && body != null) {
-                    OfflineStore.replaceRegistered(body.bookmarks)
-                    cachedUser = cachedUser?.copy(bookmarks = body.bookmarks)
-                    Result.Success(body)
-                } else failure(resp, "Could not update bookmark").propagate()
-            } catch (e: Exception) {
-                // Offline: apply locally so the tap still feels responsive.
-                if (bookmarked) OfflineStore.register(eventId) else OfflineStore.unregister(eventId)
-                cachedUser = cachedUser?.copy(bookmarks = OfflineStore.registeredIds())
-                Result.Error(e.message ?: "Saved on device only")
+            OfflineStore.queueBookmark(eventId, bookmarked)
+            cachedUser = cachedUser?.copy(bookmarks = OfflineStore.registeredIds())
+            val flush = flushOutbox()
+            flush.authError?.let { return@withContext it }
+            val body = flush.lastBookmark
+            val stillPending = OfflineStore.pendingBookmarks().any { it.eventId == eventId }
+            if (!stillPending && body != null) {
+                val ids = OfflineStore.mergePending(body.bookmarks)
+                OfflineStore.replaceRegistered(ids)
+                cachedUser = cachedUser?.copy(bookmarks = ids)
+                Result.Success(body)
+            } else {
+                Result.Error("Saved on device; will sync when online")
             }
         }
 
     suspend fun updateInterests(interests: List<String>): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val resp = api.updateInterests(InterestsRequest(interests))
-            if (resp.isSuccessful) {
-                cachedUser = cachedUser?.copy(interests = interests)
-                OfflineStore.setUser(cachedUser)
-                Result.Success(Unit)
-            } else failure(resp, "Could not save interests").propagate()
-        } catch (e: Exception) {
-            cachedUser = cachedUser?.copy(interests = interests)
-            OfflineStore.setUser(cachedUser)
-            Result.Error(e.message ?: "Saved on device only")
-        }
+        OfflineStore.awaitReady()
+        OfflineStore.queueInterests(interests)
+        cachedUser = cachedUser?.copy(interests = interests)
+        val flush = flushOutbox()
+        flush.authError?.let { return@withContext it }
+        if (OfflineStore.pendingInterests() == null) Result.Success(Unit)
+        else Result.Error("Saved on device; will sync when online")
     }
 
     // ---- tracked (registered) events -------------------------------------------------
 
     fun isRegistered(id: String): Boolean = OfflineStore.isRegistered(id)
-
-    fun registerToEvent(id: String) {
-        OfflineStore.register(id)
-    }
 
     fun unregisterFromEvent(id: String) {
         OfflineStore.unregister(id)

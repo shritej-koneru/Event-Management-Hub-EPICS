@@ -68,7 +68,9 @@ private val authInterceptor = Interceptor { chain ->
 
 object ApiClient {
 
-    const val DEFAULT_BASE_URL = "http://10.0.2.2:3000/"
+    /** Fallback if BuildConfig.API_BASE_URL is blank/invalid. Cleartext emulator alias only works in debug. */
+    val DEFAULT_BASE_URL: String =
+        if (BuildConfig.DEBUG) "http://10.0.2.2:3000/" else "https://configure-api-base-url.invalid/"
 
     val baseUrl: String
         get() = normalize(BuildConfig.API_BASE_URL.ifBlank { DEFAULT_BASE_URL })

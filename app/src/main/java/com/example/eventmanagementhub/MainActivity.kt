@@ -18,7 +18,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.LocalActivity
+import android.annotation.SuppressLint
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.eventmanagementhub.ui.screens.ChatViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -57,6 +61,11 @@ private data class TabItem(
 @Composable
 private fun AppRoot() {
     val navController = rememberNavController()
+    val activity = LocalActivity.current as ComponentActivity
+    // Chat socket + thread belong to the signed-in identity; drop them on sign-out/expiry.
+    fun dropChatSession() {
+        ViewModelProvider(activity)[ChatViewModel::class.java].onSignedOut()
+    }
     var authed by remember { mutableStateOf(AuthProvider.token != null) }
 
     /**
@@ -73,6 +82,7 @@ private fun AppRoot() {
             AuthProvider.consumeSessionExpiry()
             authed = false
             mapTargetVenue = null
+            dropChatSession()
             navController.navigate("auth") {
                 popUpTo(navController.graph.id) { inclusive = true }
             }
@@ -87,6 +97,7 @@ private fun AppRoot() {
         TabItem("profile", "Profile", Icons.Default.Person)
     )
 
+    @SuppressLint("RestrictedApi") // currentBackStack: reads the root destination to pop to
     fun openTab(route: String) {
         val rootId = navController.currentBackStack.value.firstOrNull()?.destination?.id
         navController.navigate(route) {
@@ -168,6 +179,7 @@ private fun AppRoot() {
                         onSignOut = {
                             authed = false
                             mapTargetVenue = null
+                            dropChatSession()
                             navController.navigate("auth") {
                                 popUpTo(navController.graph.id) { inclusive = true }
                             }

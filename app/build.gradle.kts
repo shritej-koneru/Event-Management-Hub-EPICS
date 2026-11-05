@@ -7,12 +7,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// The project lives under OneDrive. Build output MUST stay outside the synced
-// tree or OneDrive holds file handles and Gradle can't delete intermediates.
-layout.buildDirectory.set(file("C:/Users/satvi/.emh/epics-build/app"))
-
 // Gradle does not expose local.properties as project properties, so it is
-// read explicitly here; a physical device on the LAN needs this override.
+// read explicitly here (local.properties is untracked -> per-machine settings).
 fun localProp(key: String): String? {
     val f = rootProject.layout.projectDirectory.file("local.properties").asFile
     if (!f.isFile) return null
@@ -22,9 +18,21 @@ fun localProp(key: String): String? {
         ?.substringAfter('=')?.trim()
 }
 
+// Opt-in: if the checkout lives in a synced folder (OneDrive etc.) that locks build
+// intermediates, put e.g.  build.dir=C:/some/local/path/app  in local.properties
+// (or pass -Pbuild.dir=...). Default is the normal app/build.
+val customBuildDir: String? = (project.findProperty("build.dir") as String?) ?: localProp("build.dir")
+if (!customBuildDir.isNullOrBlank()) {
+    layout.buildDirectory.set(file(customBuildDir))
+}
+
 android {
     namespace = "com.example.eventmanagementhub"
-    compileSdk = 36
+    // API 36 minor release 1 ("Android 16.0 (36.1)" in SDK Manager). Plain
+    // platform 36 is not required. targetSdk stays 36.
+    compileSdk {
+        version = release(36) { minorApiLevel = 1 }
+    }
     buildToolsVersion = "36.0.0"
 
     defaultConfig {
@@ -36,16 +44,22 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Backend origin baked into BuildConfig. Three tiers, most specific wins:
-        //   1. -P API_BASE_URL=... on the Gradle command line
-        //   2. API_BASE_URL=... in local.properties (gitignored -> this machine only)
-        //   3. "" -> ApiClient falls back to the emulator alias http://10.0.2.2:3000/
-        val apiBaseUrl = (project.findProperty("API_BASE_URL") as String?) ?: localProp("API_BASE_URL") ?: ""
-        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
     }
 
+    // Backend origin baked into BuildConfig.API_BASE_URL. Most specific wins:
+    //   1. -P API_BASE_URL=... on the Gradle command line
+    //   2. API_BASE_URL=... in local.properties (untracked -> this machine only)
+    //   3. built-in default: debug = emulator alias http://10.0.2.2:3000/ (host loopback,
+    //      matches server PORT=3000); release = a non-routable placeholder, so a release
+    //      build MUST be given its real https URL (cleartext is blocked in release).
+    val apiBaseUrlOverride: String? = (project.findProperty("API_BASE_URL") as String?) ?: localProp("API_BASE_URL")
+
     buildTypes {
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrlOverride ?: "http://10.0.2.2:3000/"}\"")
+        }
         release {
+            buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrlOverride ?: "https://configure-api-base-url.invalid/"}\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -71,6 +85,7 @@ android {
 // java.nio delete() throws AccessDeniedException for ANY child carrying the
 // FILE_ATTRIBUTE_READONLY flag — settable by Explorer, antivirus or a prior copy —
 // even when nothing holds a file handle. Two concrete failures so far:
+// Only active when build.dir is customised (see above).
 //   - RemovePreviousOutputsStep -> outputs/apk/debug (packageDebug)
 //   - DexArchiveBuilderTaskDelegate.cleanOutputDir -> intermediates/desugar_graph/**/
 //     dirs_bucket_* (dexBuilderDebug), also seen on intermediates/project_dex_archive
@@ -80,7 +95,7 @@ android {
 //
 // The stale workspace under intermediates/incremental/packageDebug/tmp is also
 // removed for an older failure mode (zip-cache handles left by a dead JVM).
-gradle.taskGraph.whenReady {
+if (!customBuildDir.isNullOrBlank()) gradle.taskGraph.whenReady {
     try {
         layout.buildDirectory.get().asFile.walkTopDown().forEach { f ->
             try {

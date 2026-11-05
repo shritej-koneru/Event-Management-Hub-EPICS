@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -34,7 +35,7 @@ import com.example.eventmanagementhub.ui.theme.*
 fun ChatScreen(
     repository: HubRepository = HubRepository()
 ) {
-    val activity = LocalContext.current as ComponentActivity
+    val activity = LocalActivity.current as ComponentActivity
     val viewModel: ChatViewModel = viewModel(
         viewModelStoreOwner = activity,
         factory = object : ViewModelProvider.Factory {

@@ -2,7 +2,7 @@
 
 A campus event platform: Android app + Node.js backend + PostgreSQL.
 Students discover events, get directions, bookmark favourites, and chat live
-via Socket.IO — with an offline-first mobile client.
+via Socket.IO — with a mobile client that reads from an on-device cache when offline and queues bookmark/interest edits to sync later (login/register, chat and live data need the server).
 
 ---
 
@@ -85,8 +85,8 @@ npm run verify:migrations   # cold-build scratch DB from SQL files alone
 Android unit tests:
 
 ```powershell
-cd app
-.\gradlew.bat :app:testDebugUnitTest   # 52 tests
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"   # JDK 17
+.\gradlew.bat :app:testDebugUnitTest   # 67 tests
 ```
 
 ---

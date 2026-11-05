@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    DEBUG ONLY. The dev backend is plain HTTP (emulator alias 10.0.2.2, or a
+    physical device on the LAN at whatever address the machine has), so cleartext
+    is allowed in debug builds. The release config (src/main) forbids cleartext.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
