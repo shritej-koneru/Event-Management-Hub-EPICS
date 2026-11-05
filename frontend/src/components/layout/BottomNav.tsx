@@ -12,7 +12,7 @@ export default function BottomNav() {
             to={item.to}
             end={item.to === '/'}
             className={({ isActive }) =>
-              `flex w-[78px] flex-col items-center justify-center gap-1 rounded-[18px] py-2 text-[9px] font-bold transition-all ${
+              `flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[18px] py-2 text-[9px] font-bold transition-all ${
                 isActive
                   ? 'bg-gradient-to-br from-[#6746f5] to-[#8b4ef5] text-white shadow-[0_7px_17px_rgba(95,60,240,0.3)]'
                   : 'text-[#9995aa] hover:bg-[#f0ecff] hover:text-[#6246ea]'

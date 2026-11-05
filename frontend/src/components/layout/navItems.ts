@@ -3,6 +3,7 @@ import {
   CalendarHeart,
   Home,
   LayoutDashboard,
+  MessageCircle,
   User,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -16,6 +17,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/events', label: 'Events', icon: CalendarDays },
+  { to: '/chat', label: 'Chat', icon: MessageCircle },
   { to: '/my-events', label: 'My Events', icon: CalendarHeart },
   { to: '/profile', label: 'Profile', icon: User },
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },

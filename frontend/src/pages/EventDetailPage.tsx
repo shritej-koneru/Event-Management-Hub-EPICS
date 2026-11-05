@@ -1,5 +1,12 @@
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, MapPin, QrCode, Sparkles, Ticket } from 'lucide-react'
+import { ArrowLeft, Bookmark, MapPin, QrCode, Sparkles, Ticket } from 'lucide-react'
+
+import { useAuth } from '@/auth/useAuth'
+import { ErrorNote, Loading } from '@/components/Feedback'
+import { api, errorMessage } from '@/lib/api'
+import type { EventItem } from '@/lib/types'
+import { useSocket } from '@/realtime/context'
 
 const HELP_CATEGORIES = [
   {
@@ -28,26 +35,93 @@ const HELP_CATEGORIES = [
 export default function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const navigate = useNavigate()
+  const { user, bookmarks, toggleBookmark } = useAuth()
+  const { socket } = useSocket()
+  const [loaded, setLoaded] = useState<{
+    id: string
+    event: EventItem | null
+    error: string | null
+  } | null>(null)
+  const [tick, setTick] = useState(0)
+  const [bookmarkError, setBookmarkError] = useState<string | null>(null)
 
-  const eventName = eventId?.replace(/-/g, ' ').toUpperCase() ?? 'EVENT'
+  useEffect(() => {
+    if (!socket) return
+    const onEvent = () => setTick((t) => t + 1)
+    socket.on('event', onEvent)
+    return () => {
+      socket.off('event', onEvent)
+    }
+  }, [socket])
+
+  useEffect(() => {
+    if (!eventId) return
+    const ctrl = new AbortController()
+    api<{ event: EventItem }>(`/events/${encodeURIComponent(eventId)}`, { signal: ctrl.signal })
+      .then((r) => setLoaded({ id: eventId, event: r.event, error: null }))
+      .catch((err: unknown) => {
+        if (!ctrl.signal.aborted) setLoaded({ id: eventId, event: null, error: errorMessage(err) })
+      })
+    return () => ctrl.abort()
+  }, [eventId, tick])
+
+  const current = loaded && loaded.id === eventId ? loaded : null
+  const event = current?.event ?? null
+  const bookmarked = eventId ? bookmarks.includes(eventId) : false
+
+  async function onBookmark() {
+    if (!eventId) return
+    setBookmarkError(null)
+    try {
+      await toggleBookmark(eventId)
+    } catch (err) {
+      setBookmarkError(errorMessage(err))
+    }
+  }
 
   return (
     <div className="px-[18px] pb-[150px] pt-5">
       <button
         type="button"
+        aria-label="Back to events"
         onClick={() => navigate('/events')}
         className="mb-[25px] flex h-[45px] w-[45px] cursor-pointer items-center justify-center rounded-[15px] border-none bg-white/16 text-white backdrop-blur-[10px] transition-all hover:bg-white/28 hover:-translate-x-[3px]"
       >
         <ArrowLeft className="h-6 w-6" aria-hidden />
       </button>
 
-      <h1 className="mb-2 text-[30px] font-bold text-white">
-        {eventName}
-      </h1>
+      {!current && <Loading label="Loading event..." />}
+      {current?.error && <ErrorNote>{current.error}</ErrorNote>}
 
-      <p className="mb-[30px] text-sm leading-[1.5] text-white/70">
-        Quick access to everything you need for this event.
-      </p>
+      {event && (
+        <>
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <h1 className="text-[30px] font-bold text-white">{event.title}</h1>
+            {user && (
+              <button
+                type="button"
+                aria-pressed={bookmarked}
+                aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark event'}
+                onClick={onBookmark}
+                className="flex h-[45px] w-[45px] min-w-[45px] cursor-pointer items-center justify-center rounded-[15px] border-none bg-white/16 text-white hover:bg-white/28"
+              >
+                <Bookmark className={`h-6 w-6 ${bookmarked ? 'fill-white' : ''}`} aria-hidden />
+              </button>
+            )}
+          </div>
+          {bookmarkError && <ErrorNote>{bookmarkError}</ErrorNote>}
+          <p className="mb-1 text-sm text-white/80">
+            {event.date} {event.time} · {event.venue} · {event.category}
+          </p>
+          <p className="mb-1 text-sm text-white/80">
+            {event.registered}/{event.capacity} registered
+            {event.host ? ` · Host: ${event.host}` : ''}
+          </p>
+          <p className="mb-[30px] mt-3 text-sm leading-[1.5] text-white/70">
+            {event.description || 'Quick access to everything you need for this event.'}
+          </p>
+        </>
+      )}
 
       <h2 className="mb-4 text-[21px] font-bold text-white">
         Quick Help Categories

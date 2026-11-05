@@ -1,11 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import AppLayout from '@/components/layout/AppLayout'
+import ChatPage from '@/pages/ChatPage'
 import CategoryPage from '@/pages/CategoryPage'
 import DashboardPage from '@/pages/DashboardPage'
 import EventDetailPage from '@/pages/EventDetailPage'
 import EventsPage from '@/pages/EventsPage'
 import HomePage from '@/pages/HomePage'
+import LoginPage from '@/pages/LoginPage'
 import MyEventsPage from '@/pages/MyEventsPage'
 import ProfilePage from '@/pages/ProfilePage'
 import RegistrationPage from '@/pages/RegistrationPage'
@@ -25,6 +27,8 @@ export default function App() {
           path="events/:eventId/register"
           element={<RegistrationPage />}
         />
+        <Route path="chat" element={<ChatPage />} />
+        <Route path="login" element={<LoginPage />} />
         <Route path="my-events" element={<MyEventsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="dashboard" element={<DashboardPage />} />
