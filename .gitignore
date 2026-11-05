@@ -30,3 +30,8 @@ keystore.properties
 
 # Logs
 *.log
+# Local tooling / dev captures
+.adb-shots/
+.freebuff/
+dev.err
+dev.out
