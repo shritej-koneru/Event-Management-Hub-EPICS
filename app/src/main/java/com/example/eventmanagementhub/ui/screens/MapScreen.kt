@@ -403,7 +403,8 @@ fun MapScreen(
                 MapMode.Outdoor -> OutdoorMap(
                     myLocation = myLocation,
                     campusMap = campusMap,
-                    onRouteHere = { id -> selectDestination(id) },
+                    // Campus places are routed on the campus graph, so show it there.
+                    onRouteHere = { id -> selectDestination(id); setMode(MapMode.Indoor) },
                     controller = outdoorController,
                     modifier = Modifier.fillMaxSize()
                 )
