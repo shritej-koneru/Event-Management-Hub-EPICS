@@ -2,6 +2,9 @@ import { getPool } from '../db/pool.js';
 
 const MAX_RETURNED = 20;
 
+/** Served `room` of a campus-wide announcement (stored as NULL). */
+const GLOBAL_ROOM_NAME = 'all';
+
 /**
  * Persists an announcement idempotently.
  *
@@ -48,7 +51,7 @@ export async function recordAnnouncement(room, message, eventId = null) {
 function serialize(row) {
   return {
     id: row.id,
-    room: stripRoomPrefix(row.room),
+    room: row.room == null ? GLOBAL_ROOM_NAME : stripRoomPrefix(row.room),
     message: row.message,
     at: row.at instanceof Date ? row.at.toISOString() : row.at,
     // Only present when the announcement is tied to an event. Keeping it absent
@@ -131,3 +134,67 @@ export async function countAnnouncements() {
 }
 
 export { MAX_RETURNED };
+/* -------------------------------------------------------------------------- */
+/* Manager (organizer/admin) announcements                                     */
+/* -------------------------------------------------------------------------- */
+
+function serializeManaged(row) {
+  return {
+    id: row.id,
+    room: row.room ?? GLOBAL_ROOM_NAME,
+    message: row.message,
+    at: row.at instanceof Date ? row.at.toISOString() : row.at,
+    eventId: row.event_id ?? null,
+    sentBy: row.sent_by ?? null
+  };
+}
+
+const MANAGED_COLUMNS = 'id, room, message, event_id, sent_by, at';
+
+/**
+ * Inserts a manual announcement. Unlike the idempotent event relay this does
+ * NOT use ON CONFLICT: a duplicate (room, message) raises 23505, which the
+ * service maps to 409 DUPLICATE_ANNOUNCEMENT.
+ */
+export async function insertManagedAnnouncement({ room, message, eventId = null, sentBy }) {
+  const { rows } = await getPool().query(
+    `INSERT INTO announcements (room, message, event_id, sent_by)
+     VALUES ($1, $2, $3, $4)
+     RETURNING ${MANAGED_COLUMNS}`,
+    [room === GLOBAL_ROOM_NAME ? null : room, message, eventId, sentBy]
+  );
+  return serializeManaged(rows[0]);
+}
+
+/** Newest first. `sentBy` restricts to one sender; omit for everything. */
+export async function listManagedAnnouncements({ sentBy = null, limit = 200 } = {}) {
+  const { rows } = await getPool().query(
+    `SELECT ${MANAGED_COLUMNS} FROM announcements
+      WHERE ($1::text IS NULL OR sent_by = $1)
+      ORDER BY id DESC
+      LIMIT $2`,
+    [sentBy, limit]
+  );
+  return rows.map(serializeManaged);
+}
+
+export async function findManagedAnnouncement(id) {
+  const { rows } = await getPool().query(
+    `SELECT ${MANAGED_COLUMNS} FROM announcements WHERE id = $1`,
+    [id]
+  );
+  return rows[0] ? serializeManaged(rows[0]) : null;
+}
+
+export async function deleteAnnouncementRow(id) {
+  const { rowCount } = await getPool().query('DELETE FROM announcements WHERE id = $1', [id]);
+  return rowCount > 0;
+}
+
+export async function countAnnouncementsBy(sentBy = null) {
+  const { rows } = await getPool().query(
+    'SELECT COUNT(*)::int AS count FROM announcements WHERE ($1::text IS NULL OR sent_by = $1)',
+    [sentBy]
+  );
+  return rows[0].count;
+}

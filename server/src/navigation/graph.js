@@ -1,14 +1,14 @@
 import {
-  GRAPH,
-  VENUES,
-  VENUE_IDS,
-  assertAllVenuesReachable,
-  assertGraphIntegrity,
-  venueIdToName
-} from './venues.js';
+  adjacency,
+  assertLiveGraph,
+  neighborsOf,
+  reachability,
+  venueIds,
+  venueNameForId,
+  venues as liveVenues
+} from './registry.js';
 import { ApiError } from '../utils/errors.js';
 
-const nodes = Object.keys(GRAPH);
 
 /**
  * Dijkstra shortest path over the venue graph.
@@ -20,6 +20,8 @@ const nodes = Object.keys(GRAPH);
  *                    400 NO_PATH when the nodes are not connected.
  */
 export function shortestPath(fromId, toId) {
+  const GRAPH = adjacency();
+  const nodes = Object.keys(GRAPH);
   if (!Object.prototype.hasOwnProperty.call(GRAPH, fromId)) {
     throw ApiError.badRequest(`Unknown venue: ${fromId}`, 'UNKNOWN_VENUE');
   }
@@ -78,7 +80,7 @@ export function shortestPath(fromId, toId) {
     if (index > 0) cumulative += legLengths.get(id);
     return {
       node: id,
-      name: venueIdToName.get(id),
+      name: venueNameForId(id),
       distanceM: index === 0 ? 0 : legLengths.get(id),
       instruction: instructionFor(nodeIds, index)
     };
@@ -89,12 +91,12 @@ export function shortestPath(fromId, toId) {
 
 /** `{ id, name }` list for the `nodes` array in the path response. */
 export function describeNodes(nodeIds) {
-  return nodeIds.map((id) => ({ id, name: venueIdToName.get(id) }));
+  return nodeIds.map((id) => ({ id, name: venueNameForId(id) }));
 }
 
 function instructionFor(nodeIds, index) {
-  if (index === 0) return `Start at ${venueIdToName.get(nodeIds[0])}`;
-  if (index === nodeIds.length - 1) return `Turn right, arrive at ${venueIdToName.get(nodeIds[index])}`;
+  if (index === 0) return `Start at ${venueNameForId(nodeIds[0])}`;
+  if (index === nodeIds.length - 1) return `Turn right, arrive at ${venueNameForId(nodeIds[index])}`;
 
   const previous = nodeIds[index - 1];
   const current = nodeIds[index];
@@ -103,7 +105,7 @@ function instructionFor(nodeIds, index) {
   if (isStraight(previous, current, next)) return 'Go straight ahead';
   const delta = ((bearingFromTo(current, next) - bearingFromTo(previous, current)) % 4 + 4) % 4;
   const turn = { 1: 'Turn right', 2: 'Go back and head', 3: 'Turn left' }[delta] || 'Continue';
-  return `${turn} toward ${venueIdToName.get(next)}`;
+  return `${turn} toward ${venueNameForId(next)}`;
 }
 
 /**
@@ -111,8 +113,8 @@ function instructionFor(nodeIds, index) {
  * Direction is derived from the venue ordering (0=N, 1=E, 2=S, 3=W).
  */
 function bearingFromTo(fromId, toId) {
-  const from = VENUE_IDS.indexOf(fromId);
-  const to = VENUE_IDS.indexOf(toId);
+  const from = venueIds().indexOf(fromId);
+  const to = venueIds().indexOf(toId);
   const dx = to - from;
   const dy = ((from * 7 + to * 3) % 5) - 2;
   if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? 1 : 3;
@@ -120,9 +122,9 @@ function bearingFromTo(fromId, toId) {
 }
 
 function isStraight(previous, current, next) {
-  const a = VENUE_IDS.indexOf(previous);
-  const b = VENUE_IDS.indexOf(current);
-  const c = VENUE_IDS.indexOf(next);
+  const a = venueIds().indexOf(previous);
+  const b = venueIds().indexOf(current);
+  const c = venueIds().indexOf(next);
   const first = b - a;
   const second = c - b;
   return first !== 0 && Math.sign(first) === Math.sign(second);
@@ -130,16 +132,20 @@ function isStraight(previous, current, next) {
 
 /** Full venue catalogue with neighbour ids, as returned by GET /navigation/venues. */
 export function venueList() {
-  return VENUES.map((venue) => ({
+  return liveVenues().map((venue) => ({
     id: venue.id,
     name: venue.name,
-    neighbors: Object.keys(GRAPH[venue.id] || {})
+    neighbors: neighborsOf(venue.id)
   }));
 }
 
-/** Runs both structural checks; called at boot so a broken graph never ships. */
+/**
+ * Structural check of the LIVE graph (symmetric, positive distances, known
+ * endpoints); called at boot and after map writes. Venues without edges are
+ * allowed - they are reported in `unreachable` and routing to them returns
+ * NO_PATH.
+ */
 export function validateGraph() {
-  assertGraphIntegrity();
-  const reached = assertAllVenuesReachable();
-  return { venueCount: VENUE_IDS.length, reachableCount: reached.size };
+  assertLiveGraph();
+  return reachability();
 }

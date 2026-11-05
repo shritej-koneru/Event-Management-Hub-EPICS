@@ -5,7 +5,7 @@ Android emulator → host: `http://10.0.2.2:3000` (or `adb reverse tcp:3000 tcp:
 
 All errors: `{ "error": "<human message>", "code": "<CODE>" }` with sibling keys.
 
-Contract version reported by `/ping`: `1.3.0`.
+Contract version reported by `/ping`: `1.4.0`.
 
 ---
 
@@ -20,7 +20,7 @@ curl -s http://localhost:3000/ping
 ```
 
 ```json
-{ "status": "ok", "ok": true, "service": "emh-server", "contractVersion": "1.3.0",
+{ "status": "ok", "ok": true, "service": "emh-server", "contractVersion": "1.4.0",
   "database": "connected", "venues": [ { "id": "entrance", "name": "Entrance" } ] }
 ```
 
@@ -201,6 +201,72 @@ Real membership is established by the Socket.IO `join` event.
 
 ---
 
+## Event-manager API · `/api/manage/*` (1.4.0)
+
+Console API for organizers and admins. **Every route needs a JWT and role `organizer` or
+`admin`** (`401` without a token, `403 FORBIDDEN` for students). Errors keep the usual
+`{ error, code, details? }` shape. Admins see everything; an organizer sees/edits only what
+they created (`events.created_by`, `announcements.sent_by`). The campus map is shared:
+any organizer or admin may edit it (no ownership).
+
+| Method + path | Body / query | Success | Errors |
+| --- | --- | --- | --- |
+| `GET /api/manage/overview` | - | `200 { events:{total,upcoming,past}, bookmarks, announcements, venues, edges }` (organizer: own events/announcements; admin: whole system) | - |
+| `GET /api/manage/events?scope=mine\|all` | `scope=all` admin only | `200 { events:[ <Event> + createdBy, bookmarkCount ] }` date asc | `403` (organizer + `all`), `400` bad scope |
+| `POST /api/manage/venues` | `{ id, name, x, y }` | `201 { id, name, x, y }` | `400 VALIDATION_ERROR`, `409 DUPLICATE_VENUE` (id or name; name compared case-insensitively) |
+| `PUT /api/manage/venues/:id` | `{ name?, x?, y? }` (>=1; `id` is immutable) | `200 { id, name, x, y }` | `404 UNKNOWN_VENUE`, `409 DUPLICATE_VENUE`, `400` |
+| `DELETE /api/manage/venues/:id` | - | `200 { deleted:true, id }` (edges cascade) | `404 UNKNOWN_VENUE`, `409 VENUE_IN_USE` |
+| `POST /api/manage/edges` | `{ from, to, distanceM }` | `201 { from, to, distanceM }` (stored with `from < to`) | `400 UNKNOWN_VENUE`, `400 VALIDATION_ERROR`, `409 DUPLICATE_EDGE` |
+| `PUT /api/manage/edges` | `{ from, to, distanceM }` | `200 { from, to, distanceM }` | `404 UNKNOWN_EDGE`, `400` |
+| `DELETE /api/manage/edges?from=&to=` | - | `200 { deleted:true }` | `404 UNKNOWN_EDGE`, `400` |
+| `GET /api/manage/announcements?scope=mine\|all` | `all` admin only | `200 { announcements:[ { id, room, message, at, eventId, sentBy } ] }` newest first | `403`, `400` |
+| `POST /api/manage/announcements` | `{ message, venueId?, eventId? }` | `201 { announcement:{ id, room, message, at, eventId, sentBy } }` | `400`, `403` (not your event), `404 EVENT_NOT_FOUND`, `409 DUPLICATE_ANNOUNCEMENT`, `429 RATE_LIMITED` |
+| `DELETE /api/manage/announcements/:id` | - | `200 { deleted:true, id }` (own, or admin) | `403`, `404 ANNOUNCEMENT_NOT_FOUND` |
+
+Rules:
+- **Venue `id`**: lowercase slug `^[a-z0-9]+(-[a-z0-9]+)*$`, max 40, immutable; `all` is reserved.
+  `name` 1..60 chars, unique. `x`,`y` are JSON numbers in `[0,1]`. Venue ids remain a cross-team
+  contract (events, Android, mesh): creating/renaming is allowed, ids never change.
+- **Edges** are undirected (`from`/`to` order does not matter), `distanceM` an integer `1..1000`,
+  `from != to`, both ids must be existing venues. A venue with no edges is allowed; routing to it
+  returns `400 NO_PATH`.
+- **The database is the graph source of truth.** The static list in `src/navigation/venues.js`
+  only seeds EMPTY tables. `/navigation/path`, `/navigation/venues`, `/navigation/map`,
+  `/ping.venues`, event-venue validation, `/events/:id/route` and socket room validation all use
+  the live graph, rebuilt after every write.
+- **Announcement target**: `eventId` -> that event's venue room (and `event_id` stored; non-admins must
+  own the event; a `venueId` that disagrees with the event is `400`); else `venueId` -> that venue's
+  room; neither -> **global** (`room: "all"`, delivered to every connected client, no room join needed).
+  `venueId` accepts an id or canonical display name. Responses return the *bare* room (`"room-205"`,
+  `"all"`), never the `announce:` socket prefix. `message` 1..280. An identical `(room, message)` sent
+  twice to a venue is `409 DUPLICATE_ANNOUNCEMENT` (global announcements are exempt).
+- **Throttle**: max 10 announcements / minute / user -> `429 RATE_LIMITED`.
+- Existing event CRUD (`POST /events`, `PUT|DELETE /events/:id`) is unchanged.
+
+**Live announcement broadcast** uses the SAME socket event as event relays, `event`, with the
+fields the Android `ChatViewModel` already reads (`title`, `venue`) at the top level:
+
+```json
+{
+  "event": null,
+  "announcement": { "id": 7, "room": "room-205", "message": "Doors open", "at": "2026-11-05T18:00:00.000Z",
+                    "eventId": null, "sentBy": "usr_1", "title": "Doors open", "venueId": "room-205" },
+  "title": "Doors open", "venue": "Room 205", "venueId": "room-205", "eventId": null,
+  "reason": "announcement", "global": false
+}
+```
+
+- Venue/event announcement -> room `announce:<venueId>` (both namespaces `/` and `/announce`);
+  `event` is the full Event object when `eventId` was given.
+- Global -> emitted to **all** sockets of both namespaces: `venue: "All venues"`, `venueId: null`,
+  `global: true`.
+
+**Map change signal**: after every successful venue/edge write the server emits socket event
+`map:updated` with `{ "at": "<ISO timestamp>" }` to all clients of `/` and `/announce`. Clients
+re-fetch `GET /navigation/map`.
+
+---
+
 ## Socket.IO
 
 Path `/socket.io`, namespaces `/` and `/announce`.
@@ -241,3 +307,7 @@ Assistant auto-replies after ~500 ms with `bot: true` (also persisted).
 
 Socket.IO CORS uses the same `CORS_ORIGINS` allowlist as Express (reflect-origin in dev, none in production when unset).
 Handshake auth: `auth: { token: "<jwt>" }` optional for listening, required for posting. Invalid token → `connect_error` `AUTH_INVALID_TOKEN`.
+
+### Event auto-announcement wording (1.4.0)
+
+`event` socket title: `New event: <title> at <venue>` (created), `Updated: <title>`, `Cancelled: <title>`. The stored message keeps the `[<eventId>]` suffix.

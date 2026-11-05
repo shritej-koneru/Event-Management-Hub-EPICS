@@ -3,9 +3,15 @@ import { pathToFileURL } from 'node:url';
 import { config } from '../../config/index.js';
 import { getPool } from '../pool.js';
 import { ensureDatabase, releaseDatabase } from '../bootstrap.js';
-import { validateGraph } from '../../navigation/graph.js';
-import { isValidVenueId, assertMapIntegrity } from '../../navigation/venues.js';
-import { upsertVenues, upsertVenueEdges, countVenues } from '../../models/venueModel.js';
+import {
+  isValidVenueId,
+  assertMapIntegrity,
+  assertGraphIntegrity,
+  assertAllVenuesReachable,
+  VENUE_IDS
+} from '../../navigation/venues.js';
+import { refreshRegistry } from '../../navigation/registry.js';
+import { upsertVenues, upsertVenueEdges, countVenues, countVenueEdges } from '../../models/venueModel.js';
 import { insertEvent, countEvents } from '../../models/eventModel.js';
 import { findUserByEmail, insertUser, countUsers, setUserRole } from '../../models/userModel.js';
 import { addBookmark, listBookmarkIds } from '../../models/bookmarkModel.js';
@@ -27,8 +33,11 @@ import { DEMO_USER, DEMO_PERSONALIZATION, SEED_ANNOUNCEMENTS } from './users.js'
  */
 export async function seed({ log = console.log, demoUser = config.seedDemoUser } = {}) {
   // Fail fast if the graph or the seed data drifted apart.
-  const graph = validateGraph();
-  log(`  navigation graph: ${graph.reachableCount}/${graph.venueCount} venues reachable from Entrance`);
+  // (This validates the STATIC seed data; the live DB graph is managed through
+  // the API and validated by the registry on every load.)
+  assertGraphIntegrity();
+  const reached = assertAllVenuesReachable();
+  log(`  navigation graph: ${reached.size}/${VENUE_IDS.length} venues reachable from Entrance`);
 
   // The stored map layout must cover every venue and stay inside the canvas.
   assertMapIntegrity();
@@ -41,17 +50,28 @@ export async function seed({ log = console.log, demoUser = config.seedDemoUser }
     }
   }
 
-  const venueCount = await upsertVenues();
-  log(`  venues: ${venueCount} synced`);
-
-  // Mirror GRAPH into venue_edges so the map API serves the stored copy.
-  const edgeCount = await upsertVenueEdges();
-  log(`  venue edges: ${edgeCount} synced`);
+  // The DB is the source of truth for the map: the static catalogue only fills
+  // EMPTY tables, so venues/edges edited through the manager API survive a
+  // forced re-seed (SEED_ON_BOOT=true).
+  const existingVenues = await countVenues();
+  if (existingVenues === 0) {
+    const venueCount = await upsertVenues();
+    log(`  venues: ${venueCount} synced`);
+    const synced = await upsertVenueEdges();
+    log(`  venue edges: ${synced} synced`);
+  } else {
+    log(`  venues: ${existingVenues} already stored (map is DB-managed, seed skipped)`);
+  }
+  const edgeCount = await countVenueEdges();
+  await refreshRegistry();
 
   let eventsInserted = 0;
   for (const event of SEED_EVENTS) {
     const existing = await getPool().query('SELECT 1 FROM events WHERE id = $1', [event.id]);
     if (existing.rowCount > 0) continue;
+    // The map is DB-managed: skip seed events whose venue was removed.
+    const venue = await getPool().query('SELECT 1 FROM venues WHERE id = $1', [event.venueId]);
+    if (venue.rowCount === 0) continue;
     await insertEvent({ ...event, registered: Math.min(event.registered, event.capacity) });
     eventsInserted += 1;
   }

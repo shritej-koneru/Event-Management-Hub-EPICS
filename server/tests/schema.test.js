@@ -298,3 +298,23 @@ describe('migration 006 (roles, ownership, chat client id)', () => {
     expect(idx.rows[0].indexdef).toMatch(/UNIQUE.*\(user_id, client_id\).*WHERE \(client_id IS NOT NULL\)/);
   });
 });
+
+describe('migration 007 (announcement sender, global announcements)', () => {
+  it('adds announcements.sent_by (nullable FK to users) and makes room nullable', async () => {
+    const cols = await pool().query(
+      `SELECT column_name, is_nullable FROM information_schema.columns
+        WHERE table_name = 'announcements' AND column_name IN ('sent_by', 'room')
+        ORDER BY column_name`
+    );
+    expect(cols.rows).toEqual([
+      { column_name: 'room', is_nullable: 'YES' },
+      { column_name: 'sent_by', is_nullable: 'YES' }
+    ]);
+    const fk = await pool().query(
+      `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+        WHERE conrelid = 'announcements'::regclass AND contype = 'f' AND pg_get_constraintdef(oid) LIKE '%sent_by%'`
+    );
+    expect(fk.rows[0].def).toContain('REFERENCES users(id)');
+    expect(fk.rows[0].def).toContain('ON DELETE SET NULL');
+  });
+});

@@ -228,3 +228,41 @@ export async function countEventsByCategory(category) {
   );
   return rows[0].count;
 }
+/* -------------------------------------------------------------------------- */
+/* Manager console                                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Events with ownership + bookmark count, date ascending.
+ * `createdBy` restricts to one owner; null returns every event.
+ */
+export async function listManagedEvents({ createdBy = null } = {}) {
+  const { rows } = await getPool().query(
+    `SELECT e.*, v.name AS venue_name,
+            (SELECT COUNT(*)::int FROM bookmarks b WHERE b.event_id = e.id) AS bookmark_count
+       FROM events e
+       JOIN venues v ON v.id = e.venue_id
+      WHERE ($1::text IS NULL OR e.created_by = $1)
+      ORDER BY e.date ASC, e.time ASC, e.id ASC`,
+    [createdBy]
+  );
+  return rows.map((row) => ({
+    ...rowToEvent(row),
+    createdBy: row.created_by ?? null,
+    bookmarkCount: row.bookmark_count
+  }));
+}
+
+/** Event counts + bookmark total for the manager overview. */
+export async function eventOverviewCounts({ createdBy = null, today }) {
+  const { rows } = await getPool().query(
+    `SELECT COUNT(*)::int AS total,
+            COUNT(*) FILTER (WHERE e.date >= $2::date)::int AS upcoming,
+            COUNT(*) FILTER (WHERE e.date <  $2::date)::int AS past,
+            COALESCE(SUM((SELECT COUNT(*) FROM bookmarks b WHERE b.event_id = e.id)), 0)::int AS bookmarks
+       FROM events e
+      WHERE ($1::text IS NULL OR e.created_by = $1)`,
+    [createdBy, today]
+  );
+  return rows[0];
+}

@@ -2,7 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { listRecentAnnouncements } from '../models/announcementModel.js';
 import { listRecentChatMessages } from '../models/chatMessageModel.js';
 import { findEventById } from '../models/eventModel.js';
-import { resolveVenue } from '../navigation/venues.js';
+import { resolveVenue } from '../navigation/registry.js';
 import { ApiError } from '../utils/errors.js';
 import { roomForVenue, normalizeRoom } from '../socket/index.js';
 import { validatedQuery } from '../middleware/validate.js';

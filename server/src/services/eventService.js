@@ -15,7 +15,7 @@ import {
   announcementTrendForEvent
 } from '../models/announcementModel.js';
 import { countBookmarksForEvent, isEventBookmarked } from '../models/bookmarkModel.js';
-import { resolveVenue, GRAPH } from '../navigation/venues.js';
+import { resolveVenue, neighborsOf } from '../navigation/registry.js';
 import { ApiError } from '../utils/errors.js';
 import { newId } from '../utils/id.js';
 import { pathToEventVenue } from './navigationService.js';
@@ -237,7 +237,7 @@ export async function getEventDetails(id, { from = 'entrance', auth = null } = {
       // The event's venue IS a navigation graph node, so this is the id the
       // navigation API accepts for `to`.
       navigationNode: event.venueId,
-      neighbors: Object.keys(GRAPH[event.venueId] ?? {})
+      neighbors: neighborsOf(event.venueId)
     },
     statistics: {
       capacity: event.capacity,

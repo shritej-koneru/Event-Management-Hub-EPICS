@@ -90,7 +90,10 @@ export const config = {
   // 1.3.0 added users.role (auth responses), role-gated POST /events,
   // PUT/DELETE /events/:id, chat auth/room delivery/clientId, and 401 for an
   // invalid bearer token on optional-auth routes.
-  contractVersion: '1.3.0',
+  // 1.4.0 added the /api/manage/* event-manager API, the `map:updated` socket
+  // event, announcements.sent_by (migration 007) and the new event
+  // auto-announcement wording.
+  contractVersion: '1.4.0',
 
   jwt: {
     secret: resolveJwtSecret(),

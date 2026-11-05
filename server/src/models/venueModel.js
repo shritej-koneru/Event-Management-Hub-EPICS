@@ -1,5 +1,5 @@
 import { getPool } from '../db/pool.js';
-import { VENUES, MAP_POSITIONS, isValidVenueId, GRAPH } from '../navigation/venues.js';
+import { VENUES, MAP_POSITIONS, GRAPH } from '../navigation/venues.js';
 
 /** Rows for GET /navigation/venues, ordered to match the canonical venue list. */
 export async function listVenueRows() {
@@ -84,13 +84,101 @@ export async function countVenues() {
   return rows[0].count;
 }
 
-/**
- * Guards referential integrity: an event may only reference a node that also
- * exists in the navigation graph.
- */
-export function assertVenueIsNavigable(venueId) {
-  if (!isValidVenueId(venueId)) {
-    throw new Error(`Venue "${venueId}" is not a navigation graph node`);
-  }
-  return venueId;
+/* -------------------------------------------------------------------------- */
+/* Manager writes (venues + edges). Callers refresh the registry afterwards.  */
+/* -------------------------------------------------------------------------- */
+
+const MAP_COLUMNS = 'id, name, map_x, map_y';
+
+export async function countVenueEdges() {
+  const { rows } = await getPool().query('SELECT COUNT(*)::int AS count FROM venue_edges');
+  return rows[0].count;
+}
+
+/** Case-insensitive name lookup, optionally ignoring one venue id. */
+export async function findVenueByName(name, excludeId = null) {
+  const { rows } = await getPool().query(
+    `SELECT ${MAP_COLUMNS} FROM venues
+      WHERE lower(name) = lower($1) AND ($2::text IS NULL OR id <> $2)
+      LIMIT 1`,
+    [name, excludeId]
+  );
+  return rows[0] ?? null;
+}
+
+export async function insertVenue({ id, name, x, y }) {
+  const { rows } = await getPool().query(
+    `INSERT INTO venues (id, name, map_x, map_y) VALUES ($1, $2, $3, $4) RETURNING ${MAP_COLUMNS}`,
+    [id, name, x, y]
+  );
+  return rows[0];
+}
+
+/** Partial update of name / position; returns the row or null when unknown. */
+export async function updateVenueRow(id, { name, x, y }) {
+  const { rows } = await getPool().query(
+    `UPDATE venues
+        SET name = COALESCE($2, name),
+            map_x = COALESCE($3, map_x),
+            map_y = COALESCE($4, map_y)
+      WHERE id = $1
+      RETURNING ${MAP_COLUMNS}`,
+    [id, name ?? null, x ?? null, y ?? null]
+  );
+  return rows[0] ?? null;
+}
+
+export async function countEventsAtVenue(id) {
+  const { rows } = await getPool().query(
+    'SELECT COUNT(*)::int AS count FROM events WHERE venue_id = $1',
+    [id]
+  );
+  return rows[0].count;
+}
+
+/** Deletes a venue (its edges cascade). */
+export async function deleteVenueRow(id) {
+  const { rowCount } = await getPool().query('DELETE FROM venues WHERE id = $1', [id]);
+  return rowCount > 0;
+}
+
+/** Undirected edge key: from_id < to_id. */
+const ordered = (a, b) => (a < b ? [a, b] : [b, a]);
+
+export async function findEdgeRow(a, b) {
+  const [from, to] = ordered(a, b);
+  const { rows } = await getPool().query(
+    'SELECT from_id, to_id, distance_m FROM venue_edges WHERE from_id = $1 AND to_id = $2',
+    [from, to]
+  );
+  return rows[0] ?? null;
+}
+
+export async function insertEdgeRow(a, b, distanceM) {
+  const [from, to] = ordered(a, b);
+  const { rows } = await getPool().query(
+    `INSERT INTO venue_edges (from_id, to_id, distance_m) VALUES ($1, $2, $3)
+     RETURNING from_id, to_id, distance_m`,
+    [from, to, distanceM]
+  );
+  return rows[0];
+}
+
+export async function updateEdgeRow(a, b, distanceM) {
+  const [from, to] = ordered(a, b);
+  const { rows } = await getPool().query(
+    `UPDATE venue_edges SET distance_m = $3 WHERE from_id = $1 AND to_id = $2
+     RETURNING from_id, to_id, distance_m`,
+    [from, to, distanceM]
+  );
+  return rows[0] ?? null;
+}
+
+export async function deleteEdgeRow(a, b) {
+  const [from, to] = ordered(a, b);
+  const { rowCount } = await getPool().query(
+    'DELETE FROM venue_edges WHERE from_id = $1 AND to_id = $2',
+    [from, to]
+  );
+  return rowCount > 0;
 }

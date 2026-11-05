@@ -211,3 +211,68 @@ export const chatMessageQuerySchema = z
   .strict();
 
 export { VENUE_IDS };
+/* -------------------------------------------------------------------------- */
+/* Manager console (/api/manage/*)                                             */
+/* -------------------------------------------------------------------------- */
+
+export const manageScopeQuerySchema = z
+  .object({ scope: z.enum(['mine', 'all']).default('mine') })
+  .strict();
+
+const venueSlug = z
+  .string({ error: 'id is required' })
+  .trim()
+  .min(1, 'id is required')
+  .max(40, 'id must be at most 40 characters')
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'id must be a lowercase slug (a-z, 0-9, single hyphens)')
+  .refine((id) => id !== 'all', { message: '"all" is reserved' });
+
+const venueName = z.string({ error: 'name is required' }).trim().min(1, 'name is required').max(60);
+const fraction = (label) =>
+  z
+    .number({ error: `${label} must be a number between 0 and 1` })
+    .min(0, `${label} must be between 0 and 1`)
+    .max(1, `${label} must be between 0 and 1`);
+
+export const createVenueSchema = z.strictObject({
+  id: venueSlug,
+  name: venueName,
+  x: fraction('x'),
+  y: fraction('y')
+});
+
+export const updateVenueSchema = z
+  .strictObject({ name: venueName.optional(), x: fraction('x').optional(), y: fraction('y').optional() })
+  .refine((b) => Object.keys(b).length > 0, { message: 'at least one of name, x, y is required' });
+
+/** :id on PUT/DELETE is loose on purpose so an unknown id is a 404, not a 400. */
+export const manageVenueParamsSchema = z.object({
+  id: z.string().trim().min(1).max(80)
+});
+
+const edgeEndpoint = (label) =>
+  z.string({ error: `${label} is required` }).trim().min(1, `${label} is required`).max(80);
+
+const distanceM = z
+  .number({ error: 'distanceM must be an integer between 1 and 1000' })
+  .int('distanceM must be an integer between 1 and 1000')
+  .min(1, 'distanceM must be an integer between 1 and 1000')
+  .max(1000, 'distanceM must be an integer between 1 and 1000');
+
+export const edgeBodySchema = z
+  .strictObject({ from: edgeEndpoint('from'), to: edgeEndpoint('to'), distanceM })
+  .refine((b) => b.from !== b.to, { message: 'from and to must be different venues', path: ['to'] });
+
+export const edgeQuerySchema = z
+  .object({ from: edgeEndpoint('from'), to: edgeEndpoint('to') })
+  .strict();
+
+export const createAnnouncementSchema = z.strictObject({
+  message: z.string({ error: 'message is required' }).trim().min(1, 'message is required').max(280),
+  venueId: z.string().trim().min(1).max(80).optional(),
+  eventId: eventIdParamSchema.shape.id.optional()
+});
+
+export const announcementIdParamSchema = z.object({
+  id: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER)
+});

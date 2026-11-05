@@ -63,6 +63,7 @@ export async function dropAll() {
                     bookmarks,
                     events,
                     users,
+                    venue_edges,
                     venues,
                     migrations
     CASCADE

@@ -1,5 +1,5 @@
 import { describeNodes, shortestPath } from '../navigation/graph.js';
-import { resolveVenue } from '../navigation/venues.js';
+import { resolveVenue } from '../navigation/registry.js';
 import { listVenueMapRows, getVenueMapRow, listVenueEdgeRows } from '../models/venueModel.js';
 import { ApiError } from '../utils/errors.js';
 

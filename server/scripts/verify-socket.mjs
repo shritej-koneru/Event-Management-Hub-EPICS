@@ -124,7 +124,7 @@ check('no duplicate (room,message) rows in DB',
   new Set(after.map((a) => `${a.room}|${a.message}`)).size === after.length);
 
 // Each stored row must be traceable to its own event id. The announcement text
-// is "New event at <venue> [<id>]", so match on the id we were handed back.
+// is "New event: <title> at <venue> [<id>]", so match on the id we were handed back.
 const probeIds = [first.event?.id, second.event?.id].filter(Boolean);
 const probeRows = after.filter((a) => a.room === 'room-102' && probeIds.some((id) => a.message.endsWith(`[${id}]`)));
 check('one stored row per probe event', probeRows.length === probeIds.length, {
@@ -140,6 +140,8 @@ const payload = received.at(-1);
 check('client received event broadcast', Boolean(payload), { received: received.length });
 check('broadcast exposes top-level title (Android reads it)', typeof payload?.title === 'string' && payload.title.length > 0, { title: payload?.title });
 check('broadcast exposes top-level venue (Android reads it)', typeof payload?.venue === 'string' && payload.venue.length > 0, { venue: payload?.venue });
+check('created-event title uses "New event: <title> at <venue>"',
+  /^New event: .+ at Room 102$/.test(payload?.title ?? ''), { title: payload?.title });
 check('broadcast exposes top-level venueId', typeof payload?.venueId === 'string' && payload.venueId.length > 0, { venueId: payload?.venueId });
 check('broadcast keeps contract keys event + announcement',
   Boolean(payload?.event?.id && payload?.announcement?.venueId), {

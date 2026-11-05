@@ -48,7 +48,7 @@ Verify:
 
 ```bash
 curl http://localhost:3000/ping
-# {"status":"ok","ok":true,"service":"emh-server","contractVersion":"1.3.0",
+# {"status":"ok","ok":true,"service":"emh-server","contractVersion":"1.4.0",
 #  "contract":"contract/API-CONTRACT.md","database":"connected",
 #  "venues":[{"id":"entrance","name":"Entrance"}, ...]}
 ```
@@ -336,7 +336,7 @@ contract shape.
 Rooms are stored in PostgreSQL as **bare venue ids** (`room-204`) while sockets join
 `announce:room-204`. Duplicate announcements are impossible:
 `UNIQUE (room, message)` plus `ON CONFLICT DO NOTHING`. The stored message embeds the
-event id (`New event at Room 204 [evt_…]`), so two different events at one venue produce
+event id (`New event: <title> at Room 204 [evt_…]`), so two different events at one venue produce
 two announcements instead of collapsing onto one.
 
 **Authentication.** The Android client connects anonymously

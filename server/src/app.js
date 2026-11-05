@@ -5,7 +5,7 @@ import { config, resolveDatabaseName } from './config/index.js';
 import apiRoutes from './routes/index.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 import { apiRateLimit } from './middleware/rateLimit.js';
-import { VENUES } from './navigation/venues.js';
+import { venues as liveVenues, ensureRegistryLoaded } from './navigation/registry.js';
 import { healthcheck } from './db/pool.js';
 
 /**
@@ -82,14 +82,24 @@ export function createApp(deps = {}) {
         // production (the live verifier scripts run on the same host and use it
         // to refuse real databases). LAN / emulator / internet clients never see it.
         ...(!config.isProd && isLoopback(req) ? { databaseName: resolveDatabaseName() } : {}),
-        venues: VENUES.map((venue) => ({ id: venue.id, name: venue.name }))
+        venues: liveVenues().map((venue) => ({ id: venue.id, name: venue.name }))
       });
     } catch (err) {
       next(err);
     }
   });
 
-  app.use('/api', apiRoutes);
+  // The DB is the venue/graph source of truth: load the cached registry once
+  // before the first request (server.js also loads it at boot).
+  const registryReady = async (req, res, next) => {
+    try {
+      await ensureRegistryLoaded();
+    } catch {
+      // Keep serving the cached (seed) registry; the next request retries.
+    }
+    next();
+  };
+  app.use('/api', registryReady, apiRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

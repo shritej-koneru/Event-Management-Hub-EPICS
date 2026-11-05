@@ -6,7 +6,8 @@ import { migrate } from './db/migrate.js';
 import { seed } from './db/seeds/index.js';
 import { countEvents } from './models/eventModel.js';
 import { validateGraph } from './navigation/graph.js';
-import { attachSocketServer, broadcastEventUpdate, socketCorsOrigin } from './socket/index.js';
+import { refreshRegistry } from './navigation/registry.js';
+import { attachSocketServer, bindSocketBroadcasts, socketCorsOrigin } from './socket/index.js';
 import { closePool } from './db/pool.js';
 
 /**
@@ -35,14 +36,17 @@ async function start() {
     console.log('  seed: skipped (database already populated; set SEED_ON_BOOT=true to force)');
   }
 
+  // The DB is the graph source of truth: load it into the in-memory registry.
+  await refreshRegistry();
   const graph = validateGraph();
-  console.log(`  venues: ${graph.venueCount} graph nodes, all reachable`);
+  console.log(`  venues: ${graph.venueCount} graph nodes, ${graph.reachableCount} reachable from Entrance`);
+  if (graph.unreachable.length) console.log(`  unreachable venues: ${graph.unreachable.join(', ')}`);
 
   const app = createApp();
   const server = http.createServer(app);
   const io = attachSocketServer(server, { corsOrigin: socketCorsOrigin() });
 
-  app.locals.broadcastEvent = (event, options) => broadcastEventUpdate(io, event, options);
+  bindSocketBroadcasts(app, io);
 
   await new Promise((resolve) => server.listen(config.port, resolve));
 
@@ -82,7 +86,18 @@ function printRoutes(port) {
     ['POST', '/api/navigation/path', '-'],
     ['GET', '/api/chat/announcements', 'optional'],
     ['GET', '/api/chat/messages', 'optional'],
-    ['POST', '/api/chat/join', '-']
+    ['POST', '/api/chat/join', '-'],
+    ['GET', '/api/manage/overview', 'Bearer + organizer/admin'],
+    ['GET', '/api/manage/events', 'Bearer + organizer/admin'],
+    ['POST', '/api/manage/venues', 'Bearer + organizer/admin'],
+    ['PUT', '/api/manage/venues/:id', 'Bearer + organizer/admin'],
+    ['DELETE', '/api/manage/venues/:id', 'Bearer + organizer/admin'],
+    ['POST', '/api/manage/edges', 'Bearer + organizer/admin'],
+    ['PUT', '/api/manage/edges', 'Bearer + organizer/admin'],
+    ['DELETE', '/api/manage/edges', 'Bearer + organizer/admin'],
+    ['GET', '/api/manage/announcements', 'Bearer + organizer/admin'],
+    ['POST', '/api/manage/announcements', 'Bearer + organizer/admin'],
+    ['DELETE', '/api/manage/announcements/:id', 'Bearer + organizer/admin']
   ];
   const width = Math.max(...rows.map((r) => r[1].length));
   for (const [method, route, auth] of rows) {

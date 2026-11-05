@@ -1,6 +1,6 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { verifyToken } from '../auth/jwt.js';
-import { isValidVenueId } from '../navigation/venues.js';
+import { isValidVenueId, GLOBAL_ANNOUNCE_ROOM } from '../navigation/registry.js';
 import { listEvents } from '../models/eventModel.js';
 import { findUserById } from '../models/userModel.js';
 import { recordAnnouncement, stripRoomPrefix } from '../models/announcementModel.js';
@@ -316,10 +316,10 @@ export async function broadcastEventUpdate(io, event, { reason = 'updated' } = {
   const announcement = {
     title:
       reason === 'created'
-        ? `New event at ${event.venue}`
+        ? `New event: ${event.title} at ${event.venue}`
         : reason === 'deleted'
-          ? `${event.title} was cancelled at ${event.venue}`
-          : `${event.title} updated at ${event.venue}`,
+          ? `Cancelled: ${event.title}`
+          : `Updated: ${event.title}`,
     venueId: event.venueId,
     eventId: event.id
   };
@@ -354,4 +354,60 @@ export async function broadcastEventUpdate(io, event, { reason = 'updated' } = {
   }
 
   return { event, announcement, created, persisted };
+}
+
+/** Namespaces every broadcast is mirrored to (Android uses '/', contract §6 uses '/announce'). */
+const NAMESPACES = ['/', '/announce'];
+
+/**
+ * Relays a manager announcement live using the SAME `event` socket event and
+ * top-level fields (`title`, `venue`) the Android ChatViewModel already reads.
+ *
+ *   venue/event announcement -> emitted to room `announce:<venueId>`
+ *   global announcement      -> emitted to EVERY connected client of the
+ *                               namespace (no room membership needed)
+ *
+ * @param {object} announcement  { id, room, message, at, eventId, sentBy }
+ * @param {{venueName?: string|null, event?: object|null}} [extra]
+ */
+export function broadcastAnnouncement(io, announcement, { venueName = null, event = null } = {}) {
+  if (!io) return null;
+  const isGlobal = announcement.room === GLOBAL_ANNOUNCE_ROOM;
+  const venueId = isGlobal ? null : announcement.room;
+  const payload = {
+    event,
+    announcement: {
+      ...announcement,
+      title: announcement.message,
+      venueId
+    },
+    title: announcement.message,
+    venue: isGlobal ? 'All venues' : (venueName ?? announcement.room),
+    venueId,
+    eventId: announcement.eventId ?? null,
+    reason: 'announcement',
+    global: isGlobal
+  };
+  for (const namespace of NAMESPACES) {
+    const target = io.of(namespace);
+    if (isGlobal) target.emit('event', payload);
+    else target.to(roomForVenue(venueId)).emit('event', payload);
+  }
+  return payload;
+}
+
+/** Tells every client (both namespaces) that the campus map changed. */
+export function broadcastMapUpdated(io) {
+  if (!io) return null;
+  const payload = { at: new Date().toISOString() };
+  for (const namespace of NAMESPACES) io.of(namespace).emit('map:updated', payload);
+  return payload;
+}
+
+/** Wires every server -> socket broadcast hook onto `app.locals`. */
+export function bindSocketBroadcasts(app, io) {
+  app.locals.io = io;
+  app.locals.broadcastEvent = (event, options) => broadcastEventUpdate(io, event, options);
+  app.locals.broadcastAnnouncement = (announcement, extra) => broadcastAnnouncement(io, announcement, extra);
+  app.locals.broadcastMapUpdated = () => broadcastMapUpdated(io);
 }
