@@ -127,8 +127,13 @@ export function validateEventForm(f: EventFormValues): string | null {
 }
 
 /** Upcoming = event start is now or later. */
-export function isUpcoming(e: Pick<EventItem, 'date' | 'time'>, now: Date = new Date()): boolean {
-  return new Date(`${e.date}T${e.time || '00:00'}:00`).getTime() >= now.getTime()
+/**
+ * Same rule as the server's overview counts and PAST_DATE check: an event is
+ * upcoming when its date is today or later, with "today" taken in UTC.
+ * Keeps the dashboard numbers and the lists in agreement.
+ */
+export function isUpcoming(e: Pick<EventItem, 'date'>, now: Date = new Date()): boolean {
+  return e.date >= now.toISOString().slice(0, 10)
 }
 
 // ---- API error -> message ----------------------------------------------

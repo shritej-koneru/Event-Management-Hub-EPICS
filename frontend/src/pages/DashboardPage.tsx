@@ -10,24 +10,30 @@ import { useFetch } from '@/lib/useFetch'
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  // The server's overview is system-wide for admins and per-organizer otherwise,
+  // so the lists below use the same scope and the labels say which one it is.
+  const scope = user?.role === 'admin' ? 'all' : 'mine'
+  const suffix = scope === 'all' ? ' (all managers)' : ''
   const overview = useFetch((signal) => api<Overview>('/manage/overview', { signal }))
   const events = useFetch((signal) =>
-    api<{ events: ManagedEvent[] }>('/manage/events', { query: { scope: 'mine' }, signal }),
+    api<{ events: ManagedEvent[] }>('/manage/events', { query: { scope }, signal }),
+    scope,
   )
   const announcements = useFetch((signal) =>
     api<{ announcements: ManagedAnnouncement[] }>('/manage/announcements', {
-      query: { scope: 'mine' },
+      query: { scope },
       signal,
     }),
+    scope,
   )
 
   const o = overview.data
   const cards = [
-    { label: 'Upcoming events', value: o?.events.upcoming },
-    { label: 'Past events', value: o?.events.past },
-    { label: 'Total events', value: o?.events.total },
-    { label: 'Bookmarks', value: o?.bookmarks },
-    { label: 'Announcements sent', value: o?.announcements },
+    { label: 'Upcoming events' + suffix, value: o?.events.upcoming },
+    { label: 'Past events' + suffix, value: o?.events.past },
+    { label: 'Total events' + suffix, value: o?.events.total },
+    { label: 'Bookmarks' + suffix, value: o?.bookmarks },
+    { label: 'Announcements' + suffix, value: o?.announcements },
     { label: 'Venues', value: o?.venues },
     { label: 'Paths', value: o?.edges },
   ]

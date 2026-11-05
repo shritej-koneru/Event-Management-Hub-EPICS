@@ -107,9 +107,12 @@ describe('event form', () => {
     expect(validateEventForm({ ...ok, durationMin: '0' })).toMatch(/duration/i)
   })
   it('classifies upcoming vs past', () => {
-    const now = new Date('2030-01-02T12:00:00')
+    const now = new Date('2030-01-02T12:00:00Z')
     expect(isUpcoming(event, now)).toBe(true)
-    expect(isUpcoming({ date: '2030-01-01', time: '10:00' }, now)).toBe(false)
+    expect(isUpcoming({ date: '2030-01-02' }, now)).toBe(true) // today counts, like the server
+    expect(isUpcoming({ date: '2030-01-01' }, now)).toBe(false)
+    // 00:30 in India on 3 Jan is still 2 Jan in UTC: the server's day wins
+    expect(isUpcoming({ date: '2030-01-02' }, new Date('2030-01-03T00:30:00+05:30'))).toBe(true)
   })
 })
 
