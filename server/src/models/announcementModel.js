@@ -206,11 +206,19 @@ export async function countAnnouncementsBy(sentBy = null) {
  */
 export async function listAnnouncementsForEventFeed(eventId, limit = 100) {
   const { rows } = await getPool().query(
-    `SELECT ${MANAGED_COLUMNS} FROM announcements
-      WHERE event_id = $1 OR (room IS NULL AND event_id IS NULL)
-      ORDER BY id DESC
+    `SELECT a.id, a.room, a.message, a.event_id, a.sent_by, a.at, u.name AS sent_by_name
+       FROM announcements a
+       LEFT JOIN users u ON u.id = a.sent_by
+      WHERE a.event_id = $1 OR (a.room IS NULL AND a.event_id IS NULL)
+      ORDER BY a.id DESC
       LIMIT $2`,
     [eventId, limit]
   );
-  return rows.map((row) => ({ ...serializeManaged(row), global: row.room == null }));
+  return rows.map((row) => ({
+    ...serializeManaged(row),
+    // Automatic relay rows carry a " [evt_…]" dedupe suffix; attendees should not see it.
+    message: row.sent_by == null ? row.message.replace(/\s\[[^\]]+\]$/, '') : row.message,
+    sentByName: row.sent_by_name ?? null,
+    global: row.room == null
+  }));
 }

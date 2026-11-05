@@ -186,7 +186,9 @@ data class Announcement(
     val eventId: String? = null,
     /** Contract 1.6.0: true for notices addressed to every attendee (no single event). */
     val global: Boolean = false,
-    val sentBy: String? = null
+    val sentBy: String? = null,
+    /** Contract 1.6.0 event feed: the manager's display name (never show the raw id). */
+    val sentByName: String? = null
 )
 
 @Serializable

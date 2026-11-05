@@ -708,7 +708,7 @@ Message = { id, ticketId, senderId, senderName, senderRole: "user"|"manager", bo
 ```
 
 ### `GET /api/events/:id/announcements` (public)
-`200 { announcements: [ { id, room, message, at, eventId, sentBy, global } ] }` newest first (max 100): rows for
+`200 { announcements: [ { id, room, message, at, eventId, sentBy, sentByName, global } ] }` newest first (max 100; automatic rows without the internal `[evt_…]` suffix): rows for
 `:id` plus global announcements (`room: "all"`, `global: true`, `eventId: null`). Never another event's.
 `404 EVENT_NOT_FOUND`.
 

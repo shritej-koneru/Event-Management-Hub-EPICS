@@ -291,9 +291,9 @@ private fun AnnouncementCard(a: Announcement) {
             }
             Spacer(Modifier.height(6.dp))
             Text(a.message.ifBlank { a.room }, style = MaterialTheme.typography.bodyMedium, color = NavyText)
-            if (!a.sentBy.isNullOrBlank()) {
+            if (!a.sentByName.isNullOrBlank()) {
                 Spacer(Modifier.height(4.dp))
-                Text("— ${a.sentBy}", style = MaterialTheme.typography.bodySmall, color = MutedText)
+                Text("— ${a.sentByName}", style = MaterialTheme.typography.bodySmall, color = MutedText)
             }
         }
     }

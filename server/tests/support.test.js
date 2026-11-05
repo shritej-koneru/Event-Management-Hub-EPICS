@@ -146,7 +146,11 @@ describe('GET /api/events/:id/announcements', () => {
     expect(mine).toMatchObject({ eventId: eventA, global: false, message: 'Hall A news' });
     const glob = res.body.announcements.find((x) => x.id === g.body.announcement.id);
     expect(glob).toMatchObject({ room: 'all', global: true, eventId: null });
-    expect(Object.keys(mine).sort()).toEqual(['at', 'eventId', 'global', 'id', 'message', 'room', 'sentBy']);
+    expect(Object.keys(mine).sort()).toEqual(['at', 'eventId', 'global', 'id', 'message', 'room', 'sentBy', 'sentByName']);
+    // Attendees see the manager's name, not an id; automatic rows lose the "[evt_…]" dedupe suffix.
+    expect(typeof mine.sentByName).toBe('string');
+    expect(mine.sentByName.length).toBeGreaterThan(0);
+    expect(res.body.announcements.some((x) => /\[evt_[^\]]+\]$/.test(x.message))).toBe(false);
     // newest first
     expect(ids).toEqual([...ids].sort((x, y) => y - x));
   });
