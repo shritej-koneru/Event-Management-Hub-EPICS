@@ -260,10 +260,10 @@ fun OutdoorMap(
             }
         }
         val solid = android.graphics.drawable.BitmapDrawable(
-            mapView.resources, circleIcon(Color(0xFFE65100).toArgb(), 72)
+            mapView.resources, circleIcon(Color(0xFFE65100).toArgb(), 40)
         )
         val hollow = android.graphics.drawable.BitmapDrawable(
-            mapView.resources, hollowIcon(Color(0xFFE65100).toArgb())
+            mapView.resources, hollowIcon(Color(0xFFE65100).toArgb(), 36)
         )
         geoMarkers.forEach { g ->
             added += Marker(mapView).apply {
