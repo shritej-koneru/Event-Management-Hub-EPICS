@@ -25,6 +25,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.border
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -50,7 +53,7 @@ import com.example.eventmanagementhub.data.Result
 import com.example.eventmanagementhub.data.model.CampusMapResponse
 import com.example.eventmanagementhub.data.model.PathResponse
 import com.example.eventmanagementhub.data.model.Venue
-import com.example.eventmanagementhub.ui.components.CustomSearchBar
+import com.example.eventmanagementhub.ui.components.*
 import com.example.eventmanagementhub.ui.navigation.DeviceLocation
 import com.example.eventmanagementhub.ui.navigation.NavigationUiLogic
 import com.example.eventmanagementhub.ui.navigation.OutdoorGeoLogic
@@ -273,7 +276,7 @@ fun MapScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(BodyBackground)
+            .background(Paper)
     ) {
         // ---- search -------------------------------------------------------
         Box(
@@ -289,20 +292,15 @@ fun MapScreen(
                 onSearch = { }
             )
             if (query.isNotBlank() && (searchResults.isNotEmpty() || collegeMatch)) {
-                Card(
+                HubCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 56.dp)
-                        .testTag("map-search-results"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                    border = BorderStroke(1.dp, CardBorder),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                        .padding(top = 60.dp)
+                        .testTag("map-search-results")
                 ) {
                     Column(
                         Modifier
                             .fillMaxWidth()
-                            .background(EventCardWhiteGradient)
                             .padding(vertical = 4.dp)
                     ) {
                         if (collegeMatch) {
@@ -317,20 +315,20 @@ fun MapScreen(
                                 Icon(
                                     Icons.Default.Place,
                                     contentDescription = null,
-                                    tint = NavyText
+                                    tint = Ink3
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Column {
                                     Text(
                                         NavigationUiLogic.COLLEGE_NAME,
                                         style = MaterialTheme.typography.bodyLarge,
-                                        color = NavyText,
+                                        color = Ink,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
                                         NavigationUiLogic.COLLEGE_ADDRESS,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MutedText
+                                        color = Ink2
                                     )
                                 }
                             }
@@ -346,14 +344,14 @@ fun MapScreen(
                                 Icon(
                                     Icons.Default.Place,
                                     contentDescription = null,
-                                    tint = PrimaryPurple
+                                    tint = Ink3
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Column {
                                     Text(
                                         v.name,
                                         style = MaterialTheme.typography.bodyLarge,
-                                        color = NavyText
+                                        color = Ink
                                     )
                                     val mv = campusMap?.venues?.firstOrNull { it.id == v.id }
                                     val detail = mv?.let {
@@ -363,7 +361,7 @@ fun MapScreen(
                                         Text(
                                             detail,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MutedText,
+                                            color = Ink2,
                                             maxLines = 1
                                         )
                                     }
@@ -412,7 +410,7 @@ fun MapScreen(
 
             if (loading && campusMap == null) {
                 CircularProgressIndicator(
-                    color = PrimaryPurple,
+                    color = Accent,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .testTag("map-loading")
@@ -458,8 +456,8 @@ fun MapScreen(
             // travel-mode chips (walking is the only mode the graph supports)
             Row(
                 Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 10.dp),
+                    .align(Alignment.TopStart)
+                    .padding(start = 8.dp, top = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ModeChip(
@@ -477,9 +475,9 @@ fun MapScreen(
 
         // ---- bottom sheet --------------------------------------------------
         Surface(
-            shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-            color = Color.White,
-            shadowElevation = 10.dp,
+            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
+            color = HubSurface,
+            border = Hairline,
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("route-sheet")
@@ -489,7 +487,7 @@ fun MapScreen(
                     Text(
                         "Offline — showing the map and route stored on this device",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFFB26A00)
+                        color = Warning
                     )
                     Spacer(Modifier.height(8.dp))
                 }
@@ -497,14 +495,14 @@ fun MapScreen(
                     Text(
                         "Location access denied — the blue dot needs the location permission.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = Danger
                     )
                     Spacer(Modifier.height(8.dp))
                 }
 
                 FromRow(venues, from, onSelect = ::setFrom)
                 Spacer(Modifier.height(12.dp))
-                HorizontalDivider(color = CardBorder)
+                HorizontalDivider(color = Line)
                 Spacer(Modifier.height(12.dp))
 
                 val p = path
@@ -549,7 +547,7 @@ fun MapScreen(
                         Text(
                             "Search for a destination to see the walking route",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MutedText,
+                            color = Ink2,
                             modifier = Modifier.testTag("route-sheet-hint")
                         )
                     }
@@ -559,7 +557,7 @@ fun MapScreen(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         error ?: "",
-                        color = MaterialTheme.colorScheme.error,
+                        color = Danger,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.testTag("route-error")
                     )
@@ -574,18 +572,17 @@ fun MapScreen(
 // ---------------------------------------------------------------------------
 
 /**
- * Polished campus navigation canvas driven entirely by the backend map
- * (fractional venue positions + undirected edges from GET /api/navigation/map).
+ * Campus navigation canvas driven entirely by the backend map (fractional venue
+ * positions + undirected edges from GET /api/navigation/map).
  *
- * Visual language (Google-Maps-inspired indoor plan):
- *  - soft neutral floor background
- *  - rooms as white rounded cards with centred names (ellipsised when long)
- *  - corridors as soft beds under every edge; ordinary links are thin muted
- *    centre-lines; the computed route is a thick purple path with a white
- *    casing and rounded caps
- *  - start = green chip + dot, destination = red chip + dot, active step =
- *    purple ring + "Now" chip; traveled route segments mute once navigating
- *  - fixed corner legend (does not zoom with the map)
+ * Visual language ("Campus ops" map canvas):
+ *  - Surface background with a faint 24dp grid (Line at 40%), drawn behind the
+ *    pan/zoom layer so it stays put
+ *  - walkways = thin #9AA19C lines; the computed route is a 3dp Accent line
+ *  - rooms = Small labels on Surface with a 1dp Line border and 4dp radius
+ *  - start = Success, destination = Danger, active step = Accent ring + "Now" tag
+ *  - the legend is a single compact row docked UNDER the canvas (outside the
+ *    pannable area) so it can never cover a node
  *
  * Graph topology, distances and route order always come from the backend —
  * nothing is invented or re-wired here.
@@ -609,15 +606,15 @@ private fun CampusMap(
     }
 
     val roomNameStyle = TextStyle(
-        fontSize = 11.sp,
+        fontSize = 12.sp,
         fontWeight = FontWeight.Medium,
-        color = NavyText,
+        color = Ink,
         textAlign = TextAlign.Center
     )
     val chipTextStyle = TextStyle(
         fontSize = 9.sp,
         fontWeight = FontWeight.SemiBold,
-        color = Color.White
+        color = OnAccent
     )
 
     // Fractional positions from the backend map (fallback: canvas centre).
@@ -627,7 +624,7 @@ private fun CampusMap(
     // Undirected edges, one segment each (server stores each edge once).
     val edges = remember(map.edges) { map.edges.map { it.from to it.to } }
 
-    // Room cards are measured against the canvas size so long names ellipsize
+    // Room labels are measured against the canvas size so long names ellipsize
     // consistently; size comes from onSizeChanged on the Canvas host.
     var canvasSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     val roomNameStyleLocal = roomNameStyle
@@ -638,7 +635,11 @@ private fun CampusMap(
         map.venues.map { v ->
             val frac = positions[v.id] ?: Offset(0.5f, 0.5f)
             val center = Offset(frac.x * w, frac.y * h)
-            val maxLabel = (w * 0.22f).coerceIn(64f, 150f)
+            // Wrap only between words: never narrower than the longest single word.
+            val longestWord = v.name.split(' ').maxOfOrNull {
+                textMeasurer.measure(it, style = roomNameStyleLocal).size.width
+            }?.toFloat() ?: 0f
+            val maxLabel = maxOf((w * 0.22f).coerceIn(64f, 150f), longestWord)
             val layout = textMeasurer.measure(
                 text = v.name,
                 style = roomNameStyleLocal,
@@ -647,19 +648,39 @@ private fun CampusMap(
             IndoorRoom(
                 id = v.id,
                 center = center,
-                width = (layout.size.width + 32f).coerceIn(64f, maxLabel + 32f),
-                height = (layout.size.height + 24f).coerceAtLeast(38f)
+                width = (layout.size.width + 28f).coerceIn(64f, maxLabel + 28f),
+                height = (layout.size.height + 18f).coerceAtLeast(34f)
             )
         }
     }
     val nameById = remember(map.venues) { map.venues.associate { it.id to it.name } }
 
-    Box(modifier = modifier) {
+    Column(
+        modifier
+            .clip(CardShape)
+            .background(HubSurface)
+            .border(1.dp, Line, CardShape)
+    ) {
         Canvas(
             Modifier
-                .matchParentSize()
-                .clip(RoundedCornerShape(20.dp))
-                .background(IndoorMapBackground)
+                .weight(1f)
+                .fillMaxWidth()
+                .clipToBounds()
+                .background(HubSurface)
+                .drawBehind {
+                    // Faint 24dp grid; static (not part of the pan/zoom layer).
+                    val step = 24.dp.toPx()
+                    var x = 0f
+                    while (x <= size.width) {
+                        drawLine(MapGrid, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+                        x += step
+                    }
+                    var y = 0f
+                    while (y <= size.height) {
+                        drawLine(MapGrid, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                        y += step
+                    }
+                }
                 .onSizeChanged { canvasSize = it }
                 .pointerInput(map.venues) {
                     detectTransformGestures { _, pan, zoom, _ ->
@@ -675,13 +696,14 @@ private fun CampusMap(
         ) {
             val w = size.width
             val h = size.height
+            val dp1 = 1.dp.toPx()
 
             fun pos(id: String): Offset {
                 val frac = positions[id] ?: Offset(0.5f, 0.5f)
                 return Offset(frac.x * w, frac.y * h)
             }
 
-            // --- corridors + links (under rooms) --------------------------------
+            // --- walkways + route (under room labels) ----------------------------
             for ((a, b) in edges) {
                 val p1 = pos(a)
                 val p2 = pos(b)
@@ -689,55 +711,40 @@ private fun CampusMap(
                 val bothCompleted = completedSet.isNotEmpty() && a in completedSet && b in completedSet
 
                 if (bothOnPath) {
-                    // White casing + coloured route stroke (remaining bright,
-                    // already-walked segments muted).
+                    // Accent 3dp route; already-walked segments are muted.
                     drawLine(
-                        color = IndoorRouteCasing,
+                        color = if (bothCompleted) MapRoute.copy(alpha = 0.35f) else MapRoute,
                         start = p1,
                         end = p2,
-                        strokeWidth = 16f,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = if (bothCompleted) IndoorRouteTraveled else IndoorRoute,
-                        start = p1,
-                        end = p2,
-                        strokeWidth = 10f,
+                        strokeWidth = 3.dp.toPx(),
                         cap = StrokeCap.Round
                     )
                 } else {
-                    // Soft corridor bed + thin muted centre line.
                     drawLine(
-                        color = IndoorCorridorBed,
+                        color = MapWalkway,
                         start = p1,
                         end = p2,
-                        strokeWidth = 12f,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = IndoorEdgeLine,
-                        start = p1,
-                        end = p2,
-                        strokeWidth = 2.5f,
+                        strokeWidth = 1.5.dp.toPx(),
                         cap = StrokeCap.Round
                     )
                 }
             }
 
-            // --- room cards ------------------------------------------------------
-            fun drawRoomCard(room: IndoorRoom, fill: Color, stroke: Color, strokeW: Float) {
+            // --- room labels -----------------------------------------------------
+            val labelRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+            fun drawRoomCard(room: IndoorRoom, stroke: Color, strokeW: Float) {
                 val topLeft = Offset(room.center.x - room.width / 2f, room.center.y - room.height / 2f)
                 drawRoundRect(
-                    color = fill,
+                    color = HubSurface,
                     topLeft = topLeft,
                     size = Size(room.width, room.height),
-                    cornerRadius = CornerRadius(14f, 14f)
+                    cornerRadius = labelRadius
                 )
                 drawRoundRect(
                     color = stroke,
                     topLeft = topLeft,
                     size = Size(room.width, room.height),
-                    cornerRadius = CornerRadius(14f, 14f),
+                    cornerRadius = labelRadius,
                     style = Stroke(width = strokeW)
                 )
             }
@@ -760,13 +767,13 @@ private fun CampusMap(
 
             fun drawChip(center: Offset, label: String, color: Color) {
                 val layout = textMeasurer.measure(label, style = chipTextStyle)
-                val cw = layout.size.width + 18f
-                val ch = layout.size.height + 10f
+                val cw = layout.size.width + 16f
+                val ch = layout.size.height + 8f
                 drawRoundRect(
                     color = color,
                     topLeft = Offset(center.x - cw / 2f, center.y - ch / 2f),
                     size = Size(cw, ch),
-                    cornerRadius = CornerRadius(ch / 2f, ch / 2f)
+                    cornerRadius = labelRadius
                 )
                 drawText(
                     textLayoutResult = layout,
@@ -777,93 +784,81 @@ private fun CampusMap(
             for (room in rooms) {
                 val onPath = room.id in pathSet
                 val isActive = room.id == activeNodeId
-                val fill = when {
-                    onPath || isActive -> IndoorRoomOnPathFill
-                    else -> IndoorRoomFill
-                }
                 val stroke = when {
-                    isActive -> IndoorActiveRing
-                    room.id == startId -> IndoorStart
-                    room.id == endId -> IndoorDestination
-                    onPath -> IndoorRoute.copy(alpha = 0.45f)
-                    else -> IndoorRoomStroke
+                    isActive -> Accent
+                    room.id == startId -> MapStart
+                    room.id == endId -> MapDestination
+                    onPath -> Accent
+                    else -> Line
                 }
                 val strokeW = when {
-                    isActive || room.id == startId || room.id == endId -> 2.5f
-                    onPath -> 1.8f
-                    else -> 1.5f
+                    isActive || room.id == startId || room.id == endId -> 2f * dp1
+                    onPath -> 1.5f * dp1
+                    else -> dp1
                 }
-                drawRoomCard(room, fill, stroke, strokeW)
+                drawRoomCard(room, stroke, strokeW)
                 drawRoomLabel(room, nameById[room.id] ?: room.id)
             }
 
-            // --- status rings + chips (drawn last so they sit on top) ------------
+            // --- status rings + tags (drawn last so they sit on top) -------------
             for (room in rooms) {
                 val id = room.id
                 if (id == activeNodeId) {
                     drawCircle(
-                        color = IndoorActiveRing.copy(alpha = 0.18f),
-                        radius = maxOf(room.width, room.height) / 2f + 10f,
-                        center = room.center
-                    )
-                    drawCircle(
-                        color = IndoorActiveRing,
+                        color = Accent,
                         radius = maxOf(room.width, room.height) / 2f + 6f,
                         center = room.center,
-                        style = Stroke(width = 3f)
+                        style = Stroke(width = 2.dp.toPx())
                     )
                     drawChip(
                         center = Offset(room.center.x, room.center.y - room.height / 2f - 16f),
                         label = "Now",
-                        color = IndoorActiveRing
+                        color = Accent
                     )
                 }
                 if (id == startId) {
                     drawCircle(
-                        color = IndoorStart,
+                        color = MapStart,
                         radius = 7f,
                         center = Offset(room.center.x, room.center.y + room.height / 2f + 12f)
                     )
                     drawCircle(
-                        color = Color.White,
+                        color = HubSurface,
                         radius = 3f,
                         center = Offset(room.center.x, room.center.y + room.height / 2f + 12f)
                     )
                     drawChip(
                         center = Offset(room.center.x, room.center.y - room.height / 2f - 16f),
                         label = "Start",
-                        color = IndoorStart
+                        color = MapStart
                     )
                 }
                 if (id == endId) {
                     drawCircle(
-                        color = IndoorDestination,
+                        color = MapDestination,
                         radius = 7f,
                         center = Offset(room.center.x, room.center.y + room.height / 2f + 12f)
                     )
                     drawCircle(
-                        color = Color.White,
+                        color = HubSurface,
                         radius = 3f,
                         center = Offset(room.center.x, room.center.y + room.height / 2f + 12f)
                     )
                     drawChip(
                         center = Offset(room.center.x, room.center.y - room.height / 2f - 16f),
                         label = "End",
-                        color = IndoorDestination
+                        color = MapDestination
                     )
                 }
             }
         }
 
-        IndoorMapLegend(
-            Modifier
-                .align(Alignment.TopStart)
-                .padding(12.dp)
-        )
+        HubDivider()
+        IndoorMapLegend(Modifier.fillMaxWidth())
     }
 }
 
-/** Measured room card geometry for one venue on the indoor canvas. */
+/** Measured room label geometry for one venue on the indoor canvas. */
 private data class IndoorRoom(
     val id: String,
     val center: Offset,
@@ -872,53 +867,50 @@ private data class IndoorRoom(
 )
 
 /**
- * Compact fixed legend for the indoor map. Lives outside the zoomable canvas
- * so it stays readable at any zoom level.
+ * Compact single-row legend docked under the indoor canvas. It lives outside the
+ * zoomable canvas, so it stays readable at any zoom level and never covers a node.
  */
 @Composable
 private fun IndoorMapLegend(modifier: Modifier = Modifier) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = Color.White.copy(alpha = 0.94f),
-        shadowElevation = 3.dp,
-        border = BorderStroke(1.dp, CardBorder),
-        modifier = modifier.testTag("indoor-map-legend")
+    Row(
+        modifier
+            .background(HubSurface)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .testTag("indoor-map-legend"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-            LegendRow(IndoorStart, "Start")
-            LegendRow(IndoorRoute, "Route")
-            LegendRow(IndoorDestination, "Destination")
-            LegendRow(IndoorEdgeLine, "Walkway", isLine = true)
-        }
+        LegendItem(MapStart, "Start")
+        LegendItem(MapRoute, "Route")
+        LegendItem(MapDestination, "Destination")
+        LegendItem(MapWalkway, "Walkway", isLine = true)
     }
 }
 
 @Composable
-private fun LegendRow(color: Color, label: String, isLine: Boolean = false) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 2.dp)
-    ) {
+private fun LegendItem(color: Color, label: String, isLine: Boolean = false) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         if (isLine) {
             Canvas(Modifier.size(width = 14.dp, height = 6.dp)) {
                 drawLine(
                     color = color,
                     start = Offset(0f, size.height / 2f),
                     end = Offset(size.width, size.height / 2f),
-                    strokeWidth = 4f,
+                    strokeWidth = 2.dp.toPx(),
                     cap = StrokeCap.Round
                 )
             }
         } else {
-            Canvas(Modifier.size(10.dp)) {
+            Canvas(Modifier.size(8.dp)) {
                 drawCircle(color = color)
             }
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(6.dp))
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            color = NavyText
+            color = Ink2,
+            maxLines = 1
         )
     }
 }
@@ -937,19 +929,19 @@ private fun FromRow(
     var expanded by remember { mutableStateOf(false) }
     val name = venues.firstOrNull { it.id == selected }?.name ?: selected
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("From:", style = MaterialTheme.typography.bodySmall, color = MutedText)
+        Text("From:", style = MaterialTheme.typography.bodySmall, color = Ink2)
         Spacer(Modifier.width(8.dp))
         OutlinedButton(
             onClick = { expanded = true },
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, CardBorder),
+            shape = ControlShape,
+            border = HairlineStrong,
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            modifier = Modifier.testTag("from-selector")
+            modifier = Modifier.heightIn(min = 48.dp).testTag("from-selector")
         ) {
             Text(
                 name,
                 style = MaterialTheme.typography.bodyMedium,
-                color = NavyText,
+                color = Ink,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1
             )
@@ -976,8 +968,7 @@ private fun RoutePanel(
     Text(
         "Walk to $destName",
         style = MaterialTheme.typography.titleMedium,
-        color = PrimaryPurple,
-        fontWeight = FontWeight.Bold,
+        color = Ink,
         modifier = Modifier.testTag("route-title")
     )
     Spacer(Modifier.height(6.dp))
@@ -985,31 +976,27 @@ private fun RoutePanel(
         Text(
             "${pathData.totalDistanceM} m",
             style = MaterialTheme.typography.bodyLarge,
-            color = NavyText,
-            fontWeight = FontWeight.Bold
-        )
+            color = Ink,
+                    )
         Text(
             "  ·  ${NavigationUiLogic.walkingEtaLabel(pathData.totalDistanceM)}",
             style = MaterialTheme.typography.bodyMedium,
-            color = MutedText
+            color = Ink2
         )
         Spacer(Modifier.width(8.dp))
         WalkingChip()
     }
     Spacer(Modifier.height(12.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Button(
+        PrimaryButton(
+            text = "Start navigation",
             onClick = onStart,
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
-            modifier = Modifier.testTag("nav-start")
-        ) {
-            Icon(Icons.AutoMirrored.Filled.DirectionsWalk, contentDescription = null)
-            Spacer(Modifier.width(6.dp))
-            Text("Start Navigation")
-        }
+            modifier = Modifier.testTag("nav-start"),
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.DirectionsWalk, contentDescription = null, modifier = Modifier.size(18.dp)) }
+        )
         Spacer(Modifier.width(8.dp))
         IconButton(onClick = onClear, modifier = Modifier.testTag("nav-clear")) {
-            Icon(Icons.Default.Close, contentDescription = "Clear destination", tint = MutedText)
+            Icon(Icons.Default.Close, contentDescription = "Clear destination", tint = Ink2)
         }
     }
     Spacer(Modifier.height(8.dp))
@@ -1017,7 +1004,7 @@ private fun RoutePanel(
         Text(
             "${index + 1}. ${step.instruction}",
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF3A3850),
+            color = Ink2,
             modifier = Modifier.padding(bottom = 2.dp)
         )
     }
@@ -1025,7 +1012,7 @@ private fun RoutePanel(
         Text(
             "+${pathData.steps.size - 2} more steps",
             style = MaterialTheme.typography.bodySmall,
-            color = MutedText
+            color = Ink2
         )
     }
 }
@@ -1048,64 +1035,50 @@ private fun NavigationPanel(
         Icon(
             Icons.Default.Place,
             contentDescription = null,
-            tint = PrimaryPurple
+            tint = Accent
         )
         Spacer(Modifier.height(4.dp))
         Text(
             "You have arrived at $destName",
             style = MaterialTheme.typography.titleMedium,
-            color = NavyText,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.testTag("nav-arrived")
+            color = Ink,
+                        modifier = Modifier.testTag("nav-arrived")
         )
         Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = onEnd,
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
-            modifier = Modifier.testTag("nav-done")
-        ) { Text("Done") }
+        PrimaryButton(text = "Done", onClick = onEnd, modifier = Modifier.testTag("nav-done"))
         return
     }
     val step = pathData.steps.getOrNull(stepIndex)
     if (step == null) {
-        Text("Route unavailable", color = MutedText)
+        Text("Route unavailable", color = Ink2)
         return
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = null,
-            tint = PrimaryPurple
+            tint = Accent
         )
         Spacer(Modifier.width(10.dp))
         Column {
             Text(
                 step.instruction,
                 style = MaterialTheme.typography.titleMedium,
-                color = NavyText,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.testTag("nav-instruction")
+                color = Ink,
+                                modifier = Modifier.testTag("nav-instruction")
             )
             Text(
                 "${step.distanceM} m  ·  ${NavigationUiLogic.stepProgressLabel(stepIndex, pathData.steps.size)}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MutedText
+                color = Ink2
             )
         }
     }
     Spacer(Modifier.height(12.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Button(
-            onClick = onNext,
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
-            modifier = Modifier.testTag("nav-next")
-        ) { Text("Next") }
+        PrimaryButton(text = "Next", onClick = onNext, modifier = Modifier.testTag("nav-next"))
         Spacer(Modifier.width(8.dp))
-        OutlinedButton(
-            onClick = onEnd,
-            border = BorderStroke(1.dp, CardBorder),
-            modifier = Modifier.testTag("nav-end")
-        ) { Text("End", color = NavyText) }
+        SecondaryButton(text = "End", onClick = onEnd, modifier = Modifier.testTag("nav-end"))
     }
 }
 
@@ -1122,29 +1095,25 @@ private fun OutdoorRoutePanel(
     Text(
         "Walk to $destName",
         style = MaterialTheme.typography.titleMedium,
-        color = PrimaryPurple,
-        fontWeight = FontWeight.Bold
+        color = Ink
     )
     Spacer(Modifier.height(4.dp))
     Text(
         "Outdoor walking directions are provided by the Google Maps app.",
         style = MaterialTheme.typography.bodyMedium,
-        color = MutedText
+        color = Ink2
     )
     Spacer(Modifier.height(12.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Button(
+        PrimaryButton(
+            text = "Open in Google Maps",
             onClick = onOpenMaps,
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
-            modifier = Modifier.testTag("outdoor-directions")
-        ) {
-            Icon(Icons.Default.Place, contentDescription = null)
-            Spacer(Modifier.width(6.dp))
-            Text("Open in Google Maps")
-        }
+            modifier = Modifier.testTag("outdoor-directions"),
+            leadingIcon = { Icon(Icons.Default.Place, contentDescription = null, modifier = Modifier.size(18.dp)) }
+        )
         Spacer(Modifier.width(8.dp))
         IconButton(onClick = onClear, modifier = Modifier.testTag("nav-clear-outdoor")) {
-            Icon(Icons.Default.Close, contentDescription = "Clear destination", tint = MutedText)
+            Icon(Icons.Default.Close, contentDescription = "Clear destination", tint = Ink2)
         }
     }
 }
@@ -1155,19 +1124,7 @@ private fun OutdoorRoutePanel(
 
 @Composable
 private fun WalkingChip() {
-    FilterChip(
-        selected = true,
-        onClick = { },
-        label = { Text("Walking") },
-        leadingIcon = {
-            Icon(
-                Icons.AutoMirrored.Filled.DirectionsWalk,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
-        },
-        modifier = Modifier.testTag("mode-walking")
-    )
+    HubChip("Walking", ChipKind.Accent, Modifier.testTag("mode-walking"))
 }
 
 @Composable
@@ -1177,18 +1134,7 @@ private fun ModeChip(
     tag: String,
     onClick: () -> Unit
 ) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label) },
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = Color.White,
-            labelColor = NavyText,
-            selectedContainerColor = PrimaryPurple,
-            selectedLabelColor = Color.White
-        ),
-        modifier = Modifier.testTag(tag)
-    )
+    HubFilterChip(label = label, selected = selected, onClick = onClick, modifier = Modifier.testTag(tag))
 }
 
 @Composable
@@ -1199,14 +1145,13 @@ private fun MapCircleButton(
     onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = Color.White,
-        shadowElevation = 4.dp,
-        border = BorderStroke(1.dp, CardBorder),
+        shape = ControlShape,
+        color = HubSurface,
+        border = Hairline,
         modifier = Modifier.testTag(tag)
     ) {
         IconButton(onClick = onClick) {
-            Icon(icon, contentDescription = contentDescription, tint = NavyText)
+            Icon(icon, contentDescription = contentDescription, tint = Ink)
         }
     }
 }

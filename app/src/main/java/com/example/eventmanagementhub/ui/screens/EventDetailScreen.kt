@@ -1,35 +1,27 @@
 package com.example.eventmanagementhub.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.eventmanagementhub.data.EventDetails
 import com.example.eventmanagementhub.data.HubRepository
 import com.example.eventmanagementhub.data.Result
 import com.example.eventmanagementhub.data.model.Event
 import com.example.eventmanagementhub.data.model.EventChart
+import com.example.eventmanagementhub.ui.components.*
 import com.example.eventmanagementhub.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -73,40 +65,28 @@ fun EventDetailScreen(
         loading = false
     }
 
-    Box(Modifier.fillMaxSize().background(BodyBackground)) {
+    Column(Modifier.fillMaxSize().background(Paper)) {
+        HubTopBar(title = "Event details", onBack = onBack)
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = NavyText)
-                }
-                Text(
-                    "Event Details",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = NavyText,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
             if (loading) {
                 Box(Modifier.fillMaxWidth().padding(top = 60.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = PrimaryPurple)
+                    CircularProgressIndicator(color = Accent)
                 }
             } else {
                 val e = event
                 if (e == null) {
                     Text(
                         errorMsg ?: "Event not found",
-                        color = MutedText,
-                        modifier = Modifier.padding(top = 40.dp)
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Ink2,
+                        modifier = Modifier.padding(top = 24.dp)
                     )
                 } else {
-                    Spacer(Modifier.height(12.dp))
-
                     if (isStale) {
                         StatusBanner("Offline — showing saved details for this device")
                         Spacer(Modifier.height(12.dp))
@@ -116,54 +96,97 @@ fun EventDetailScreen(
                         Spacer(Modifier.height(12.dp))
                     }
 
-                    Card(
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                        border = BorderStroke(1.dp, CardBorder)
-                    ) {
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .background(EventCardWhiteGradient)
-                                .padding(20.dp)
-                        ) {
-                            Text(
-                                text = e.title,
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = NavyText,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = "${e.host} · ${e.category}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MutedText
-                            )
-                            Spacer(Modifier.height(16.dp))
-
-                            InfoRow(Icons.Default.Schedule, "${e.date} · ${e.time} · ${e.durationMin} min")
-                            InfoRow(Icons.Default.LocationOn, details?.venue?.name ?: e.venue)
-                            InfoRow(Icons.Default.People, "${e.registered} / ${e.capacity} registered")
-
-                            if (e.tags.isNotEmpty()) {
-                                Spacer(Modifier.height(12.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    e.tags.forEach { tag -> TagChip(tag) }
-                                }
-                            }
+                    // ---- header ----
+                    CategoryTag(e.category)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = e.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Ink
+                    )
+                    if (e.host.isNotBlank()) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "Hosted by ${e.host}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Ink2
+                        )
+                    }
+                    if (e.tags.isNotEmpty()) {
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            e.tags.forEach { tag -> HubChip(tag, ChipKind.Neutral) }
                         }
                     }
+                    Spacer(Modifier.height(16.dp))
 
-                    Spacer(Modifier.height(18.dp))
+                    // ---- facts: label / value rows ----
+                    HubCard(Modifier.fillMaxWidth()) {
+                        FactRow("When", "${HubFormat.dayTime(e.date, e.time)} · ${e.durationMin} min")
+                        HubDivider(inset = 16.dp)
+                        FactRow("Where", details?.venue?.name ?: e.venue)
+                        HubDivider(inset = 16.dp)
+                        FactRow("Registered", "${e.registered} / ${e.capacity}")
+                    }
 
                     if (e.description.isNotBlank()) {
+                        Spacer(Modifier.height(16.dp))
                         Text(
                             text = e.description,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF4A4863)
+                            color = Ink2
                         )
-                        Spacer(Modifier.height(16.dp))
                     }
+                    Spacer(Modifier.height(16.dp))
+
+                    // ---- primary actions ----
+                    PrimaryButton(
+                        text = "Navigate to ${details?.venue?.name ?: e.venue}",
+                        onClick = { onNavigate(e.venueId) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("navigate-button"),
+                        trailingIcon = {
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+                        }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    SecondaryButton(
+                        text = if (bookmarked) "Saved" else "Save",
+                        onClick = {
+                            val next = !bookmarked
+                            scope.launch {
+                                // Server is authoritative; the local cache is
+                                // updated optimistically and reconciled.
+                                when (val res = repository.syncBookmark(e.id, next)) {
+                                    is Result.Success -> {
+                                        bookmarked = res.data.bookmarked
+                                        bookmarkError = null
+                                    }
+                                    is Result.Error -> {
+                                        bookmarked = next
+                                        bookmarkError = res.message
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("bookmark-button"),
+                        leadingIcon = {
+                            Icon(
+                                if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                contentDescription = null,
+                                tint = if (bookmarked) Accent else Ink2,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                    bookmarkError?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = Ink3)
+                    }
+                    Spacer(Modifier.height(24.dp))
 
                     // ---- statistics ----
                     details?.statistics?.let { stats ->
@@ -192,9 +215,9 @@ fun EventDetailScreen(
                     // ---- charts ----
                     details?.charts?.takeIf { it.isNotEmpty() }?.let { charts ->
                         SectionCard("Charts") {
-                            charts.forEach { chart ->
+                            charts.forEachIndexed { i, chart ->
+                                if (i > 0) Spacer(Modifier.height(16.dp))
                                 ChartBlock(chart)
-                                Spacer(Modifier.height(12.dp))
                             }
                         }
                         Spacer(Modifier.height(16.dp))
@@ -207,97 +230,33 @@ fun EventDetailScreen(
                             Text(
                                 "No announcements for this event yet.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MutedText
+                                color = Ink2
                             )
                         } else {
-                            scoped.forEach { a ->
-                                Row(
-                                    verticalAlignment = Alignment.Top,
-                                    modifier = Modifier.padding(bottom = 10.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Campaign,
-                                        contentDescription = null,
-                                        tint = PrimaryPurple,
-                                        modifier = Modifier
-                                            .padding(end = 10.dp)
-                                            .size(18.dp)
+                            scoped.forEachIndexed { i, a ->
+                                if (i > 0) {
+                                    Spacer(Modifier.height(10.dp))
+                                    HubDivider()
+                                    Spacer(Modifier.height(10.dp))
+                                }
+                                Column {
+                                    Text(
+                                        a.message,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Ink
                                     )
-                                    Column {
+                                    if (a.at.isNotBlank()) {
                                         Text(
-                                            a.message,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = NavyText
+                                            a.at.take(16).replace('T', ' '),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Ink3
                                         )
-                                        if (a.at.isNotBlank()) {
-                                            Text(
-                                                a.at.take(16).replace('T', ' '),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MutedText
-                                            )
-                                        }
                                     }
                                 }
                             }
                         }
                     }
-                    Spacer(Modifier.height(18.dp))
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(
-                            onClick = { onNavigate(e.venueId) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(52.dp)
-                                .testTag("navigate-button"),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
-                        ) {
-                            Text("Navigate to ${details?.venue?.name ?: e.venue}", fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.width(8.dp))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                val next = !bookmarked
-                                scope.launch {
-                                    // Server is authoritative; the local cache is
-                                    // updated optimistically and reconciled.
-                                    when (val res = repository.syncBookmark(e.id, next)) {
-                                        is Result.Success -> {
-                                            bookmarked = res.data.bookmarked
-                                            bookmarkError = null
-                                        }
-                                        is Result.Error -> {
-                                            bookmarked = next
-                                            bookmarkError = res.message
-                                        }
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .height(52.dp)
-                                .testTag("bookmark-button"),
-                            shape = RoundedCornerShape(16.dp),
-                            border = BorderStroke(1.dp, if (bookmarked) PrimaryPurple else CardBorder),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = if (bookmarked) PrimaryPurple else Color(0xFF3A3850)
-                            )
-                        ) {
-                            Icon(
-                                if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(if (bookmarked) "Saved" else "Save", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    bookmarkError?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = MutedText)
-                    }
+                    Spacer(Modifier.height(24.dp))
                 }
             }
         }
@@ -305,20 +264,22 @@ fun EventDetailScreen(
 }
 
 @Composable
-private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        border = BorderStroke(1.dp, CardBorder)
+private fun FactRow(label: String, value: String) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .background(EventCardWhiteGradient)
-                .padding(16.dp)
-        ) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = NavyText, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(10.dp))
+        Text(label, style = MaterialTheme.typography.bodySmall, color = Ink3, modifier = Modifier.width(88.dp))
+        Text(value, style = MaterialTheme.typography.titleSmall, color = Ink, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
+    HubCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = Ink)
+            Spacer(Modifier.height(8.dp))
             content()
         }
     }
@@ -327,8 +288,8 @@ private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Un
 @Composable
 private fun StatRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MutedText, modifier = Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.bodyMedium, color = NavyText, fontWeight = FontWeight.SemiBold)
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = Ink2, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.titleSmall, color = Ink)
     }
 }
 
@@ -336,7 +297,7 @@ private fun StatRow(label: String, value: String) {
 @Composable
 private fun ChartBlock(chart: EventChart) {
     Column(Modifier.fillMaxWidth().testTag("chart-${chart.id}")) {
-        Text(chart.title, style = MaterialTheme.typography.bodyMedium, color = NavyText, fontWeight = FontWeight.Medium)
+        Text(chart.title, style = MaterialTheme.typography.titleSmall, color = Ink)
         if (chart.total > 0) {
             Spacer(Modifier.height(8.dp))
             chart.data.forEach { slice ->
@@ -345,65 +306,43 @@ private fun ChartBlock(chart: EventChart) {
                     Text(
                         slice.label,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MutedText,
+                        color = Ink2,
                         modifier = Modifier.width(120.dp)
                     )
                     Box(
                         Modifier
                             .weight(1f)
-                            .height(10.dp)
-                            .background(Color(0xFFEDE9FF), RoundedCornerShape(5.dp))
+                            .height(8.dp)
+                            .background(SurfaceSunken, RoundedCornerShape(2.dp))
                     ) {
                         Box(
                             Modifier
                                 .fillMaxWidth(fraction.coerceAtLeast(if (slice.value > 0) 0.02f else 0f))
-                                .height(10.dp)
-                                .background(PrimaryPurple, RoundedCornerShape(5.dp))
+                                .height(8.dp)
+                                .background(Accent, RoundedCornerShape(2.dp))
                         )
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(
                         "${slice.value.toInt()}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = NavyText
+                        color = Ink,
+                        modifier = Modifier.widthIn(min = 24.dp),
+                        textAlign = TextAlign.End
                     )
                 }
             }
             Text(
                 "Total ${chart.total.toInt()} ${chart.unit}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MutedText
+                color = Ink3
             )
         } else {
             Text(
                 "No chart data available.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MutedText
+                color = Ink3
             )
         }
-    }
-}
-
-@Composable
-private fun InfoRow(icon: ImageVector, text: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = PrimaryPurple, modifier = Modifier.padding(end = 12.dp))
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF3A3850))
-    }
-}
-
-@Composable
-private fun TagChip(label: String) {
-    Surface(shape = RoundedCornerShape(50), color = Color(0xFFEDE9FF)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = PrimaryPurple,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-        )
     }
 }

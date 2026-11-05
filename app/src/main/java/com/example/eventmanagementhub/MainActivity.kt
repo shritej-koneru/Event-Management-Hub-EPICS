@@ -15,7 +15,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.LocalActivity
@@ -43,12 +50,21 @@ import com.example.eventmanagementhub.ui.screens.HomeScreen
 import com.example.eventmanagementhub.ui.screens.MapScreen
 import com.example.eventmanagementhub.ui.screens.ProfileScreen
 import com.example.eventmanagementhub.ui.theme.EventManagementHubTheme
-import com.example.eventmanagementhub.ui.theme.PrimaryPurple
-import com.example.eventmanagementhub.ui.theme.BodyBackground
+import com.example.eventmanagementhub.ui.components.HubDivider
+import com.example.eventmanagementhub.ui.theme.Accent
+import com.example.eventmanagementhub.ui.theme.HubSurface
+import com.example.eventmanagementhub.ui.theme.Ink3
+import com.example.eventmanagementhub.ui.theme.Paper
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Paper bars with dark icons (light style = dark icons on a light scrim colour).
+        val paper = Paper.toArgb()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(paper, paper),
+            navigationBarStyle = SystemBarStyle.light(paper, paper)
+        )
         setContent {
             EventManagementHubTheme {
                 AppRoot()
@@ -60,8 +76,63 @@ class MainActivity : ComponentActivity() {
 private data class TabItem(
     val route: String,
     val label: String,
-    val icon: ImageVector
+    val icon: ImageVector,
+    /** Single-line label for the bottom bar when [label] does not fit 5 tabs at 360dp. */
+    val shortLabel: String = label
 )
+
+/**
+ * Flat bottom navigation: Surface with a top hairline, 56dp tall; active tab = Accent
+ * icon + label with a 2dp accent bar on top. Labels are single-line (Caption).
+ */
+@Composable
+private fun HubBottomBar(
+    tabs: List<TabItem>,
+    isSelected: (TabItem) -> Boolean,
+    onSelect: (TabItem) -> Unit
+) {
+    Column(Modifier.fillMaxWidth().background(HubSurface)) {
+        HubDivider()
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .height(56.dp)
+                .selectableGroup()
+        ) {
+            tabs.forEach { tab ->
+                val selected = isSelected(tab)
+                val tint = if (selected) Accent else Ink3
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(tab) }),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth(0.5f)
+                            .height(2.dp)
+                            .background(if (selected) Accent else Color.Transparent)
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Icon(tab.icon, contentDescription = tab.label, tint = tint, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        tab.shortLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = tint,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
+                    )
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun AppRoot() {
@@ -103,7 +174,7 @@ private fun AppRoot() {
         TabItem("home", "Home", Icons.Default.Home),
         TabItem("events", "Events", Icons.Default.List),
         TabItem("map", "Map", Icons.Default.Map),
-        TabItem("announcements", "Announcements", Icons.Default.Campaign),
+        TabItem("announcements", "Announcements", Icons.Default.Campaign, shortLabel = "Updates"),
         TabItem("profile", "Profile", Icons.Default.Person)
     )
 
@@ -118,35 +189,24 @@ private fun AppRoot() {
     }
 
     Scaffold(
-        containerColor = BodyBackground,
+        containerColor = Paper,
         bottomBar = {
             if (authed) {
-                NavigationBar(containerColor = Color.White) {
-                    val backStackEntry by navController.currentBackStackEntryAsState()
-                    val currentRoute = backStackEntry?.destination?.route
-                    tabs.forEach { tab ->
-                        NavigationBarItem(
-                            // Nested routes (announcements/{eventId}/...) keep their tab highlighted.
-                            selected = currentRoute == tab.route ||
-                                currentRoute?.startsWith(tab.route + "/") == true,
-                            onClick = {
-                                // Re-tapping the active tab from a nested screen returns to its root.
-                                if (currentRoute != null && currentRoute.startsWith(tab.route + "/")) {
-                                    navController.popBackStack(tab.route, inclusive = false)
-                                } else openTab(tab.route)
-                            },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = PrimaryPurple,
-                                selectedTextColor = PrimaryPurple,
-                                indicatorColor = Color(0xFFEDE9FF),
-                                unselectedIconColor = Color.Gray,
-                                unselectedTextColor = Color.Gray
-                            )
-                        )
+                val backStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = backStackEntry?.destination?.route
+                HubBottomBar(
+                    tabs = tabs,
+                    isSelected = { tab ->
+                        // Nested routes (announcements/{eventId}/...) keep their tab highlighted.
+                        currentRoute == tab.route || currentRoute?.startsWith(tab.route + "/") == true
+                    },
+                    onSelect = { tab ->
+                        // Re-tapping the active tab from a nested screen returns to its root.
+                        if (currentRoute != null && currentRoute.startsWith(tab.route + "/")) {
+                            navController.popBackStack(tab.route, inclusive = false)
+                        } else openTab(tab.route)
                     }
-                }
+                )
             }
         }
     ) { padding ->

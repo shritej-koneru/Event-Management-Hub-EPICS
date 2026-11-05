@@ -1,7 +1,7 @@
 package com.example.eventmanagementhub.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
@@ -17,11 +16,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.eventmanagementhub.data.HubRepository
 import com.example.eventmanagementhub.data.LiveUpdates
@@ -29,17 +25,17 @@ import com.example.eventmanagementhub.data.Result
 import com.example.eventmanagementhub.data.model.Announcement
 import com.example.eventmanagementhub.data.model.Event
 import com.example.eventmanagementhub.data.model.SupportTicket
+import com.example.eventmanagementhub.ui.components.*
 import com.example.eventmanagementhub.ui.theme.*
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.UUID
 
-private val Tint = Color(0xFFEDE9FF)
-
 // ---------------------------------------------------------------------------------
 // Shared bits
 // ---------------------------------------------------------------------------------
 
+/** Flat top bar with an optional Back and a Refresh action (spinner while refreshing). */
 @Composable
 private fun ScreenHeader(
     title: String,
@@ -48,41 +44,31 @@ private fun ScreenHeader(
     onRefresh: (() -> Unit)? = null,
     refreshing: Boolean = false
 ) {
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (onBack != null) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-        }
-        Column(Modifier.weight(1f).padding(start = if (onBack == null) 16.dp else 0.dp)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.Black,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (subtitle != null) {
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MutedText, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis)
-            }
-        }
-        if (onRefresh != null) {
-            if (refreshing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.padding(12.dp).size(24.dp).semantics { contentDescription = "Refreshing" },
-                    strokeWidth = 2.dp, color = PrimaryPurple
-                )
-            } else {
-                IconButton(onClick = onRefresh) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+    HubTopBar(
+        title = title,
+        subtitle = subtitle,
+        onBack = onBack,
+        actions = if (onRefresh == null) null else {
+            {
+                if (refreshing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .size(24.dp)
+                            .semantics { contentDescription = "Refreshing" },
+                        strokeWidth = 2.dp, color = Accent
+                    )
+                } else {
+                    IconButton(onClick = onRefresh) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = Ink2)
+                    }
                 }
             }
         }
-    }
+    )
 }
 
+/** Empty / loading state: one line of Ink2 (plus an optional quiet action). No illustrations. */
 @Composable
 private fun Centered(content: @Composable ColumnScope.() -> Unit) {
     Column(
@@ -94,27 +80,26 @@ private fun Centered(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
+private fun EmptyState(title: String, hint: String) {
+    Centered {
+        Text(title, style = MaterialTheme.typography.titleMedium, color = Ink)
+        Spacer(Modifier.height(4.dp))
+        Text(hint, style = MaterialTheme.typography.bodyMedium, color = Ink2)
+    }
+}
+
+@Composable
 private fun ErrorWithRetry(message: String, onRetry: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         ErrorBanner(message)
-        OutlinedButton(onClick = onRetry) { Text("Try again") }
+        SecondaryButton("Try again", onRetry)
     }
 }
 
 @Composable
 private fun StatusChip(status: String) {
     val closed = status.equals("closed", true)
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = if (closed) Color(0xFFF0F0F0) else Color(0xFFD7F5E6)
-    ) {
-        Text(
-            SupportLogic.statusLabel(status),
-            style = MaterialTheme.typography.labelSmall,
-            color = if (closed) MutedText else Color(0xFF14724A),
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-        )
-    }
+    HubChip(SupportLogic.statusLabel(status), if (closed) ChipKind.Neutral else ChipKind.Success)
 }
 
 // ---------------------------------------------------------------------------------
@@ -150,7 +135,7 @@ fun AnnouncementsEventsScreen(
     }
     LaunchedEffect(Unit) { load() }
 
-    Column(Modifier.fillMaxSize().background(BodyBackground)) {
+    Column(Modifier.fillMaxSize().background(Paper)) {
         ScreenHeader(
             "Announcements",
             "Pick an event you registered for",
@@ -164,35 +149,15 @@ fun AnnouncementsEventsScreen(
         }
         val list = events
         when {
-            list == null -> Centered { CircularProgressIndicator(color = PrimaryPurple) }
-            list.isEmpty() -> Centered {
-                Text("No registered events yet", style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold, color = NavyText)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Register for an event from the Events tab and its announcements and help chats will show up here.",
-                    style = MaterialTheme.typography.bodyMedium, color = MutedText
-                )
-            }
-            else -> LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+            list == null -> Centered { CircularProgressIndicator(color = Accent) }
+            list.isEmpty() -> EmptyState(
+                "No registered events yet",
+                "Register for an event from the Events tab and its announcements and help chats will show up here."
+            )
+            else -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+                item { HubDivider() }
                 items(list, key = { it.id }) { e ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable { onEventClick(e.id) },
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = BorderStroke(1.dp, CardBorder)
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(e.title, style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold, color = NavyText)
-                            Spacer(Modifier.height(4.dp))
-                            Text("${e.date} · ${e.time}", style = MaterialTheme.typography.bodySmall, color = MutedText)
-                            Text(e.venue, style = MaterialTheme.typography.bodySmall, color = MutedText)
-                        }
-                    }
+                    EventRow(event = e, onClick = { onEventClick(e.id) })
                 }
             }
         }
@@ -233,7 +198,7 @@ fun EventAnnouncementsScreen(
         LiveUpdates.signals.collect { if (SupportLogic.shouldRefreshAnnouncements(it, eventId)) load() }
     }
 
-    Column(Modifier.fillMaxSize().background(BodyBackground)) {
+    Column(Modifier.fillMaxSize().background(Paper)) {
         ScreenHeader(
             title ?: "Announcements", "Announcements",
             onBack = onBack, onRefresh = { scope.launch { load() } }, refreshing = loading && items != null
@@ -242,60 +207,46 @@ fun EventAnnouncementsScreen(
             val list = items
             when {
                 list == null && error != null -> ErrorWithRetry(error!!) { scope.launch { load() } }
-                list == null -> Centered { CircularProgressIndicator(color = PrimaryPurple) }
-                list.isEmpty() -> Centered {
-                    Text("No announcements yet", style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold, color = NavyText)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Organizers' updates for this event will appear here.",
-                        style = MaterialTheme.typography.bodyMedium, color = MutedText)
-                }
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    if (error != null) item { ErrorBanner(error!!) }
-                    items(list, key = { "${it.id}-${it.message.hashCode()}" }) { a -> AnnouncementCard(a) }
+                list == null -> Centered { CircularProgressIndicator(color = Accent) }
+                list.isEmpty() -> EmptyState("No announcements yet", "Organizers' updates for this event will appear here.")
+                else -> LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
+                    if (error != null) item { ErrorBanner(error!!, Modifier.padding(16.dp)) }
+                    items(list, key = { "${it.id}-${it.message.hashCode()}" }) { a -> AnnouncementItem(a) }
                 }
             }
         }
-        Button(
-            onClick = onHelp,
-            modifier = Modifier.fillMaxWidth().padding(16.dp).height(52.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = Color.White)
-        ) {
-            Text("Help", fontWeight = FontWeight.Bold)
+        // Sticky action with a top hairline.
+        Column(Modifier.fillMaxWidth().background(HubSurface)) {
+            HubDivider()
+            PrimaryButton(
+                text = "Help",
+                onClick = onHelp,
+                modifier = Modifier.fillMaxWidth().padding(16.dp)
+            )
         }
     }
 }
 
+/** Announcement entry: roomy text on Surface, separated by hairlines (not a card per item). */
 @Composable
-private fun AnnouncementCard(a: Announcement) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, CardBorder)
-    ) {
-        Column(Modifier.padding(14.dp)) {
+private fun AnnouncementItem(a: Announcement) {
+    Column(Modifier.fillMaxWidth().background(HubSurface)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (SupportLogic.isForAll(a)) {
-                    Surface(shape = RoundedCornerShape(50), color = Tint) {
-                        Text("All attendees", style = MaterialTheme.typography.labelSmall, color = PrimaryPurple,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp))
-                    }
+                    HubChip("All attendees", ChipKind.Info)
                     Spacer(Modifier.width(8.dp))
                 }
-                Text(SupportLogic.formatTime(a.at), style = MaterialTheme.typography.bodySmall, color = MutedText)
+                Text(SupportLogic.formatTime(a.at), style = MaterialTheme.typography.labelSmall, color = Ink3)
             }
             Spacer(Modifier.height(6.dp))
-            Text(a.message.ifBlank { a.room }, style = MaterialTheme.typography.bodyMedium, color = NavyText)
+            Text(a.message.ifBlank { a.room }, style = MaterialTheme.typography.bodyMedium, color = Ink)
             if (!a.sentByName.isNullOrBlank()) {
                 Spacer(Modifier.height(4.dp))
-                Text("— ${a.sentByName}", style = MaterialTheme.typography.bodySmall, color = MutedText)
+                Text("— ${a.sentByName}", style = MaterialTheme.typography.bodySmall, color = Ink3)
             }
         }
+        HubDivider()
     }
 }
 
@@ -329,7 +280,7 @@ fun HelpChatsScreen(
         LiveUpdates.signals.collect { if (SupportLogic.shouldRefreshTickets(it, eventId)) load() }
     }
 
-    Box(Modifier.fillMaxSize().background(BodyBackground)) {
+    Box(Modifier.fillMaxSize().background(Paper)) {
         Column(Modifier.fillMaxSize()) {
             ScreenHeader(
                 "Help", "Your chats with the event team",
@@ -338,19 +289,10 @@ fun HelpChatsScreen(
             val list = tickets
             when {
                 list == null && error != null -> ErrorWithRetry(error!!) { scope.launch { load() } }
-                list == null -> Centered { CircularProgressIndicator(color = PrimaryPurple) }
-                list.isEmpty() -> Centered {
-                    Text("No help chats yet", style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold, color = NavyText)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Tap + to start a chat with the event team.",
-                        style = MaterialTheme.typography.bodyMedium, color = MutedText)
-                }
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    if (error != null) item { ErrorBanner(error!!) }
+                list == null -> Centered { CircularProgressIndicator(color = Accent) }
+                list.isEmpty() -> EmptyState("No help chats yet", "Tap + to start a chat with the event team.")
+                else -> LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
+                    if (error != null) item { ErrorBanner(error!!, Modifier.padding(16.dp)) }
                     items(list, key = { it.id }) { t -> TicketRow(t) { onOpenTicket(t.id) } }
                 }
             }
@@ -358,8 +300,10 @@ fun HelpChatsScreen(
         FloatingActionButton(
             onClick = onNewChat,
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
-            containerColor = PrimaryPurple,
-            contentColor = Color.White
+            shape = ControlShape,
+            containerColor = Accent,
+            contentColor = OnAccent,
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
         ) {
             Icon(Icons.Default.Add, contentDescription = "Start a new help chat")
         }
@@ -368,26 +312,20 @@ fun HelpChatsScreen(
 
 @Composable
 private fun TicketRow(t: SupportTicket, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, CardBorder)
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(t.subject, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
-                    color = NavyText, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                Spacer(Modifier.width(8.dp))
-                StatusChip(t.status)
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(SupportLogic.preview(t), style = MaterialTheme.typography.bodyMedium, color = MutedText,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(4.dp))
-            Text(SupportLogic.formatTime(t.lastMessageAt), style = MaterialTheme.typography.bodySmall, color = MutedText)
-        }
-    }
+    HubListRow(
+        title = t.subject,
+        onClick = onClick,
+        leading = { InitialsAvatar(t.subject) },
+        meta = {
+            Text(
+                SupportLogic.preview(t),
+                style = MaterialTheme.typography.bodySmall, color = Ink2, maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+            MetaText(SupportLogic.formatTime(t.lastMessageAt))
+        },
+        trailing = { StatusChip(t.status) }
+    )
 }
 
 // ---------------------------------------------------------------------------------
@@ -409,27 +347,34 @@ fun NewChatScreen(
     val clientId = remember { UUID.randomUUID().toString() }
     val scope = rememberCoroutineScope()
 
-    Column(Modifier.fillMaxSize().background(BodyBackground)) {
+    Column(Modifier.fillMaxSize().background(Paper)) {
         ScreenHeader("New help chat", "Tell the event team what you need", onBack = onBack)
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (error != null) ErrorBanner(error!!)
-            OutlinedTextField(
-                value = subject,
-                onValueChange = { subject = it.take(120) },
-                label = { Text("Subject") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !sending
-            )
-            OutlinedTextField(
-                value = message,
-                onValueChange = { message = it.take(1000) },
-                label = { Text("Your message") },
-                minLines = 4,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !sending
-            )
-            Button(
+            LabeledField("Subject") {
+                OutlinedTextField(
+                    value = subject,
+                    onValueChange = { subject = it.take(120) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Subject" },
+                    shape = ControlShape,
+                    colors = hubFieldColors(),
+                    enabled = !sending
+                )
+            }
+            LabeledField("Your message") {
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = { message = it.take(1000) },
+                    minLines = 4,
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Your message" },
+                    shape = ControlShape,
+                    colors = hubFieldColors(),
+                    enabled = !sending
+                )
+            }
+            PrimaryButton(
+                text = "Start chat",
                 onClick = {
                     sending = true
                     error = null
@@ -440,14 +385,10 @@ fun NewChatScreen(
                         }
                     }
                 },
-                enabled = !sending && SupportLogic.isValidNewChat(subject, message),
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = Color.White)
-            ) {
-                if (sending) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
-                else Text("Start chat", fontWeight = FontWeight.Bold)
-            }
+                enabled = SupportLogic.isValidNewChat(subject, message),
+                loading = sending,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -516,7 +457,7 @@ fun ChatThreadScreen(
         if (thread.isNotEmpty()) listState.animateScrollToItem(thread.lastIndex)
     }
 
-    Column(Modifier.fillMaxSize().background(BodyBackground)) {
+    Column(Modifier.fillMaxSize().background(Paper)) {
         ScreenHeader(
             ticket?.subject ?: "Help chat",
             ticket?.let { "${SupportLogic.statusLabel(it.status)} · ${it.eventTitle}" },
@@ -524,16 +465,16 @@ fun ChatThreadScreen(
             onRefresh = { scope.launch { load() } }
         )
         if (error != null) {
-            Box(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) { ErrorBanner(error!!) }
+            Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { ErrorBanner(error!!) }
         }
         Box(Modifier.weight(1f)) {
             if (!loaded && thread.isEmpty()) {
-                if (error == null) Centered { CircularProgressIndicator(color = PrimaryPurple) }
+                if (error == null) Centered { CircularProgressIndicator(color = Accent) }
             } else {
                 LazyColumn(
                     state = listState,
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(thread, key = { it.clientId ?: it.id }) { item ->
                         Bubble(item) {
@@ -547,68 +488,82 @@ fun ChatThreadScreen(
                 }
             }
         }
-        if (ticket?.status.equals("closed", true)) {
-            Text(
-                "This chat is closed. Sending a message reopens it.",
-                style = MaterialTheme.typography.bodySmall, color = MutedText,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-        }
-        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = draft,
-                onValueChange = { draft = it.take(1000) },
-                placeholder = { Text("Type a message…", color = MutedText) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
-                maxLines = 4,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PrimaryPurple,
-                    unfocusedBorderColor = CardBorder,
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
+        // Sticky composer with a top hairline.
+        Column(Modifier.fillMaxWidth().background(HubSurface).imePadding()) {
+            HubDivider()
+            if (ticket?.status.equals("closed", true)) {
+                Text(
+                    "This chat is closed. Sending a message reopens it.",
+                    style = MaterialTheme.typography.bodySmall, color = Ink3,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
-            )
-            Spacer(Modifier.width(8.dp))
-            FilledIconButton(
-                onClick = ::send,
-                enabled = draft.isNotBlank(),
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = PrimaryPurple)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send message")
+            }
+            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.Bottom) {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it.take(1000) },
+                    placeholder = { Text("Type a message…", color = Ink3) },
+                    modifier = Modifier.weight(1f),
+                    shape = ControlShape,
+                    maxLines = 4,
+                    colors = hubFieldColors()
+                )
+                Spacer(Modifier.width(8.dp))
+                FilledIconButton(
+                    onClick = ::send,
+                    enabled = draft.isNotBlank(),
+                    modifier = Modifier.size(56.dp),
+                    shape = ControlShape,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Accent, contentColor = OnAccent,
+                        disabledContainerColor = SurfaceSunken, disabledContentColor = Ink3
+                    )
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send message")
+                }
             }
         }
     }
 }
 
+/**
+ * Chat bubble: others = Surface + Line border, own = AccentSoft + Ink. 8dp radius with a 2dp
+ * tail corner (bottom-end for own, bottom-start for others). Sender + time sit above as Caption.
+ */
 @Composable
 private fun Bubble(item: ThreadItem, onRetry: () -> Unit) {
     val mine = !item.fromTeam
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = if (mine) PrimaryPurple else Color(0xFFF1EEFE),
-            modifier = Modifier.widthIn(max = 300.dp).then(
-                if (item.state == SendState.FAILED) Modifier.clickable(onClick = onRetry) else Modifier
-            )
+    val bubbleShape = RoundedCornerShape(
+        topStart = 8.dp, topEnd = 8.dp,
+        bottomStart = if (mine) 8.dp else 2.dp,
+        bottomEnd = if (mine) 2.dp else 8.dp
+    )
+    val meta = when (item.state) {
+        SendState.PENDING -> "Sending…"
+        SendState.FAILED -> "Not sent — tap to retry"
+        SendState.SENT -> SupportLogic.formatTime(item.createdAt)
+    }
+    val sender = if (mine) "You" else "Event team"
+    val caption = if (meta.isNotEmpty()) "$sender · $meta" else sender
+    Column(
+        Modifier.fillMaxWidth(),
+        horizontalAlignment = if (mine) Alignment.End else Alignment.Start
+    ) {
+        Text(
+            caption,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (item.state == SendState.FAILED) Danger else Ink3
+        )
+        Spacer(Modifier.height(4.dp))
+        Box(
+            Modifier
+                .widthIn(max = 300.dp)
+                .background(if (mine) AccentSoft else HubSurface, bubbleShape)
+                .then(if (mine) Modifier else Modifier.border(1.dp, Line, bubbleShape))
+                .then(if (item.state == SendState.FAILED) Modifier.clickable(onClick = onRetry) else Modifier)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                if (!mine) {
-                    Text("Event team", style = MaterialTheme.typography.bodySmall, color = PrimaryPurple,
-                        fontWeight = FontWeight.Bold)
-                }
-                Text(item.body, style = MaterialTheme.typography.bodyMedium,
-                    color = if (mine) Color.White else Color(0xFF3A3850))
-                val meta = when (item.state) {
-                    SendState.PENDING -> "Sending…"
-                    SendState.FAILED -> "Not sent — tap to retry"
-                    SendState.SENT -> SupportLogic.formatTime(item.createdAt)
-                }
-                if (meta.isNotEmpty()) {
-                    Text(meta, style = MaterialTheme.typography.labelSmall,
-                        color = if (mine) Color(0xFFD9D2FF) else MutedText)
-                }
-            }
+            Text(item.body, style = MaterialTheme.typography.bodyMedium, color = Ink)
         }
     }
 }

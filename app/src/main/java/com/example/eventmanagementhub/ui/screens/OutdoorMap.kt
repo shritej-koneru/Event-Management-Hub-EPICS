@@ -9,11 +9,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import com.example.eventmanagementhub.ui.components.HubCard
+import com.example.eventmanagementhub.ui.components.PrimaryButton
+import com.example.eventmanagementhub.ui.components.QuietButton
+import com.example.eventmanagementhub.ui.theme.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -23,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.eventmanagementhub.data.model.CampusMapResponse
 import com.example.eventmanagementhub.ui.navigation.GeoMarker
@@ -196,7 +198,7 @@ fun OutdoorMap(
                 androidx.core.graphics.drawable.DrawableCompat.wrap(
                     android.graphics.drawable.BitmapDrawable(
                         mapView.resources,
-                        circleIcon(Color(0xFF3D2B8C).toArgb())
+                        circleIcon(Ink.toArgb())
                     )
                 )
             )
@@ -220,7 +222,7 @@ fun OutdoorMap(
                     androidx.core.graphics.drawable.DrawableCompat.wrap(
                         android.graphics.drawable.BitmapDrawable(
                             mapView.resources,
-                            circleIcon(Color(0xFF2E7D32).toArgb())
+                            circleIcon(Info.toArgb())
                         )
                     )
                 )
@@ -247,23 +249,23 @@ fun OutdoorMap(
                     GeoPoint(b.north, b.west), GeoPoint(b.north, b.east),
                     GeoPoint(b.south, b.east), GeoPoint(b.south, b.west)
                 )
-                fillPaint.color = Color(0xFF3D2B8C).copy(alpha = 0.04f).toArgb()
-                outlinePaint.color = Color(0xFF3D2B8C).copy(alpha = 0.25f).toArgb()
+                fillPaint.color = android.graphics.Color.TRANSPARENT
+                outlinePaint.color = MapBounds.toArgb()
                 outlinePaint.strokeWidth = 2f
             }
         }
         geoLines.forEach { l ->
             added += Polyline(mapView).apply {
                 setPoints(listOf(GeoPoint(l.fromLat, l.fromLng), GeoPoint(l.toLat, l.toLng)))
-                outlinePaint.color = Color(0xFF3D2B8C).copy(alpha = 0.55f).toArgb()
+                outlinePaint.color = MapWalkway.toArgb()
                 outlinePaint.strokeWidth = 3f
             }
         }
         val solid = android.graphics.drawable.BitmapDrawable(
-            mapView.resources, circleIcon(Color(0xFFE65100).toArgb(), 40)
+            mapView.resources, circleIcon(Accent.toArgb(), 40)
         )
         val hollow = android.graphics.drawable.BitmapDrawable(
-            mapView.resources, hollowIcon(Color(0xFFE65100).toArgb(), 36)
+            mapView.resources, hollowIcon(Ink3.toArgb(), 36)
         )
         geoMarkers.forEach { g ->
             added += Marker(mapView).apply {
@@ -290,21 +292,21 @@ fun OutdoorMap(
     Box(modifier) {
         AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
         selected?.let { g ->
-            Card(
+            HubCard(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(12.dp)
-                    .testTag("outdoor-venue-card"),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                    .testTag("outdoor-venue-card")
             ) {
                 Column(Modifier.padding(12.dp)) {
-                    Text(g.name, fontWeight = FontWeight.SemiBold, color = Color(0xFF1B1B3A))
-                    if (g.kind.isNotBlank()) Text(g.kind, color = Color(0xFF6B6B80))
-                    if (g.description.isNotBlank()) Text(g.description, color = Color(0xFF6B6B80))
-                    if (!g.placed) Text("Approximate position", color = Color(0xFF9A9AAE))
+                    Text(g.name, style = MaterialTheme.typography.titleSmall, color = Ink)
+                    if (g.kind.isNotBlank()) Text(g.kind, style = MaterialTheme.typography.bodySmall, color = Ink2)
+                    if (g.description.isNotBlank()) Text(g.description, style = MaterialTheme.typography.bodySmall, color = Ink2)
+                    if (!g.placed) Text("Approximate position", style = MaterialTheme.typography.labelSmall, color = Warning)
+                    Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { onRouteHere(g.id); selected = null }) { Text("Route here") }
-                        TextButton(onClick = { selected = null }) { Text("Close") }
+                        PrimaryButton(text = "Route here", onClick = { onRouteHere(g.id); selected = null })
+                        QuietButton(text = "Close", onClick = { selected = null })
                     }
                 }
             }

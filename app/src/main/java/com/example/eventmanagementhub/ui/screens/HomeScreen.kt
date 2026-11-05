@@ -1,23 +1,19 @@
 package com.example.eventmanagementhub.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.eventmanagementhub.data.HubRepository
 import com.example.eventmanagementhub.data.Result
 import com.example.eventmanagementhub.data.model.Event
-import com.example.eventmanagementhub.ui.components.CustomSearchBar
+import com.example.eventmanagementhub.ui.components.*
 import com.example.eventmanagementhub.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -75,23 +71,15 @@ fun HomeScreen(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(BodyBackground)) {
+    Box(Modifier.fillMaxSize().background(Paper)) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             item {
-                Text(
-                    text = "Event Hub",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Find your next campus event with AI search",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MutedText
+                PageHeader(
+                    title = "Event Hub",
+                    description = "Find your next campus event"
                 )
             }
             item {
@@ -99,40 +87,40 @@ fun HomeScreen(
                     value = query,
                     onValueChange = { query = it },
                     onSearch = { runSearch() },
-                    placeholder = "Ask: android workshop, music, ai…"
+                    placeholder = "Ask: android workshop, music, ai…",
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
+                Spacer(Modifier.height(16.dp))
             }
             if (searching) {
                 item {
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = PrimaryPurple)
+                        CircularProgressIndicator(color = Accent)
                     }
                 }
             }
             // Cached data is labelled explicitly instead of being presented as live.
             if (isStale && !searching) {
-                item { StatusBanner("Offline — showing saved events from this device") }
+                item {
+                    StatusBanner("Offline — showing saved events from this device", Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                }
             }
             errorMsg?.let { msg ->
-                item { ErrorBanner(msg) }
+                item { ErrorBanner(msg, Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
             }
             if (reason.isNotBlank() && !searching) {
                 item {
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = BorderStroke(1.dp, CardBorder)
-                    ) {
+                    HubCard(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
-                            Text("Why these results", fontWeight = FontWeight.Bold, color = NavyText)
-                            Spacer(Modifier.height(8.dp))
-                            Text(reason, style = MaterialTheme.typography.bodySmall, color = MutedText)
+                            Text("Why these results", style = MaterialTheme.typography.titleSmall, color = Ink)
+                            Spacer(Modifier.height(6.dp))
+                            Text(reason, style = MaterialTheme.typography.bodySmall, color = Ink2)
                         }
                     }
                 }
             }
             // While a query is active the results must sit near the search box;
-            // otherwise the three recommendation cards push them off the bottom
+            // otherwise the recommendation rows push them off the bottom
             // of the screen and the search looks like it returned nothing.
             if (recommendations.isNotEmpty() && query.isBlank()) {
                 item {
@@ -141,7 +129,7 @@ fun HomeScreen(
                     }
                 }
                 items(recommendations.take(3), key = { "rec-${it.id}" }) { e ->
-                    EventListCard(event = e, onClick = { onEventClick(e.id) })
+                    EventRow(event = e, onClick = { onEventClick(e.id) })
                 }
             }
             item {
@@ -153,14 +141,15 @@ fun HomeScreen(
                 }
             }
             items(events, key = { "ev-${it.id}" }) { e ->
-                EventListCard(event = e, onClick = { onEventClick(e.id) })
+                EventRow(event = e, onClick = { onEventClick(e.id) })
             }
             if (events.isEmpty() && !searching && errorMsg == null) {
                 item {
                     Text(
                         "No events matched. Try a different search.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MutedText
+                        color = Ink2,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             }
@@ -169,45 +158,36 @@ fun HomeScreen(
 }
 
 @Composable
-internal fun StatusBanner(text: String) {
-    Surface(shape = RoundedCornerShape(14.dp), color = Color(0xFFFFF4E5)) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFFB26A00),
-            modifier = Modifier.fillMaxWidth().padding(12.dp)
-        )
-    }
+internal fun StatusBanner(text: String, modifier: Modifier = Modifier) {
+    NoticeBanner(text, ChipKind.Warning, modifier)
 }
 
 @Composable
-internal fun ErrorBanner(message: String) {
-    Surface(shape = RoundedCornerShape(14.dp), color = Color(0xFFFDECEC)) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.fillMaxWidth().padding(12.dp)
-        )
-    }
+internal fun ErrorBanner(message: String, modifier: Modifier = Modifier) {
+    NoticeBanner(message, ChipKind.Danger, modifier)
 }
 
+/** Heading with a quiet Refresh action; a hairline closes the section above its first row. */
 @Composable
 private fun SectionHeader(title: String, onRefresh: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = NavyText,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
-        )
-        TextButton(
-            onClick = onRefresh,
-            modifier = Modifier.semanticsForTest("refresh-$title")
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Refresh", color = PrimaryPurple)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = Ink,
+                modifier = Modifier.weight(1f)
+            )
+            QuietButton(
+                text = "Refresh",
+                onClick = onRefresh,
+                modifier = Modifier.semanticsForTest("refresh-$title")
+            )
         }
+        HubDivider()
     }
 }
 

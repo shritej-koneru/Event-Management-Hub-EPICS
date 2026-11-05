@@ -1,30 +1,23 @@
 package com.example.eventmanagementhub.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.eventmanagementhub.data.HubRepository
 import com.example.eventmanagementhub.data.OfflineStore
 import com.example.eventmanagementhub.data.Result
 import com.example.eventmanagementhub.data.SessionStore
 import com.example.eventmanagementhub.data.model.Event
+import com.example.eventmanagementhub.data.model.UserProfile
+import com.example.eventmanagementhub.ui.components.*
 import com.example.eventmanagementhub.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -74,89 +67,95 @@ fun ProfileScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(BodyBackground)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
+            .background(Paper),
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
-            Text(
-                text = "My Profile",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.Black,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Your profile is synced with the server",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MutedText
+            PageHeader(
+                title = "Profile",
+                description = "Your profile is synced with the server"
             )
         }
 
         if (isStale) {
-            item { StatusBanner("Offline — showing the profile saved on this device") }
+            item {
+                StatusBanner(
+                    "Offline — showing the profile saved on this device",
+                    Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
         }
         status?.let {
-            item { Text(it, style = MaterialTheme.typography.bodySmall, color = MutedText) }
-        }
-
-        item {
-            ProfileHeaderCard(user = repository.loggedInUser())
-        }
-
-        item {
-            Text(
-                text = "My interests",
-                style = MaterialTheme.typography.titleMedium,
-                color = NavyText,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(8.dp))
-            // Interests are now editable and persisted to the server.
-            FlowRowSimple(INTEREST_OPTIONS) { tag ->
-                FilterChip(
-                    selected = interests.contains(tag),
-                    onClick = { toggleInterest(tag) },
-                    label = { Text(tag) }
+            item {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Ink3,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
             }
         }
 
         item {
-            Text(
-                text = "Bookmarked events (${bookmarks.size})",
-                style = MaterialTheme.typography.titleMedium,
-                color = NavyText,
-                fontWeight = FontWeight.Bold
+            ProfileHeaderCard(
+                user = repository.loggedInUser(),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
 
-        if (bookmarks.isEmpty()) {
-            item {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    border = BorderStroke(1.dp, CardBorder)
-                ) {
-                    Text(
-                        text = "No bookmarks yet — open an event and tap Save.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MutedText,
-                        modifier = Modifier.padding(16.dp)
+        item {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "My interests",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Ink
+                )
+                Spacer(Modifier.height(8.dp))
+                // Interests are editable and persisted to the server.
+                FlowRowSimple(INTEREST_OPTIONS) { tag ->
+                    HubFilterChip(
+                        label = tag,
+                        selected = interests.contains(tag),
+                        onClick = { toggleInterest(tag) },
+                        modifier = Modifier.fillMaxWidth()
                     )
-                }
-            }
-        } else {
-            items(bookmarks, key = { "bm-$it" }) { id ->
-                eventFor(bookmarks, id)?.let { e ->
-                    EventListCard(event = e, onClick = { onEventClick(e.id) })
                 }
             }
         }
 
         item {
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(
+            Text(
+                text = "Bookmarked events (${bookmarks.size})",
+                style = MaterialTheme.typography.titleMedium,
+                color = Ink,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            HubDivider()
+        }
+
+        if (bookmarks.isEmpty()) {
+            item {
+                Text(
+                    text = "No bookmarks yet — open an event and tap Save.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Ink2,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        } else {
+            items(bookmarks, key = { "bm-$it" }) { id ->
+                eventFor(bookmarks, id)?.let { e ->
+                    EventRow(event = e, onClick = { onEventClick(e.id) })
+                }
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(24.dp))
+            SecondaryButton(
+                text = "Sign out",
+                danger = true,
                 onClick = {
                     repository.logout()
                     scope.launch {
@@ -164,13 +163,11 @@ fun ProfileScreen(
                         onSignOut()
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(52.dp).testTag("sign-out"),
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, Color(0xFFE04A5A)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE04A5A))
-            ) {
-                Text("Sign out", fontWeight = FontWeight.Bold)
-            }
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .testTag("sign-out")
+            )
         }
     }
 }
@@ -197,76 +194,31 @@ private fun FlowRowSimple(
 }
 
 @Composable
-private fun ProfileHeaderCard(user: com.example.eventmanagementhub.data.model.UserProfile?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = BorderStroke(1.dp, CardBorder)
-    ) {
+private fun ProfileHeaderCard(user: UserProfile?, modifier: Modifier = Modifier) {
+    HubCard(modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(EventCardWhiteGradient)
-                .padding(18.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(IconPurpleGradient),
-                contentAlignment = Alignment.Center
-            ) {
-                val initials = user?.name
-                    ?.split(" ")
-                    ?.filter { it.isNotBlank() }
-                    ?.take(2)
-                    ?.map { it.first().uppercase() }
-                    ?.joinToString("")
-                    ?: ""
-                Text(
-                    text = if (initials.isNotBlank()) initials else "U",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            InitialsAvatar(user?.name, size = 56.dp)
 
             Spacer(Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = user?.name ?: "Guest",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = NavyText,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Ink
                 )
                 Text(
                     text = user?.email ?: "No email",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MutedText
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Ink3
                 )
-                Surface(shape = RoundedCornerShape(50), color = Color(0xFFE9F7EF)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CloudDone,
-                            contentDescription = null,
-                            tint = Color(0xFF2F9E63),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "Synced with server",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF2F9E63)
-                        )
-                    }
-                }
+                Spacer(Modifier.height(6.dp))
+                HubChip("Synced with server", ChipKind.Success)
             }
         }
     }

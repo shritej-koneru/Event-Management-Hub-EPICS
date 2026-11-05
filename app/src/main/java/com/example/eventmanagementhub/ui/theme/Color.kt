@@ -1,34 +1,47 @@
 package com.example.eventmanagementhub.ui.theme
 
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Base palette
-val BodyBackground = Color(0xFFF6F5F2)
-val CardBorder = Color(0xFFEAE6FD)
-val PrimaryPurple = Color(0xFF6849EC)
-val NavyText = Color(0xFF20204A)
-val MutedText = Color(0xFF77758B)
+// "Campus ops" design tokens — see docs/DESIGN_SYSTEM.md. One accent (teal), warm paper,
+// hairline borders. Status colours are reserved for status.
 
-// Icon box gradients (used by EventListCard / Home)
-val IconPurpleGradient = Brush.linearGradient(listOf(Color(0xFF7C5CFC), Color(0xFF4F39D0)))
-val IconTealGradient = Brush.linearGradient(listOf(Color(0xFF2DD4BF), Color(0xFF0F9B8E)))
-val IconOrangeGradient = Brush.linearGradient(listOf(Color(0xFFFBBF24), Color(0xFFF97316)))
+val Paper = Color(0xFFF7F5F0)
+val HubSurface = Color(0xFFFFFFFF)
+val SurfaceSunken = Color(0xFFF0EDE6)
+val Line = Color(0xFFE3DFD6)
+val LineStrong = Color(0xFFCFC9BC)
 
-// Card background white gradient (Person 1's EventCardWhiteGradient)
-val EventCardWhiteGradient =
-    Brush.linearGradient(listOf(Color(0xFFFFFFFF), Color(0xFFFDFBFF)))
+val Ink = Color(0xFF1C1F1E)
+val Ink2 = Color(0xFF4A4F4C)
+val Ink3 = Color(0xFF6B706C)
 
-// Indoor campus map palette (soft neutral "floor plan" look)
-val IndoorMapBackground = Color(0xFFF3F2EF)
-val IndoorCorridorBed = Color(0xFFE8E6E1)
-val IndoorEdgeLine = Color(0xFFA8A4B5)
-val IndoorRoute = PrimaryPurple
-val IndoorRouteCasing = Color(0xFFFFFFFF)
-val IndoorRouteTraveled = Color(0xFFC4B5FD)
-val IndoorRoomFill = Color(0xFFFFFFFF)
-val IndoorRoomStroke = Color(0xFFE2DFEA)
-val IndoorRoomOnPathFill = Color(0xFFEDE9FE)
-val IndoorStart = Color(0xFF22C55E)
-val IndoorDestination = Color(0xFFE11D48)
-val IndoorActiveRing = PrimaryPurple
+val Accent = Color(0xFF0F6E6E)
+val AccentHover = Color(0xFF0B5858)
+val AccentSoft = Color(0xFFE3F0EE)
+val OnAccent = Color(0xFFFFFFFF)
+
+val Success = Color(0xFF2E7D4F)
+val SuccessSoft = Color(0xFFE4F2E9)
+val Warning = Color(0xFF8F540C)
+val WarningSoft = Color(0xFFFBEFDC)
+val Danger = Color(0xFFB3261E)
+val DangerSoft = Color(0xFFFBE7E5)
+val Info = Color(0xFF2F5D8A)
+val InfoSoft = Color(0xFFE6EEF6)
+
+// Event category dots
+val CategoryTech = Info
+val CategoryCultural = Color(0xFF8A3B6B)
+val CategoryEntertainment = Warning
+val CategoryWellness = Success
+val CategoryCareer = Accent
+val CategorySports = Danger
+val CategoryOther = Ink3
+
+// Map
+val MapWalkway = Color(0xFF9AA19C)
+val MapRoute = Accent
+val MapStart = Success
+val MapDestination = Danger
+val MapGrid = Line.copy(alpha = 0.4f)
+val MapBounds = Line

@@ -1,17 +1,18 @@
 package com.example.eventmanagementhub.ui.screens
 
 import android.content.Context
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.example.eventmanagementhub.ui.components.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.eventmanagementhub.data.HubRepository
@@ -57,87 +58,79 @@ fun AuthScreen(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(BodyBackground)) {
+    Box(Modifier.fillMaxSize().background(Paper)) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp)
         ) {
-            Spacer(Modifier.weight(0.25f))
+            Spacer(Modifier.height(48.dp))
 
             Text(
                 "Event Hub",
                 style = MaterialTheme.typography.headlineMedium,
-                color = NavyText,
-                fontWeight = FontWeight.Bold
+                color = Ink
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
-                if (isLogin) "Welcome back" else "Create your account",
+                if (isLogin) "Sign in to see events, routes and announcements" else "Create your account",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MutedText
+                color = Ink2
             )
-            Spacer(Modifier.weight(0.3f))
+            Spacer(Modifier.height(24.dp))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Column(Modifier.padding(20.dp)) {
+            HubCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
                     if (!isLogin) {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
-                            label = { Text("Name") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PrimaryPurple,
-                                unfocusedBorderColor = CardBorder
+                        LabeledField("Name") {
+                            OutlinedTextField(
+                                value = name,
+                                onValueChange = { name = it },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Name" },
+                                shape = ControlShape,
+                                colors = hubFieldColors()
                             )
-                        )
-                        Spacer(Modifier.height(12.dp))
+                        }
+                        Spacer(Modifier.height(16.dp))
                     }
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryPurple,
-                            unfocusedBorderColor = CardBorder
+                    LabeledField("Email") {
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Email" },
+                            shape = ControlShape,
+                            colors = hubFieldColors()
                         )
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryPurple,
-                            unfocusedBorderColor = CardBorder
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    LabeledField("Password") {
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Password" },
+                            shape = ControlShape,
+                            colors = hubFieldColors()
                         )
-                    )
+                    }
 
                     errorMsg?.let {
-                        Spacer(Modifier.height(10.dp))
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(12.dp))
+                        Text(it, color = Danger, style = MaterialTheme.typography.bodySmall)
                     }
 
-                    Spacer(Modifier.height(18.dp))
+                    Spacer(Modifier.height(20.dp))
 
-                    Button(
+                    PrimaryButton(
+                        text = if (isLogin) "Sign in" else "Sign up",
                         onClick = {
                             if (email.isBlank() || password.isBlank()) {
                                 errorMsg = "Email and password are required"
-                                return@Button
+                                return@PrimaryButton
                             }
                             scope.launch {
                                 loading = true
@@ -157,37 +150,25 @@ fun AuthScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
-                        enabled = !loading
-                    ) {
-                        if (loading) CircularProgressIndicator(Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
-                        else Text(if (isLogin) "Sign in" else "Sign up", fontWeight = FontWeight.Bold)
-                    }
+                        modifier = Modifier.fillMaxWidth(),
+                        loading = loading
+                    )
 
                     Spacer(Modifier.height(12.dp))
 
-                    OutlinedButton(
+                    SecondaryButton(
+                        text = if (isLogin) "Create account" else "Back to sign in",
                         onClick = { isLogin = !isLogin; errorMsg = null },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple),
-                        border = BorderStroke(1.5.dp, PrimaryPurple)
-                    ) {
-                        Text(
-                            if (isLogin) "Create account" else "Back to sign in",
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
-            Spacer(Modifier.weight(0.35f))
+            Spacer(Modifier.height(16.dp))
             Text(
                 "Demo account: alice@uni.edu / secret123",
                 style = MaterialTheme.typography.bodySmall,
-                color = MutedText
+                color = Ink3
             )
         }
     }

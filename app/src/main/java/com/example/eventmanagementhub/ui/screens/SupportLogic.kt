@@ -132,7 +132,7 @@ object SupportLogic {
 
     fun formatTime(iso: String?, zone: ZoneId = ZoneId.systemDefault()): String {
         val ms = parseMillis(iso) ?: return ""
-        return DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.getDefault())
+        return DateTimeFormatter.ofPattern("d MMM, HH:mm", Locale.ENGLISH)
             .withZone(zone).format(Instant.ofEpochMilli(ms))
     }
 
