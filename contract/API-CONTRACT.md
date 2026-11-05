@@ -4,7 +4,13 @@
 > against these shapes and names. If a field changes here, update this file FIRST,
 > then bump `contractVersion` in the `/ping` response.
 
-- **Contract version: `1.4.0`** (`/ping` -> `contractVersion`; previously `1.3.0`).
+- **Contract version: `1.5.0`** (`/ping` -> `contractVersion`; previously `1.4.0`).
+  - **1.5.0 adds (additive for Android):** `bounds` on `GET /navigation/map` and per-venue
+    `lat`, `lng`, `kind`, `description`, `geoPlaced` on `/navigation/map` and `/navigation/venues`;
+    `POST`/`PUT /manage/venues` accept real `lat`/`lng` (`400 OUTSIDE_CAMPUS`, `connectToNearest`,
+    response `edge`); manager announcements may repeat (the `409 DUPLICATE_ANNOUNCEMENT` path is
+    removed); admin-only `GET|POST /manage/users` and `PUT /manage/users/:id`; migration 008.
+    Existing fields are unchanged.
   - **1.4.0 adds (additive for Android):** the event-manager API `/manage/*` (section 6b:
     overview, managed events, venue + edge CRUD, announcements); the venue/edge graph is now
     DB-backed and editable at runtime (`GET /navigation/*`, `/ping.venues` reflect edits);
@@ -369,7 +375,8 @@ personalization signal are returned with `reason: "Suggested for you"`.
 
 ### `GET /navigation/venues`
 ```json
-{ "venues": [ { "id": "room-204", "name": "Room 204", "neighbors": ["lab-a", "main-hall"] } ] }
+{ "venues": [ { "id": "room-204", "name": "Room 204", "neighbors": ["lab-a", "main-hall"],
+                "lat": 16.4851, "lng": 80.6927, "kind": "", "description": "", "geoPlaced": false } ] }
 ```
 
 ### `GET /navigation/map` (1.2.0)
@@ -380,16 +387,21 @@ graph. The Android map screen draws this instead of a hard-coded layout, so
 moving a venue is a data change, not a client release. Public (no auth).
 ```json
 {
+  "bounds": { "north": 16.487077, "south": 16.483477, "west": 80.69028, "east": 80.69528,
+              "center": { "lat": 16.485277, "lng": 80.69278 } },
   "venues": [
-    { "id": "entrance", "name": "Entrance", "x": 0.15, "y": 0.88, "neighbors": ["lobby"] },
-    { "id": "room-204", "name": "Room 204", "x": 0.72, "y": 0.62, "neighbors": ["room-205", "lab-a", "tech-lounge"] }
+    { "id": "entrance", "name": "Entrance", "x": 0.15, "y": 0.88, "neighbors": ["lobby"],
+      "lat": 16.483909, "lng": 80.69103, "kind": "", "description": "", "geoPlaced": false }
   ],
-  "edges": [
-    { "from": "entrance", "to": "lobby", "distanceM": 40 },
-    { "from": "room-204", "to": "room-205", "distanceM": 8 }
-  ]
+  "edges": [ { "from": "entrance", "to": "lobby", "distanceM": 40 } ]
 }
 ```
+`bounds` (1.5.0, additive) is the campus rectangle the canvas maps onto
+(VR Siddhartha Engineering College, about 533 m x 400 m):
+`x = (lng - west) / (east - west)`, `y = (north - lat) / (north - south)`. Per venue, `lat`/`lng` are
+always present (stored when a manager placed it on the real map, otherwise derived from `x`/`y`),
+`geoPlaced` says which, and `kind`/`description` are free text (empty by default). The same four
+extra venue fields are added to `GET /navigation/venues`.
 Every venue from `GET /navigation/venues` appears exactly once; every edge
 appears once (`from < to`) with the same distance the path API uses.
 
@@ -571,7 +583,7 @@ venue-level rather than event-specific, so clients should treat it as optional.
 
 ---
 
-## 6b. Event-manager API — `/manage` (1.4.0)
+## 6b. Event-manager API — `/manage` (1.4.0, extended in 1.5.0)
 
 Console API for organizers and admins. **Every route needs a JWT and role `organizer` or
 `admin`** (`401` without a token, `403 FORBIDDEN` for students). Errors keep the usual
@@ -583,19 +595,22 @@ any organizer or admin may edit it (no ownership).
 | --- | --- | --- | --- |
 | `GET /manage/overview` | - | `200 { events:{total,upcoming,past}, bookmarks, announcements, venues, edges }` (organizer: own events/announcements; admin: whole system) | - |
 | `GET /manage/events?scope=mine\|all` | `scope=all` admin only | `200 { events:[ <Event> + createdBy, bookmarkCount ] }` date asc | `403` (organizer + `all`), `400` bad scope |
-| `POST /manage/venues` | `{ id, name, x, y }` | `201 { id, name, x, y }` | `400 VALIDATION_ERROR`, `409 DUPLICATE_VENUE` (id or name; name compared case-insensitively) |
-| `PUT /manage/venues/:id` | `{ name?, x?, y? }` (>=1; `id` is immutable) | `200 { id, name, x, y }` | `404 UNKNOWN_VENUE`, `409 DUPLICATE_VENUE`, `400` |
+| `POST /manage/venues` | Either `{ id, name, x, y, kind?, description? }` or `{ id, name, lat, lng, kind?, description?, connectToNearest? }` (never both pairs) | `201 { id, name, x, y, lat, lng, kind, description, geoPlaced, edge }` - `edge` is `{ from, to, distanceM }` when `connectToNearest` linked it, else `null` | `400 VALIDATION_ERROR`, `400 OUTSIDE_CAMPUS`, `409 DUPLICATE_VENUE` (id or name; name compared case-insensitively) |
+| `PUT /manage/venues/:id` | `{ name?, kind?, description?, x?, y? }` or `{ name?, kind?, description?, lat, lng }` (>=1 field; `id` is immutable; both pairs together = `400`) | `200 { id, name, x, y, lat, lng, kind, description, geoPlaced }` | `404 UNKNOWN_VENUE`, `409 DUPLICATE_VENUE`, `400 VALIDATION_ERROR`, `400 OUTSIDE_CAMPUS` |
 | `DELETE /manage/venues/:id` | - | `200 { deleted:true, id }` (edges cascade) | `404 UNKNOWN_VENUE`, `409 VENUE_IN_USE` |
 | `POST /manage/edges` | `{ from, to, distanceM }` | `201 { from, to, distanceM }` (stored with `from < to`) | `400 UNKNOWN_VENUE`, `400 VALIDATION_ERROR`, `409 DUPLICATE_EDGE` |
 | `PUT /manage/edges` | `{ from, to, distanceM }` | `200 { from, to, distanceM }` | `404 UNKNOWN_EDGE`, `400` |
 | `DELETE /manage/edges?from=&to=` | - | `200 { deleted:true }` | `404 UNKNOWN_EDGE`, `400` |
 | `GET /manage/announcements?scope=mine\|all` | `all` admin only | `200 { announcements:[ { id, room, message, at, eventId, sentBy } ] }` newest first | `403`, `400` |
-| `POST /manage/announcements` | `{ message, venueId?, eventId? }` | `201 { announcement:{ id, room, message, at, eventId, sentBy } }` | `400`, `403` (not your event), `404 EVENT_NOT_FOUND`, `409 DUPLICATE_ANNOUNCEMENT`, `429 RATE_LIMITED` |
+| `POST /manage/announcements` | `{ message, venueId?, eventId? }` | `201 { announcement:{ id, room, message, at, eventId, sentBy } }` | `400`, `403` (not your event), `404 EVENT_NOT_FOUND`, `429 RATE_LIMITED` |
 | `DELETE /manage/announcements/:id` | - | `200 { deleted:true, id }` (own, or admin) | `403`, `404 ANNOUNCEMENT_NOT_FOUND` |
+| `GET /manage/users` | - (admin only) | `200 { users:[ { id, name, email, role, createdAt } ] }` sorted by name | `401`, `403` |
+| `POST /manage/users` | `{ name, email, password (>=8), role: "organizer"\|"admin"\|"student" }` (admin only) | `201 { id, name, email, role, createdAt }` | `400`, `403`, `409 EMAIL_TAKEN` |
+| `PUT /manage/users/:id` | `{ role }` (admin only) | `200 { id, name, email, role, createdAt }` | `400 CANNOT_DEMOTE_SELF` (an admin changing their own role), `403`, `404 USER_NOT_FOUND` |
 
 Rules:
 - **Venue `id`**: lowercase slug `^[a-z0-9]+(-[a-z0-9]+)*$`, max 40, immutable; `all` is reserved.
-  `name` 1..60 chars, unique. `x`,`y` are JSON numbers in `[0,1]`. Venue ids remain a cross-team
+  `name` 1..60 chars, unique. `x`,`y` are JSON numbers in `[0,1]` (or send `lat`/`lng`, see below). Venue ids remain a cross-team
   contract (events, Android, mesh): creating/renaming is allowed, ids never change.
 - **Edges** are undirected (`from`/`to` order does not matter), `distanceM` an integer `1..1000`,
   `from != to`, both ids must be existing venues. A venue with no edges is allowed; routing to it
@@ -608,8 +623,20 @@ Rules:
   own the event; a `venueId` that disagrees with the event is `400`); else `venueId` -> that venue's
   room; neither -> **global** (`room: "all"`, delivered to every connected client, no room join needed).
   `venueId` accepts an id or canonical display name. Responses return the *bare* room (`"room-205"`,
-  `"all"`), never the `announce:` socket prefix. `message` 1..280. An identical `(room, message)` sent
-  twice to a venue is `409 DUPLICATE_ANNOUNCEMENT` (global announcements are exempt).
+  `"all"`), never the `announce:` socket prefix. `message` 1..280. Manager announcements may repeat
+  the same text to the same room (1.5.0: `DUPLICATE_ANNOUNCEMENT` is gone); only automatic event
+  announcements still dedupe (migration 008: partial unique index on `sent_by IS NULL`).
+- **Campus geo (1.5.0)**: the 4:3 canvas is a linear projection of the campus `bounds` returned by
+  `GET /navigation/map`: `x = (lng - west) / (east - west)`, `y = (north - lat) / (north - south)`.
+  Clients must use the served `bounds`, never their own constants. With `lat`/`lng` the server computes
+  `x`/`y` and stores the pair (`geoPlaced:true`); a point outside the bounds is `400 OUTSIDE_CAMPUS`.
+  `connectToNearest` (default `false`, lat/lng only) creates ONE edge to the nearest existing venue
+  (haversine on each venue's effective lat/lng), `distanceM = round(metres)` clamped `1..1000`.
+  `PUT` with `lat`/`lng` recomputes `x`/`y` and sets `geoPlaced:true`; `PUT` with `x`/`y` clears the stored
+  lat/lng (`geoPlaced:false`; lat/lng are then derived from x/y). Seeded venues always report derived
+  lat/lng with `geoPlaced:false`. `kind` is free text (<=40), `description` <=500.
+- **Admin accounts (1.5.0)**: `/manage/users*` is `requireRole('admin')` - organizers and students get
+  `403 FORBIDDEN`. The new account can log in at once via `POST /auth/login`.
 - **Throttle**: max 10 announcements / minute / user -> `429 RATE_LIMITED`.
 - Existing event CRUD (`POST /events`, `PUT|DELETE /events/:id`) is unchanged.
 

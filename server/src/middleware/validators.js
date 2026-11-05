@@ -234,16 +234,70 @@ const fraction = (label) =>
     .min(0, `${label} must be between 0 and 1`)
     .max(1, `${label} must be between 0 and 1`);
 
-export const createVenueSchema = z.strictObject({
-  id: venueSlug,
-  name: venueName,
-  x: fraction('x'),
-  y: fraction('y')
-});
+const latitude = z
+  .number({ error: 'lat must be a number between -90 and 90' })
+  .min(-90, 'lat must be between -90 and 90')
+  .max(90, 'lat must be between -90 and 90');
+const longitude = z
+  .number({ error: 'lng must be a number between -180 and 180' })
+  .min(-180, 'lng must be between -180 and 180')
+  .max(180, 'lng must be between -180 and 180');
+const venueKind = z.string({ error: 'kind must be a string' }).trim().max(40, 'kind must be at most 40 characters');
+const venueDescription = z
+  .string({ error: 'description must be a string' })
+  .trim()
+  .max(500, 'description must be at most 500 characters');
+
+/**
+ * Either canvas position (x,y) or real-world position (lat,lng) - never both,
+ * never half a pair. Bounds (OUTSIDE_CAMPUS) are checked in the service.
+ */
+const venuePositionRule = (b, { partialXY = false } = {}) => {
+  const hasXY = b.x !== undefined || b.y !== undefined;
+  const hasLL = b.lat !== undefined || b.lng !== undefined;
+  if (hasXY && hasLL) return false;
+  if (!partialXY && (b.x === undefined) !== (b.y === undefined)) return false;
+  if ((b.lat === undefined) !== (b.lng === undefined)) return false;
+  return true;
+};
+const POSITION_MESSAGE = 'provide x/y or both lat and lng (never a mix of the two pairs); create needs both x and y';
+
+export const createVenueSchema = z
+  .strictObject({
+    id: venueSlug,
+    name: venueName,
+    x: fraction('x').optional(),
+    y: fraction('y').optional(),
+    lat: latitude.optional(),
+    lng: longitude.optional(),
+    kind: venueKind.optional(),
+    description: venueDescription.optional(),
+    connectToNearest: z.boolean({ error: 'connectToNearest must be a boolean' }).optional()
+  })
+  .refine(venuePositionRule, { message: POSITION_MESSAGE, path: ['x'] })
+  .refine((b) => b.x !== undefined || b.lat !== undefined, {
+    message: 'a position is required: x and y, or lat and lng',
+    path: ['x']
+  })
+  .refine((b) => b.lat !== undefined || b.connectToNearest === undefined || b.connectToNearest === false, {
+    message: 'connectToNearest needs lat and lng',
+    path: ['connectToNearest']
+  });
 
 export const updateVenueSchema = z
-  .strictObject({ name: venueName.optional(), x: fraction('x').optional(), y: fraction('y').optional() })
-  .refine((b) => Object.keys(b).length > 0, { message: 'at least one of name, x, y is required' });
+  .strictObject({
+    name: venueName.optional(),
+    kind: venueKind.optional(),
+    description: venueDescription.optional(),
+    x: fraction('x').optional(),
+    y: fraction('y').optional(),
+    lat: latitude.optional(),
+    lng: longitude.optional()
+  })
+  .refine((b) => venuePositionRule(b, { partialXY: true }), { message: POSITION_MESSAGE, path: ['x'] })
+  .refine((b) => Object.keys(b).length > 0, {
+    message: 'at least one of name, kind, description, x/y or lat/lng is required'
+  });
 
 /** :id on PUT/DELETE is loose on purpose so an unknown id is a 404, not a 400. */
 export const manageVenueParamsSchema = z.object({
@@ -276,3 +330,26 @@ export const createAnnouncementSchema = z.strictObject({
 export const announcementIdParamSchema = z.object({
   id: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER)
 });
+
+
+/* -------------------------------------------------------------------------- */
+/* Admin accounts (/api/manage/users)                                          */
+/* -------------------------------------------------------------------------- */
+
+const userRole = z.enum(['organizer', 'admin', 'student'], {
+  error: 'role must be one of organizer, admin, student'
+});
+
+export const adminCreateUserSchema = z.strictObject({
+  name: z.string({ error: 'name is required' }).trim().min(1, 'name is required').max(120),
+  email,
+  password: z
+    .string({ error: 'password is required' })
+    .min(8, 'password must be at least 8 characters')
+    .max(200),
+  role: userRole
+});
+
+export const adminUpdateUserSchema = z.strictObject({ role: userRole });
+
+export const userIdParamSchema = z.object({ id: z.string().trim().min(1).max(80) });

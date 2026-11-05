@@ -64,3 +64,15 @@ export const listAnnouncements = asyncHandler(async (req, res) => {
 export const deleteAnnouncement = asyncHandler(async (req, res) => {
   res.json(await manager.removeAnnouncement(req.user, req.params.id));
 });
+
+export const listUsers = asyncHandler(async (req, res) => {
+  res.json({ users: await manager.listAccounts() });
+});
+
+export const createUser = asyncHandler(async (req, res) => {
+  res.status(201).json(await manager.createAccount(req.body));
+});
+
+export const updateUser = asyncHandler(async (req, res) => {
+  res.json(await manager.changeAccountRole(req.user, req.params.id, req.body.role));
+});

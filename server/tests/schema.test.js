@@ -192,7 +192,7 @@ describe('schema integrity: announcement event scoping', () => {
     const { rowCount } = await pool().query(
       `INSERT INTO announcements (room, message, event_id)
        VALUES ('room-204', 'schema probe announcement', 'evt_001')
-       ON CONFLICT (room, message) DO NOTHING`
+       ON CONFLICT (room, message) WHERE sent_by IS NULL DO NOTHING`
     );
     expect(rowCount).toBe(1);
 
@@ -202,15 +202,17 @@ describe('schema integrity: announcement event scoping', () => {
   });
 
   it('leaves the relay text suffix untouched so (room, message) stays unique', async () => {
+    // 008 replaced the blanket UNIQUE constraint with a partial unique index
+    // that only covers automatic rows (sent_by IS NULL).
     const { rows } = await pool().query(
-      `SELECT conname, pg_get_constraintdef(oid) AS def
-         FROM pg_constraint
-        WHERE conrelid = 'announcements'::regclass
-          AND contype = 'u'`
+      `SELECT indexdef FROM pg_indexes
+        WHERE tablename = 'announcements' AND indexname = 'uq_announcements_auto_room_message'`
     );
 
-    const roomMessage = rows.find((row) => row.def.includes('room') && row.def.includes('message'));
-    expect(roomMessage).toBeDefined();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].indexdef).toMatch(/UNIQUE/);
+    expect(rows[0].indexdef).toMatch(/room, message/);
+    expect(rows[0].indexdef).toMatch(/sent_by IS NULL/);
   });
 
   it('resolves the bracketed relay event id when backfilling legacy rows', async () => {

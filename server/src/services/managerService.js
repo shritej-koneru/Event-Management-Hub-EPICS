@@ -11,7 +11,26 @@ import {
   deleteAnnouncementRow,
   countAnnouncementsBy
 } from '../models/announcementModel.js';
+import bcrypt from 'bcryptjs';
+import { config } from '../config/index.js';
 import {
+  findUserByEmail,
+  findUserById,
+  insertUser,
+  listUsers,
+  updateUserRole,
+  toAdminUser
+} from '../models/userModel.js';
+import { newId } from '../utils/id.js';
+import {
+  CAMPUS_BOUNDS,
+  geoFields,
+  isInsideBounds,
+  latLngToXY,
+  nearestVenue
+} from '../navigation/geo.js';
+import {
+  listVenueMapRows,
   countVenues,
   countVenueEdges,
   findVenueByName,
@@ -63,7 +82,23 @@ export async function managedEvents(user, scope) {
 /* Map writes. The DB is written first, then the in-memory registry rebuilt.  */
 /* -------------------------------------------------------------------------- */
 
-const toVenue = (row) => ({ id: row.id, name: row.name, x: Number(row.map_x), y: Number(row.map_y) });
+const clamp01 = (n) => Math.min(1, Math.max(0, n));
+
+/** Public venue shape: canvas x/y plus lat/lng (stored or derived), kind, description, geoPlaced. */
+const toVenue = (row) => {
+  const base = { id: row.id, name: row.name, x: Number(row.map_x), y: Number(row.map_y) };
+  return {
+    ...base,
+    ...geoFields({
+      ...base,
+      lat: row.lat,
+      lng: row.lng,
+      kind: row.kind,
+      description: row.description,
+      geoPlaced: row.geo_placed
+    })
+  };
+};
 const toEdge = (row) => ({ from: row.from_id, to: row.to_id, distanceM: row.distance_m });
 
 async function afterMapWrite() {
@@ -71,26 +106,95 @@ async function afterMapWrite() {
   validateGraph();
 }
 
-export async function createVenue({ id, name, x, y }) {
+/** lat/lng -> canvas position, or 400 OUTSIDE_CAMPUS. */
+function projectLatLng(lat, lng) {
+  if (!isInsideBounds(lat, lng, CAMPUS_BOUNDS)) {
+    throw ApiError.badRequest(
+      'lat/lng is outside the campus bounds (north ' +
+        `${CAMPUS_BOUNDS.north}, south ${CAMPUS_BOUNDS.south}, west ${CAMPUS_BOUNDS.west}, east ${CAMPUS_BOUNDS.east})`,
+      'OUTSIDE_CAMPUS'
+    );
+  }
+  const { x, y } = latLngToXY(lat, lng, CAMPUS_BOUNDS);
+  return { x: clamp01(x), y: clamp01(y) };
+}
+
+/**
+ * Creates a venue from canvas x/y OR real lat/lng. With lat/lng and
+ * `connectToNearest`, also links it to the nearest existing venue (haversine
+ * metres, rounded, clamped 1..1000).
+ * @returns {Promise<object>} the venue plus `edge` ({from,to,distanceM} | null)
+ */
+export async function createVenue({ id, name, x, y, lat, lng, kind, description, connectToNearest }) {
   if (await getVenueMapRow(id)) {
     throw ApiError.conflict(`Venue "${id}" already exists`, 'DUPLICATE_VENUE');
   }
   if (await findVenueByName(name)) {
     throw ApiError.conflict(`A venue named "${name}" already exists`, 'DUPLICATE_VENUE');
   }
-  const row = await insertVenue({ id, name, x, y });
+
+  const geo = lat !== undefined;
+  const pos = geo ? projectLatLng(lat, lng) : { x, y };
+
+  let nearest = null;
+  if (geo && connectToNearest) {
+    const existing = (await listVenueMapRows()).map((row) => ({
+      id: row.id,
+      x: Number(row.map_x),
+      y: Number(row.map_y),
+      lat: row.lat,
+      lng: row.lng
+    }));
+    nearest = nearestVenue(lat, lng, existing);
+  }
+
+  const row = await insertVenue({
+    id,
+    name,
+    x: pos.x,
+    y: pos.y,
+    lat: geo ? lat : null,
+    lng: geo ? lng : null,
+    kind: kind ?? '',
+    description: description ?? '',
+    geoPlaced: geo
+  });
+
+  let edge = null;
+  if (nearest) {
+    const distanceM = Math.min(1000, Math.max(1, Math.round(nearest.distanceM)));
+    edge = toEdge(await insertEdgeRow(id, nearest.venue.id, distanceM));
+  }
+
   await afterMapWrite();
-  return toVenue(row);
+  return { ...toVenue(row), edge };
 }
 
 export async function updateVenue(id, patch) {
-  if (!(await getVenueMapRow(id))) {
+  const current = await getVenueMapRow(id);
+  if (!current) {
     throw ApiError.notFound(`Unknown venue: ${id}`, 'UNKNOWN_VENUE');
   }
   if (patch.name !== undefined && (await findVenueByName(patch.name, id))) {
     throw ApiError.conflict(`A venue named "${patch.name}" already exists`, 'DUPLICATE_VENUE');
   }
-  const row = await updateVenueRow(id, patch);
+
+  let position;
+  if (patch.lat !== undefined) {
+    position = { ...projectLatLng(patch.lat, patch.lng), lat: patch.lat, lng: patch.lng };
+  } else if (patch.x !== undefined) {
+    // Moving by canvas coordinates drops any stored lat/lng (they are then derived).
+    position = { x: patch.x ?? Number(current.map_x), y: patch.y ?? Number(current.map_y) };
+  } else if (patch.y !== undefined) {
+    position = { x: Number(current.map_x), y: patch.y };
+  }
+
+  const row = await updateVenueRow(id, {
+    name: patch.name,
+    kind: patch.kind,
+    description: patch.description,
+    position
+  });
   await afterMapWrite();
   return toVenue(row);
 }
@@ -207,23 +311,13 @@ export async function sendAnnouncement(user, { message, venueId, eventId }) {
     venueName = (await getVenueMapRow(resolved))?.name ?? null;
   }
 
-  try {
-    const announcement = await insertManagedAnnouncement({
-      room,
-      message,
-      eventId: event?.id ?? null,
-      sentBy: user.id
-    });
-    return { announcement, venueName, event };
-  } catch (err) {
-    if (err?.code === '23505') {
-      throw ApiError.conflict(
-        'An identical announcement already exists for this target; change the text or delete the old one',
-        'DUPLICATE_ANNOUNCEMENT'
-      );
-    }
-    throw err;
-  }
+  const announcement = await insertManagedAnnouncement({
+    room,
+    message,
+    eventId: event?.id ?? null,
+    sentBy: user.id
+  });
+  return { announcement, venueName, event };
 }
 
 export async function managedAnnouncements(user, scope) {
@@ -241,4 +335,36 @@ export async function removeAnnouncement(user, id) {
   }
   await deleteAnnouncementRow(id);
   return { deleted: true, id: existing.id };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Admin accounts (admin only; the route enforces the role)                   */
+/* -------------------------------------------------------------------------- */
+
+export async function listAccounts() {
+  return (await listUsers()).map(toAdminUser);
+}
+
+export async function createAccount({ name, email, password, role }) {
+  if (await findUserByEmail(email)) {
+    throw ApiError.conflict('Email already registered', 'EMAIL_TAKEN');
+  }
+  const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
+  let row;
+  try {
+    row = await insertUser({ id: newId('usr'), name, email, passwordHash });
+  } catch (err) {
+    if (err?.code === '23505') throw ApiError.conflict('Email already registered', 'EMAIL_TAKEN');
+    throw err;
+  }
+  if (role !== 'student') row = await updateUserRole(row.id, role);
+  return toAdminUser(row);
+}
+
+export async function changeAccountRole(actor, id, role) {
+  if (actor.id === id && role !== actor.role) {
+    throw ApiError.badRequest('You cannot change your own role', 'CANNOT_DEMOTE_SELF');
+  }
+  if (!(await findUserById(id))) throw ApiError.notFound(`User not found: ${id}`, 'USER_NOT_FOUND');
+  return toAdminUser(await updateUserRole(id, role));
 }

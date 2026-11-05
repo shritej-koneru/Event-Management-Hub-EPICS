@@ -23,7 +23,17 @@ let loadedFromDb = false;
 function buildState(venueRows, edgeRows) {
   const byId = new Map();
   for (const row of venueRows) {
-    byId.set(row.id, { id: row.id, name: row.name, x: Number(row.x), y: Number(row.y) });
+    byId.set(row.id, {
+      id: row.id,
+      name: row.name,
+      x: Number(row.x),
+      y: Number(row.y),
+      lat: row.lat == null ? null : Number(row.lat),
+      lng: row.lng == null ? null : Number(row.lng),
+      kind: row.kind ?? '',
+      description: row.description ?? '',
+      geoPlaced: Boolean(row.geoPlaced)
+    });
   }
 
   // Stable order: canonical venues first (keeps turn-by-turn text unchanged),
@@ -80,7 +90,7 @@ export function assertLiveGraph(s = state) {
   }
 }
 
-/** Replaces the cached registry from `{id,name,x,y}[]` + `{from,to,distanceM}[]`. */
+/** Replaces the cached registry from `{id,name,x,y,lat?,lng?,kind?,description?,geoPlaced?}[]` + `{from,to,distanceM}[]`. */
 export function setRegistry(venueRows, edgeRows) {
   const next = buildState(venueRows, edgeRows);
   assertLiveGraph(next);
@@ -94,7 +104,17 @@ export async function refreshRegistry() {
   const { listVenueMapRows, listVenueEdgeRows } = await import('../models/venueModel.js');
   const [venueRows, edgeRows] = await Promise.all([listVenueMapRows(), listVenueEdgeRows()]);
   setRegistry(
-    venueRows.map((r) => ({ id: r.id, name: r.name, x: r.map_x, y: r.map_y })),
+    venueRows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      x: r.map_x,
+      y: r.map_y,
+      lat: r.lat,
+      lng: r.lng,
+      kind: r.kind,
+      description: r.description,
+      geoPlaced: r.geo_placed
+    })),
     edgeRows.map((r) => ({ from: r.from_id, to: r.to_id, distanceM: r.distance_m }))
   );
 }

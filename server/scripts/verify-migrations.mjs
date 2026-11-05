@@ -79,7 +79,7 @@ try {
 check('cold build succeeds', buildError === null, buildError ? buildError.message : '');
 
 const applied = migrationLog.filter((l) => /applied/.test(l));
-check('all seven migrations applied', applied.length === 7, `${applied.length}: ${applied.join(' | ')}`);
+check('all eight migrations applied', applied.length === 8, `${applied.length}: ${applied.join(' | ')}`);
 for (const file of [
   '001_init.sql',
   '002_integrity_and_retention.sql',
@@ -87,7 +87,8 @@ for (const file of [
   '004_chat_messages.sql',
   '005_venue_map.sql',
   '006_roles_and_ownership.sql',
-  '007_announcement_sender.sql'
+  '007_announcement_sender.sql',
+  '008_venue_geo.sql'
 ]) {
   check(`${file} ran`, migrationLog.some((l) => l.includes(file)));
 }
@@ -112,7 +113,7 @@ for (const table of [
 
 // The `migrations` ledger must record every file so a re-run skips cleanly.
 const recorded = (await query(`SELECT count(*)::int AS n FROM migrations`)).rows[0].n;
-check('migrations ledger records every file', Number(recorded) === 7, `${recorded} rows`);
+check('migrations ledger records every file', Number(recorded) === 8, `${recorded} rows`);
 
 // Map layout (005): coordinates seeded in range, one row per undirected edge.
 const mapRow = (await query(

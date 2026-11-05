@@ -1,6 +1,7 @@
 import { describeNodes, shortestPath } from '../navigation/graph.js';
 import { resolveVenue } from '../navigation/registry.js';
 import { listVenueMapRows, getVenueMapRow, listVenueEdgeRows } from '../models/venueModel.js';
+import { CAMPUS_BOUNDS, boundsPayload, geoFields } from '../navigation/geo.js';
 import { ApiError } from '../utils/errors.js';
 
 /**
@@ -47,13 +48,29 @@ function toMapNode(row) {
   return { id: row.id, name: row.name, x: Number(row.map_x), y: Number(row.map_y) };
 }
 
+/** Map node + the 1.5.0 geo fields (lat/lng stored or derived from x/y). */
+function toGeoMapNode(row) {
+  const node = toMapNode(row);
+  return {
+    ...node,
+    ...geoFields({
+      ...node,
+      lat: row.lat,
+      lng: row.lng,
+      kind: row.kind,
+      description: row.description,
+      geoPlaced: row.geo_placed
+    })
+  };
+}
+
 /**
  * GET /navigation/map — the whole campus layout for the Android canvas:
  * every venue with its fractional position plus the undirected walk graph.
  * Everything comes from the seeded database (venues.map_x/map_y, venue_edges),
  * never from values hard-coded in the client.
  *
- * @returns {{ venues: {id,name,x,y,neighbors:string[]}[], edges: {from,to,distanceM}[] }}
+ * @returns {{ bounds, venues: {id,name,x,y,lat,lng,kind,description,geoPlaced,neighbors:string[]}[], edges: {from,to,distanceM}[] }}
  */
 export async function campusMap() {
   const [venueRows, edgeRows] = await Promise.all([listVenueMapRows(), listVenueEdgeRows()]);
@@ -65,8 +82,9 @@ export async function campusMap() {
   }
 
   return {
+    bounds: boundsPayload(CAMPUS_BOUNDS),
     venues: venueRows.map((row) => ({
-      ...toMapNode(row),
+      ...toGeoMapNode(row),
       neighbors: neighbors.get(row.id) ?? []
     })),
     edges: edgeRows.map((edge) => ({

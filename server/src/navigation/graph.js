@@ -8,6 +8,7 @@ import {
   venues as liveVenues
 } from './registry.js';
 import { ApiError } from '../utils/errors.js';
+import { geoFields } from './geo.js';
 
 
 /**
@@ -135,7 +136,8 @@ export function venueList() {
   return liveVenues().map((venue) => ({
     id: venue.id,
     name: venue.name,
-    neighbors: neighborsOf(venue.id)
+    neighbors: neighborsOf(venue.id),
+    ...geoFields(venue)
   }));
 }
 

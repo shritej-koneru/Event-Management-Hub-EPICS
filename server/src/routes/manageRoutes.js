@@ -9,7 +9,10 @@ import {
   edgeBodySchema,
   edgeQuerySchema,
   createAnnouncementSchema,
-  announcementIdParamSchema
+  announcementIdParamSchema,
+  adminCreateUserSchema,
+  adminUpdateUserSchema,
+  userIdParamSchema
 } from '../middleware/validators.js';
 import * as manage from '../controllers/manageController.js';
 
@@ -40,6 +43,16 @@ router.delete(
   '/announcements/:id',
   validate({ params: announcementIdParamSchema }),
   manage.deleteAnnouncement
+);
+
+// Accounts: admin only (organizers get 403 FORBIDDEN).
+router.get('/users', requireRole('admin'), manage.listUsers);
+router.post('/users', requireRole('admin'), validate({ body: adminCreateUserSchema }), manage.createUser);
+router.put(
+  '/users/:id',
+  requireRole('admin'),
+  validate({ params: userIdParamSchema, body: adminUpdateUserSchema }),
+  manage.updateUser
 );
 
 export default router;

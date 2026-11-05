@@ -1,6 +1,9 @@
 import { getPool } from '../db/pool.js';
 import { VENUES, MAP_POSITIONS, GRAPH } from '../navigation/venues.js';
 
+/** Map columns incl. the 1.5.0 geo fields (migration 008). */
+const MAP_COLUMNS = 'id, name, map_x, map_y, lat, lng, kind, description, geo_placed';
+
 /** Rows for GET /navigation/venues, ordered to match the canonical venue list. */
 export async function listVenueRows() {
   const { rows } = await getPool().query('SELECT id, name FROM venues ORDER BY name ASC');
@@ -13,17 +16,14 @@ export async function listVenueRows() {
  */
 export async function listVenueMapRows() {
   const { rows } = await getPool().query(
-    'SELECT id, name, map_x, map_y FROM venues ORDER BY name ASC'
+    `SELECT ${MAP_COLUMNS} FROM venues ORDER BY name ASC`
   );
   return rows;
 }
 
 /** One map row by node id (null when the venue is unknown). */
 export async function getVenueMapRow(venueId) {
-  const { rows } = await getPool().query(
-    'SELECT id, name, map_x, map_y FROM venues WHERE id = $1',
-    [venueId]
-  );
+  const { rows } = await getPool().query(`SELECT ${MAP_COLUMNS} FROM venues WHERE id = $1`, [venueId]);
   return rows[0] ?? null;
 }
 
@@ -50,7 +50,8 @@ export async function upsertVenues() {
       `INSERT INTO venues (id, name, map_x, map_y) VALUES ($1, $2, $3, $4)
        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name,
                                       map_x = EXCLUDED.map_x,
-                                      map_y = EXCLUDED.map_y`,
+                                      map_y = EXCLUDED.map_y,
+                                      lat = NULL, lng = NULL, geo_placed = false`,
       [venue.id, venue.name, pos.x, pos.y]
     );
     inserted += rowCount ?? 0;
@@ -88,8 +89,6 @@ export async function countVenues() {
 /* Manager writes (venues + edges). Callers refresh the registry afterwards.  */
 /* -------------------------------------------------------------------------- */
 
-const MAP_COLUMNS = 'id, name, map_x, map_y';
-
 export async function countVenueEdges() {
   const { rows } = await getPool().query('SELECT COUNT(*)::int AS count FROM venue_edges');
   return rows[0].count;
@@ -106,24 +105,46 @@ export async function findVenueByName(name, excludeId = null) {
   return rows[0] ?? null;
 }
 
-export async function insertVenue({ id, name, x, y }) {
+export async function insertVenue({ id, name, x, y, lat = null, lng = null, kind = '', description = '', geoPlaced = false }) {
   const { rows } = await getPool().query(
-    `INSERT INTO venues (id, name, map_x, map_y) VALUES ($1, $2, $3, $4) RETURNING ${MAP_COLUMNS}`,
-    [id, name, x, y]
+    `INSERT INTO venues (id, name, map_x, map_y, lat, lng, kind, description, geo_placed)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING ${MAP_COLUMNS}`,
+    [id, name, x, y, lat, lng, kind, description, geoPlaced]
   );
   return rows[0];
 }
 
-/** Partial update of name / position; returns the row or null when unknown. */
-export async function updateVenueRow(id, { name, x, y }) {
+/**
+ * Partial update. `position` is either omitted (keep), `{x, y}` (clears the
+ * stored lat/lng, geo_placed=false) or `{x, y, lat, lng}` (geo_placed=true).
+ * Returns the row or null when unknown.
+ */
+export async function updateVenueRow(id, { name, kind, description, position }) {
+  const hasPos = position !== undefined;
   const { rows } = await getPool().query(
     `UPDATE venues
         SET name = COALESCE($2, name),
-            map_x = COALESCE($3, map_x),
-            map_y = COALESCE($4, map_y)
+            kind = COALESCE($3, kind),
+            description = COALESCE($4, description),
+            map_x = CASE WHEN $5::boolean THEN $6::double precision ELSE map_x END,
+            map_y = CASE WHEN $5::boolean THEN $7::double precision ELSE map_y END,
+            lat = CASE WHEN $5::boolean THEN $8::double precision ELSE lat END,
+            lng = CASE WHEN $5::boolean THEN $9::double precision ELSE lng END,
+            geo_placed = CASE WHEN $5::boolean THEN $10::boolean ELSE geo_placed END
       WHERE id = $1
       RETURNING ${MAP_COLUMNS}`,
-    [id, name ?? null, x ?? null, y ?? null]
+    [
+      id,
+      name ?? null,
+      kind ?? null,
+      description ?? null,
+      hasPos,
+      position?.x ?? null,
+      position?.y ?? null,
+      position?.lat ?? null,
+      position?.lng ?? null,
+      position?.lat != null
+    ]
   );
   return rows[0] ?? null;
 }

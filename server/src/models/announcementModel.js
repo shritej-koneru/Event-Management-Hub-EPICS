@@ -8,8 +8,9 @@ const GLOBAL_ROOM_NAME = 'all';
 /**
  * Persists an announcement idempotently.
  *
- * The `announcements_room_message_key` UNIQUE constraint is the single source of
- * duplicate protection — `ON CONFLICT DO NOTHING` turns a repeat insert into
+ * The partial unique index `uq_announcements_auto_room_message` (room, message)
+ * WHERE sent_by IS NULL (migration 008) is the single source of
+ * duplicate protection for automatic rows — `ON CONFLICT DO NOTHING` turns a repeat insert into
  * a no-op rather than an error, so relaying the same (room, message) twice is
  * impossible no matter how many times it is triggered.
  *
@@ -24,7 +25,7 @@ export async function recordAnnouncement(room, message, eventId = null) {
   const { rows, rowCount } = await pool.query(
     `INSERT INTO announcements (room, message, event_id)
      VALUES ($1, $2, $3)
-     ON CONFLICT (room, message) DO NOTHING
+     ON CONFLICT (room, message) WHERE sent_by IS NULL DO NOTHING
      RETURNING id, room, message, event_id, at`,
     [room, message, eventId]
   );
@@ -41,7 +42,7 @@ export async function recordAnnouncement(room, message, eventId = null) {
   const existing = await pool.query(
     `UPDATE announcements
         SET event_id = COALESCE(event_id, $3)
-      WHERE room = $1 AND message = $2
+      WHERE room = $1 AND message = $2 AND sent_by IS NULL
       RETURNING id, room, message, event_id, at`,
     [room, message, eventId]
   );
@@ -152,9 +153,9 @@ function serializeManaged(row) {
 const MANAGED_COLUMNS = 'id, room, message, event_id, sent_by, at';
 
 /**
- * Inserts a manual announcement. Unlike the idempotent event relay this does
- * NOT use ON CONFLICT: a duplicate (room, message) raises 23505, which the
- * service maps to 409 DUPLICATE_ANNOUNCEMENT.
+ * Inserts a manual announcement. Unlike the idempotent event relay, manager
+ * announcements (sent_by NOT NULL) may repeat the same text to the same room:
+ * the unique index only covers automatic rows (sent_by IS NULL).
  */
 export async function insertManagedAnnouncement({ room, message, eventId = null, sentBy }) {
   const { rows } = await getPool().query(

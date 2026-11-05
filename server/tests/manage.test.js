@@ -199,7 +199,7 @@ describe('venues', () => {
     const id = slug();
     const res = await newVenue(orgA.token, { id, name: `Annex ${id}`, x: 0.1, y: 0.9 });
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ id, name: `Annex ${id}`, x: 0.1, y: 0.9 });
+    expect(res.body).toMatchObject({ id, name: `Annex ${id}`, x: 0.1, y: 0.9, geoPlaced: false, kind: "", description: "", edge: null });
 
     const map = await api().get('/api/navigation/map');
     const node = map.body.venues.find((v) => v.id === id);
@@ -207,7 +207,7 @@ describe('venues', () => {
 
     const put = await as(orgB.token).put(`/api/manage/venues/${id}`).send({ name: `Renamed ${id}`, x: 0.2 });
     expect(put.status).toBe(200);
-    expect(put.body).toEqual({ id, name: `Renamed ${id}`, x: 0.2, y: 0.9 });
+    expect(put.body).toMatchObject({ id, name: `Renamed ${id}`, x: 0.2, y: 0.9 });
 
     const names = await api().get('/api/navigation/venues');
     expect(names.body.venues.find((v) => v.id === id).name).toBe(`Renamed ${id}`);
@@ -513,7 +513,7 @@ describe('announcements', () => {
     expect(mismatch.status).toBe(400);
   });
 
-  it('validates the body (400) and rejects an unknown venue / duplicate text', async () => {
+  it('validates the body (400) and rejects an unknown venue (repeat text is allowed)', async () => {
     resetAnnouncementThrottle();
     const post = (body) => as(orgA.token).post('/api/manage/announcements').send(body);
     expect((await post({})).status).toBe(400);
@@ -526,11 +526,9 @@ describe('announcements', () => {
 
     const message = unique('Dup');
     expect((await post({ message, venueId: 'lobby' })).status).toBe(201);
-    const dup = await post({ message, venueId: 'lobby' });
-    expect(dup.status).toBe(409);
-    expect(dup.body.code).toBe('DUPLICATE_ANNOUNCEMENT');
-    // A display name resolves to the same room, so it is the same duplicate.
-    expect((await post({ message, venueId: 'Lobby' })).status).toBe(409);
+    // 1.5.0: managers may repeat the same text to the same room.
+    expect((await post({ message, venueId: 'lobby' })).status).toBe(201);
+    expect((await post({ message, venueId: 'Lobby' })).status).toBe(201);
     expect((await post({ message: 'a'.repeat(280) })).status).toBe(201);
   });
 

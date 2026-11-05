@@ -93,7 +93,10 @@ export const config = {
   // 1.4.0 added the /api/manage/* event-manager API, the `map:updated` socket
   // event, announcements.sent_by (migration 007) and the new event
   // auto-announcement wording.
-  contractVersion: '1.4.0',
+  // 1.5.0 added campus geo bounds + per-venue lat/lng/kind/description/geoPlaced
+  // (migration 008), POST/PUT /manage/venues by lat/lng with connectToNearest,
+  // repeatable manager announcements, and admin-only /manage/users.
+  contractVersion: '1.5.0',
 
   jwt: {
     secret: resolveJwtSecret(),
