@@ -1,6 +1,6 @@
 /** Pure helpers for the manager console (unit-tested in manage.test.ts). */
 import { ApiError } from './api'
-import type { EventItem, MapVenue } from './types'
+import type { CampusBounds, EventItem, MapVenue } from './types'
 
 // ---- venue slug ---------------------------------------------------------
 export const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -38,6 +38,69 @@ export function canvasToFraction(pos: number, size: number): number {
 
 /** Round to 3 decimals so saved coordinates stay tidy. */
 export const roundFraction = (n: number): number => Math.round(clamp01(n) * 1000) / 1000
+
+// ---- geo projection (contract 1.5.0; always use server-provided bounds) --
+type Box = Pick<CampusBounds, 'north' | 'south' | 'west' | 'east'>
+
+/** lat/lng -> canvas fractions. Not clamped, so callers can detect outside points. */
+export function latLngToXY(lat: number, lng: number, b: Box): { x: number; y: number } {
+  return { x: (lng - b.west) / (b.east - b.west), y: (b.north - lat) / (b.north - b.south) }
+}
+
+/** Canvas fractions -> lat/lng (inverse of latLngToXY). */
+export function xyToLatLng(x: number, y: number, b: Box): { lat: number; lng: number } {
+  return { lat: b.north - y * (b.north - b.south), lng: b.west + x * (b.east - b.west) }
+}
+
+export function isInsideBounds(lat: number, lng: number, b: Box): boolean {
+  return lat >= b.south && lat <= b.north && lng >= b.west && lng <= b.east
+}
+
+/** Slightly larger box for the map's max-bounds (default 25% of each side). */
+export function padBounds(b: Box, factor = 0.25): [[number, number], [number, number]] {
+  const dLat = (b.north - b.south) * factor
+  const dLng = (b.east - b.west) * factor
+  return [
+    [b.south - dLat, b.west - dLng],
+    [b.north + dLat, b.east + dLng],
+  ]
+}
+
+export const KIND_OPTIONS = ['Hall', 'Lab', 'Food', 'Gate', 'Office', 'Library', 'Sports', 'Hostel', 'Parking']
+export const DESCRIPTION_MAX = 500
+
+// ---- new place form -> payload ------------------------------------------
+export interface NewPlaceValues {
+  name: string
+  id: string
+  kind: string
+  description: string
+  lat: number
+  lng: number
+  connectToNearest: boolean
+}
+
+export function newPlaceToPayload(f: NewPlaceValues) {
+  return {
+    id: f.id.trim(),
+    name: f.name.trim(),
+    lat: f.lat,
+    lng: f.lng,
+    kind: f.kind.trim(),
+    description: f.description.trim(),
+    connectToNearest: f.connectToNearest,
+  }
+}
+
+/** Client-side check; returns a message or null. */
+export function validateNewPlace(f: NewPlaceValues, b: Box): string | null {
+  if (!f.name.trim() || f.name.trim().length > 60) return 'Name must be 1-60 characters.'
+  if (!isValidSlug(f.id.trim())) return `Id must be a lowercase slug (a-z, 0-9, hyphens), max ${SLUG_MAX} chars.`
+  if (f.description.trim().length > DESCRIPTION_MAX) return `Description must be at most ${DESCRIPTION_MAX} characters.`
+  if (!Number.isFinite(f.lat) || !Number.isFinite(f.lng) || !isInsideBounds(f.lat, f.lng, b))
+    return 'Outside campus area.'
+  return null
+}
 
 // ---- distance prefill ---------------------------------------------------
 export const DEFAULT_METRES_PER_UNIT = 200
@@ -146,6 +209,10 @@ const CODE_MESSAGES: Record<string, string> = {
     'This venue is used by one or more events, so it cannot be deleted. Move or delete those events first.',
   UNKNOWN_VENUE: 'That venue does not exist (it may have been removed).',
   UNKNOWN_EDGE: 'That path no longer exists.',
+  OUTSIDE_CAMPUS: 'Outside campus area. Pick a spot inside the highlighted rectangle.',
+  CANNOT_DEMOTE_SELF: 'You cannot change your own role. Ask another admin.',
+  EMAIL_TAKEN: 'An account with this email already exists.',
+  USER_NOT_FOUND: 'That account no longer exists.',
   RATE_LIMITED: 'Too many announcements. Wait a minute and try again.',
   NETWORK_ERROR: 'Cannot reach the server. Check your connection.',
 }

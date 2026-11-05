@@ -1,15 +1,18 @@
 import { NavLink } from 'react-router-dom'
 
-import { NAV_ITEMS } from './navItems'
+import { useAuth } from '@/auth/useAuth'
+
+import { navItemsFor } from './navItems'
 
 export default function Sidebar() {
+  const { user } = useAuth()
   return (
     <aside className="fixed bottom-0 left-0 top-16 z-30 hidden w-64 flex-col overflow-y-auto border-r border-gray-200 bg-white px-3 py-6 lg:flex">
       <p className="px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
         Navigation
       </p>
       <nav className="mt-3 space-y-1">
-        {NAV_ITEMS.map((item) => (
+        {navItemsFor(user?.role).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

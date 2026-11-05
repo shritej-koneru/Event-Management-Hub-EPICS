@@ -1,12 +1,15 @@
 import { NavLink } from 'react-router-dom'
 
-import { NAV_ITEMS } from './navItems'
+import { useAuth } from '@/auth/useAuth'
+
+import { navItemsFor } from './navItems'
 
 export default function BottomNav() {
+  const { user } = useAuth()
   return (
     <nav className="fixed bottom-3 left-1/2 z-40 h-[72px] w-[calc(100%-24px)] max-w-[456px] -translate-x-1/2 rounded-[23px] bg-[rgba(255,255,255,0.97)] px-1.5 pb-[env(safe-area-inset-bottom)] shadow-[0_12px_35px_rgba(20,0,80,0.3)] lg:hidden">
       <div className="flex h-full items-center justify-around">
-        {NAV_ITEMS.map((item) => (
+        {navItemsFor(user?.role).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

@@ -58,6 +58,22 @@ export interface MapVenue {
   x: number
   y: number
   neighbors?: string[]
+  /** Contract 1.5.0 (additive; absent on older servers). */
+  lat?: number
+  lng?: number
+  kind?: string
+  description?: string
+  /** true = placed on the real map by a manager; false = lat/lng derived from x/y. */
+  geoPlaced?: boolean
+}
+
+/** Campus geo bounds served by the server (contract 1.5.0). */
+export interface CampusBounds {
+  north: number
+  south: number
+  west: number
+  east: number
+  center: { lat: number; lng: number }
 }
 
 export interface MapEdge {
@@ -69,6 +85,16 @@ export interface MapEdge {
 export interface CampusMap {
   venues: MapVenue[]
   edges: MapEdge[]
+  bounds?: CampusBounds
+}
+
+/** GET /api/manage/users item (admin only). */
+export interface ManagedUser {
+  id: string
+  name: string
+  email: string
+  role: Role
+  createdAt: string
 }
 
 /** POST /api/manage/announcements -> { announcement } ; GET list items. */
