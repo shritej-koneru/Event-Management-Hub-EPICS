@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.eventmanagementhub.data.HubRepository
+import com.example.eventmanagementhub.data.MapUpdates
 import com.example.eventmanagementhub.data.Result
 import com.example.eventmanagementhub.data.api.ApiClient
 import com.example.eventmanagementhub.data.api.AuthProvider
@@ -166,34 +167,31 @@ class ChatViewModel(
                 s.on(Socket.EVENT_CONNECT) {
                     Log.i(TAG, "socket connected id=${s.id()}")
                     viewModelScope.launch {
-                        // Rooms come from the backend venue catalogue; the
-                        // offline list is only the fallback (socket connected
-                        // means the server is reachable, so this rarely fails).
-                        val rooms = when (val res = repository.venues()) {
-                            is Result.Success -> res.data.venues.map { "announce:${it.id}" }
-                            is Result.Error -> allVenueRooms()
-                        }
-                        rooms.forEach { room ->
-                            s.emit("join", room, Ack { ack ->
-                                val n = (ack.firstOrNull() as? JSONObject)?.optJSONArray("joined")?.length() ?: 0
-                                Log.i(TAG, "join ack for $room: $n room(s)")
-                            })
-                        }
+                        joinVenueRooms(s)
                         _connected.value = true
                         // Pull anything we missed while disconnected.
                         loadHistory()
                     }
                 }
                 s.on("joined") { _connected.value = true }
+                // Manager edited the campus map: tell the Map screen, and join any new venue rooms.
+                s.on("map:updated") {
+                    Log.i(TAG, "map:updated")
+                    MapUpdates.notifyUpdated()
+                    viewModelScope.launch { joinVenueRooms(s) }
+                }
                 s.on("event") { args ->
                     if (args.isEmpty()) return@on
                     val obj = args[0] as? JSONObject
                     val title = obj?.optString("title")?.takeIf { it.isNotBlank() } ?: "Event update"
-                    val venue = obj?.optString("venue")?.takeIf { it.isNotBlank() } ?: "Unknown venue"
-                    val body = "🔔 $title — $venue"
+                    // Global announcements may carry no venue; show the title alone then.
+                    val venue = obj?.optString("venue")?.takeIf { it.isNotBlank() }
+                    val body = if (venue != null) "🔔 $title — $venue" else "🔔 $title"
                     Log.i(TAG, "event broadcast: $title @ $venue")
                     pushAnnouncement(Announcement(id = 0, room = "", message = body))
-                    prependSystemMessage("New announcement at $venue: $title")
+                    prependSystemMessage(
+                        if (venue != null) "New announcement at $venue: $title" else "New announcement: $title"
+                    )
                 }
                 s.on("chat:message") { args ->
                     if (args.isEmpty()) return@on
@@ -217,6 +215,20 @@ class ChatViewModel(
                 Log.e(TAG, "socket setup failed", e)
                 _connected.value = false
             }
+        }
+    }
+
+    /** Rooms come from the backend venue catalogue; the offline list is only the fallback. */
+    private suspend fun joinVenueRooms(s: Socket) {
+        val rooms = when (val res = repository.venues()) {
+            is Result.Success -> res.data.venues.map { "announce:${it.id}" }
+            is Result.Error -> allVenueRooms()
+        }
+        rooms.forEach { room ->
+            s.emit("join", room, Ack { ack ->
+                val n = (ack.firstOrNull() as? JSONObject)?.optJSONArray("joined")?.length() ?: 0
+                Log.i(TAG, "join ack for $room: $n room(s)")
+            })
         }
     }
 

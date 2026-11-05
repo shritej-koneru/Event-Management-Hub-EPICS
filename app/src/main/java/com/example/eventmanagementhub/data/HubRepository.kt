@@ -285,7 +285,11 @@ class HubRepository(
             if (resp.isSuccessful && body != null) Result.Success(body)
             else failure(resp, "Could not load venues").propagate()
         } catch (e: Exception) {
-            Result.Success(VenuesResponse(venues = offlineVenues), isStale = true)
+            val cached = OfflineStore.cachedCampusMap()
+            Result.Success(
+                VenuesResponse(venues = cached?.let { venuesFromMap(it) } ?: offlineVenues),
+                isStale = true
+            )
         }
     }
 
@@ -293,10 +297,12 @@ class HubRepository(
         try {
             val resp = api.campusMap()
             val body = resp.body()
-            if (resp.isSuccessful && body != null) Result.Success(body)
-            else failure(resp, "Could not load campus map").propagate()
+            if (resp.isSuccessful && body != null) {
+                OfflineStore.cacheCampusMap(body)
+                Result.Success(body)
+            } else failure(resp, "Could not load campus map").propagate()
         } catch (e: Exception) {
-            Result.Success(offlineCampusMap(), isStale = true)
+            Result.Success(OfflineStore.cachedCampusMap() ?: offlineCampusMap(), isStale = true)
         }
     }
 
@@ -307,7 +313,8 @@ class HubRepository(
             if (resp.isSuccessful && body != null) Result.Success(body)
             else failure(resp, "Could not load venue map").propagate()
         } catch (e: Exception) {
-            val offline = offlineVenueMap(venueRef)
+            val offline = OfflineStore.cachedCampusMap()?.let { venueMapFromMap(it, venueRef) }
+                ?: offlineVenueMap(venueRef)
             if (offline != null) Result.Success(offline, isStale = true)
             else Result.Error("Unknown venue: $venueRef", 400)
         }

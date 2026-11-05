@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.eventmanagementhub.data.HubRepository
+import com.example.eventmanagementhub.data.MapUpdates
 import com.example.eventmanagementhub.data.Result
 import com.example.eventmanagementhub.data.model.CampusMapResponse
 import com.example.eventmanagementhub.data.model.PathResponse
@@ -164,7 +165,9 @@ fun MapScreen(
 
     // Load the campus layout once — positions, edges and the venue list all
     // come from GET /api/navigation/map (falls back to the on-device copy).
-    LaunchedEffect(Unit) {
+    // Refetches when the screen opens and whenever the server signals `map:updated`.
+    val mapVersion by MapUpdates.version.collectAsState()
+    LaunchedEffect(mapVersion) {
         when (val res = repository.campusMap()) {
             is Result.Success -> {
                 campusMap = res.data

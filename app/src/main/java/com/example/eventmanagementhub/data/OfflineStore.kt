@@ -2,6 +2,7 @@ package com.example.eventmanagementhub.data
 
 import android.content.Context
 import com.example.eventmanagementhub.data.model.Announcement
+import com.example.eventmanagementhub.data.model.CampusMapResponse
 import com.example.eventmanagementhub.data.model.Event
 import com.example.eventmanagementhub.data.model.UserProfile
 import kotlinx.coroutines.CompletableDeferred
@@ -19,7 +20,9 @@ data class OfflineCacheData(
     /** Unsent bookmark edits, oldest first, one per eventId (latest wins). */
     val pendingBookmarks: List<PendingBookmark> = emptyList(),
     /** Unsent interests edit (null = nothing pending). */
-    val pendingInterests: List<String>? = null
+    val pendingInterests: List<String>? = null,
+    /** Last campus map fetched from the server (manager edits); null = never fetched. */
+    val campusMap: CampusMapResponse? = null
 )
 
 /**
@@ -208,6 +211,19 @@ object OfflineStore {
 
     @Synchronized
     fun user(): UserProfile? = data.user
+
+    // ---- campus map ----
+
+    @Synchronized
+    fun cacheCampusMap(map: CampusMapResponse) {
+        if (map.venues.isEmpty()) return
+        data = data.copy(campusMap = map)
+        persist()
+    }
+
+    /** Last server map, or null if none was ever cached. */
+    @Synchronized
+    fun cachedCampusMap(): CampusMapResponse? = data.campusMap
 
     // ---- announcements ----
 

@@ -207,6 +207,29 @@ fun offlineCampusMap(): CampusMapResponse = CampusMapResponse(
     }
 )
 
+/** Venue list derived from a map (server ids/names, unknown ids included). */
+fun venuesFromMap(map: CampusMapResponse): List<Venue> =
+    map.venues.map { Venue(it.id, it.name.ifBlank { it.id }, it.neighbors) }
+
+/** Same as [offlineVenueMap] but built from a (cached) server map; null if the ref is not in it. */
+fun venueMapFromMap(map: CampusMapResponse, venueRef: String): VenueMapResponse? {
+    val ref = venueRef.trim()
+    val v = map.venues.firstOrNull { it.id == ref } ?: map.venues.firstOrNull { it.name == ref } ?: return null
+    val byId = map.venues.associateBy { it.id }
+    val dist = HashMap<String, Int>()
+    for (e in map.edges) {
+        if (e.from == v.id) dist[e.to] = e.distanceM
+        if (e.to == v.id) dist[e.from] = e.distanceM
+    }
+    for (n in v.neighbors) dist.putIfAbsent(n, 0)
+    return VenueMapResponse(
+        venue = v,
+        neighbors = dist.mapNotNull { (id, d) ->
+            byId[id]?.let { VenueMapNeighbor(id = id, name = it.name, x = it.x, y = it.y, distanceM = d) }
+        }
+    )
+}
+
 /** Offline mirror of GET /api/navigation/venues/{venueId}/map (id or display name). */
 fun offlineVenueMap(venueRef: String): VenueMapResponse? {
     val ref = venueRef.trim()

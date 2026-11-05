@@ -67,6 +67,11 @@ private fun AppRoot() {
         ViewModelProvider(activity)[ChatViewModel::class.java].onSignedOut()
     }
     var authed by remember { mutableStateOf(AuthProvider.token != null) }
+    // Keep the socket alive app-wide once signed in so `map:updated` and announcements
+    // arrive on any tab, not just after the Chat tab was opened (start() is idempotent).
+    LaunchedEffect(authed) {
+        if (authed) ViewModelProvider(activity)[ChatViewModel::class.java].start()
+    }
 
     /**
      * Venue handed from Event Details ("Navigate to X") to the map tab. Held as
