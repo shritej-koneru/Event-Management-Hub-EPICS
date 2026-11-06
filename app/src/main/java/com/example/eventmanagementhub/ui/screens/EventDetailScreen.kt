@@ -51,10 +51,14 @@ fun EventDetailScreen(
                 details = res.data
                 event = res.data.event
                 isStale = res.isStale
-                bookmarked = res.data.statistics.isBookmarked
+                // Offline the cached aggregate can be older than the device's own saved
+                // list (which includes queued offline changes), so trust the device then.
+                bookmarked = if (res.isStale) repository.isRegistered(eventId)
+                    else res.data.statistics.isBookmarked
             }
             is Result.Error -> {
                 errorMsg = res.message
+                bookmarked = repository.isRegistered(eventId)
                 // Fall back to the plain event so the screen still shows something.
                 when (val basic = repository.event(eventId)) {
                     is Result.Success -> event = basic.data

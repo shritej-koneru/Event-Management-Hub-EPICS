@@ -265,7 +265,9 @@ export async function getEventDetails(id, { from = 'entrance', auth = null } = {
       totalEvents,
       trend
     }),
-    announcements,
+    // Attendee-facing: drop the internal " [evt_…]" dedupe suffix of automatic rows
+    // (GET /chat/announcements keeps it; the verify scripts match on it).
+    announcements: announcements.map((a) => ({ ...a, message: a.message.replace(/\s\[evt_[^\]]+\]$/, '') })),
     navigation: { from, ...pathToEventVenue(from, event.venueId) }
   };
 }

@@ -27,6 +27,12 @@ describe('GET /api/events/:id/details', () => {
     ]);
   });
 
+  it('shows attendees announcement text without the internal [evt_…] dedupe suffix', async () => {
+    const { body } = await api().get('/api/events/evt_001/details');
+    expect(body.announcements.length).toBeGreaterThan(0);
+    expect(body.announcements.some((a) => /\[evt_[^\]]+\]$/.test(a.message))).toBe(false);
+  });
+
   it('reuses the canonical Event shape unchanged inside the payload', async () => {
     const [{ body: detail }, { body: single }] = await Promise.all([
       api().get('/api/events/evt_001/details'),

@@ -20,6 +20,9 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -107,7 +110,10 @@ private fun HubBottomBar(
                     Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(tab) }),
+                        .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(tab) })
+                        // One accessibility node per tab, with the full name and real bounds
+                        // (the visible short label used to show up as a separate zero-size node).
+                        .semantics(mergeDescendants = true) { contentDescription = tab.label },
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
@@ -117,7 +123,7 @@ private fun HubBottomBar(
                             .background(if (selected) Accent else Color.Transparent)
                     )
                     Spacer(Modifier.weight(1f))
-                    Icon(tab.icon, contentDescription = tab.label, tint = tint, modifier = Modifier.size(22.dp))
+                    Icon(tab.icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.height(2.dp))
                     Text(
                         tab.shortLabel,
@@ -125,7 +131,8 @@ private fun HubBottomBar(
                         color = tint,
                         maxLines = 1,
                         softWrap = false,
-                        overflow = TextOverflow.Clip
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.clearAndSetSemantics { }
                     )
                     Spacer(Modifier.weight(1f))
                 }
