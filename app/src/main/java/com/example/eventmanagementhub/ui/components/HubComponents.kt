@@ -13,7 +13,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -210,12 +218,23 @@ fun MetaText(text: String, modifier: Modifier = Modifier, maxLines: Int = 1) {
     )
 }
 
-/** Event list row: category dot + category/date/venue meta. */
+/**
+ * Event list row: category dot + category/date/venue meta. [reason] adds a Small ink-3 line
+ * (recommendations); [extra] adds another Small line (e.g. latest update); [dimmed] fades past events.
+ */
 @Composable
-fun EventRow(event: Event, onClick: () -> Unit, modifier: Modifier = Modifier, showDivider: Boolean = true) {
+fun EventRow(
+    event: Event,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    showDivider: Boolean = true,
+    reason: String? = null,
+    extra: String? = null,
+    dimmed: Boolean = false
+) {
     HubListRow(
         title = event.title,
-        modifier = modifier,
+        modifier = modifier.then(if (dimmed) Modifier.alpha(0.6f) else Modifier),
         onClick = onClick,
         showDivider = showDivider,
         leading = {
@@ -226,6 +245,8 @@ fun EventRow(event: Event, onClick: () -> Unit, modifier: Modifier = Modifier, s
                 listOf(event.category, HubFormat.dateTime(event.date, event.time), event.venue)
                     .filter { it.isNotBlank() }.joinToString(" · ")
             )
+            if (!reason.isNullOrBlank()) MetaText(reason, maxLines = 2)
+            if (!extra.isNullOrBlank()) MetaText(extra)
         }
     )
 }

@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.eventmanagementhub.data.HubRepository
 import com.example.eventmanagementhub.data.Result
@@ -16,16 +17,27 @@ import com.example.eventmanagementhub.data.model.Event
 import com.example.eventmanagementhub.ui.components.*
 import com.example.eventmanagementhub.ui.theme.*
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+/** A recommended event plus the server's reason line (may be blank). */
+private data class Recommended(val event: Event, val reason: String)
 
 @Composable
 fun HomeScreen(
     onEventClick: (String) -> Unit,
-    repository: HubRepository = HubRepository()
+    repository: HubRepository = HubRepository(),
+    /** Opens the Map tab with the event's venue as destination; defaults to the event details. */
+    onDirections: (Event) -> Unit = { onEventClick(it.id) },
+    onSeeAll: (() -> Unit)? = null
 ) {
     var events by remember { mutableStateOf<List<Event>>(emptyList()) }
-    var recommendations by remember { mutableStateOf<List<Event>>(emptyList()) }
+    var recommendations by remember { mutableStateOf<List<Recommended>>(emptyList()) }
+    var registeredIds by remember { mutableStateOf<List<String>>(emptyList()) }
     var query by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(true) }
+    var refreshing by remember { mutableStateOf(false) }
     var reason by remember { mutableStateOf("") }
     var isStale by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
@@ -41,12 +53,29 @@ fun HomeScreen(
             is Result.Error -> errorMsg = res.message
         }
         when (val recs = repository.recommendations()) {
-            is Result.Success -> recommendations = recs.data.recommendations.map { it.event }
+            is Result.Success -> recommendations = recs.data.recommendations.map { Recommended(it.event, it.reason) }
             is Result.Error -> recommendations = emptyList()
+        }
+        registeredIds = when (val b = repository.bookmarks()) {
+            is Result.Success -> b.data
+            is Result.Error -> repository.registeredIds()
         }
     }
 
-    LaunchedEffect(Unit) { load() }
+    LaunchedEffect(Unit) {
+        load()
+        loading = false
+    }
+
+    fun pullRefresh() {
+        scope.launch {
+            refreshing = true
+            reason = ""
+            query = ""
+            load()
+            refreshing = false
+        }
+    }
 
     fun runSearch() {
         val q = query.trim()
@@ -71,15 +100,24 @@ fun HomeScreen(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Paper)) {
+    val now = remember(events) { LocalDateTime.now() }
+    val nextUp = remember(events, registeredIds) { EventLogic.nextUp(events, registeredIds, now) }
+    val thisWeek = remember(events) { EventLogic.upcomingThisWeek(events, now, max = 5) }
+    val searchMode = query.isNotBlank()
+
+    HubPullRefresh(
+        refreshing = refreshing,
+        onRefresh = { pullRefresh() },
+        modifier = Modifier.fillMaxSize().background(Paper)
+    ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             item {
                 PageHeader(
-                    title = "Event Hub",
-                    description = "Find your next campus event"
+                    title = EventLogic.greeting(repository.loggedInUser()?.name),
+                    description = EventLogic.todayLabel(LocalDate.now())
                 )
             }
             item {
@@ -93,11 +131,7 @@ fun HomeScreen(
                 Spacer(Modifier.height(16.dp))
             }
             if (searching) {
-                item {
-                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Accent)
-                    }
-                }
+                item { SkeletonRows(rows = 3) }
             }
             // Cached data is labelled explicitly instead of being presented as live.
             if (isStale && !searching) {
@@ -119,39 +153,105 @@ fun HomeScreen(
                     }
                 }
             }
-            // While a query is active the results must sit near the search box;
-            // otherwise the recommendation rows push them off the bottom
-            // of the screen and the search looks like it returned nothing.
-            if (recommendations.isNotEmpty() && query.isBlank()) {
-                item {
-                    SectionHeader("Recommended for you") {
-                        scope.launch { load() }
-                    }
-                }
-                items(recommendations.take(3), key = { "rec-${it.id}" }) { e ->
+
+            if (loading) {
+                item { SkeletonRows(rows = 5) }
+            } else if (searchMode) {
+                // While a query is active the results must sit directly under the search box.
+                item { SectionTitle("Results") }
+                items(events, key = { "ev-${it.id}" }) { e ->
                     EventRow(event = e, onClick = { onEventClick(e.id) })
                 }
-            }
-            item {
-                // "All events" Refresh must actually re-query the backend.
-                SectionHeader("All events") {
-                    reason = ""
-                    query = ""
-                    scope.launch { load() }
+                if (events.isEmpty() && !searching && errorMsg == null) {
+                    item {
+                        EmptyHint(
+                            "No events matched. Try a different search.",
+                            actionLabel = "Clear search",
+                            onAction = { pullRefresh() }
+                        )
+                    }
                 }
-            }
-            items(events, key = { "ev-${it.id}" }) { e ->
-                EventRow(event = e, onClick = { onEventClick(e.id) })
-            }
-            if (events.isEmpty() && !searching && errorMsg == null) {
+            } else {
+                nextUp?.let { e ->
+                    item(key = "next-up") {
+                        NextUpPanel(
+                            event = e,
+                            onDirections = { onDirections(e) },
+                            onDetails = { onEventClick(e.id) },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+                if (recommendations.isNotEmpty()) {
+                    item { SectionTitle("Recommended for you") }
+                    items(recommendations.take(3), key = { "rec-${it.event.id}" }) { r ->
+                        EventRow(event = r.event, reason = r.reason.takeIf { it.isNotBlank() }, onClick = { onEventClick(r.event.id) })
+                    }
+                }
                 item {
-                    Text(
-                        "No events matched. Try a different search.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Ink2,
-                        modifier = Modifier.padding(16.dp)
+                    SectionTitle(
+                        "Upcoming this week",
+                        actionLabel = if (onSeeAll != null) "See all" else null,
+                        onAction = onSeeAll
                     )
                 }
+                items(thisWeek, key = { "wk-${it.id}" }) { e ->
+                    EventRow(event = e, onClick = { onEventClick(e.id) })
+                }
+                if (thisWeek.isEmpty() && errorMsg == null) {
+                    item {
+                        EmptyHint(
+                            "Nothing scheduled in the next 7 days.",
+                            actionLabel = if (onSeeAll != null) "Browse all events" else null,
+                            onAction = onSeeAll
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** "Next up": date block + title + time · venue, with Directions and Details as quiet actions. */
+@Composable
+private fun NextUpPanel(
+    event: Event,
+    onDirections: () -> Unit,
+    onDetails: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier.fillMaxWidth()) {
+        SectionLabel("Next up", Modifier.padding(bottom = 6.dp))
+        HubCard(Modifier.fillMaxWidth().testTag("next-up")) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(
+                    Modifier.width(48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        EventLogic.dayNumber(event.date),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Accent
+                    )
+                    Text(EventLogic.weekday(event.date), style = MaterialTheme.typography.labelMedium, color = Ink3)
+                }
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        event.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Ink,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    MetaText(EventLogic.timeVenue(event))
+                }
+            }
+            HubDivider()
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                QuietButton("Directions", onDirections, Modifier.testTag("next-up-directions"))
+                QuietButton("Details", onDetails, Modifier.testTag("next-up-details"))
             }
         }
     }
@@ -167,30 +267,6 @@ internal fun ErrorBanner(message: String, modifier: Modifier = Modifier) {
     NoticeBanner(message, ChipKind.Danger, modifier)
 }
 
-/** Heading with a quiet Refresh action; a hairline closes the section above its first row. */
-@Composable
-private fun SectionHeader(title: String, onRefresh: () -> Unit) {
-    Column(Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = Ink,
-                modifier = Modifier.weight(1f)
-            )
-            QuietButton(
-                text = "Refresh",
-                onClick = onRefresh,
-                modifier = Modifier.semanticsForTest("refresh-$title")
-            )
-        }
-        HubDivider()
-    }
-}
-
-/** Stable test hook so UI tests can target section refresh buttons by name. */
-  internal fun Modifier.semanticsForTest(tag: String): Modifier =
-      this.testTag(tag)
+/** Stable test hook so UI tests can target elements by name. */
+internal fun Modifier.semanticsForTest(tag: String): Modifier =
+    this.testTag(tag)

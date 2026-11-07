@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 
 private val INTEREST_OPTIONS = listOf("tech", "ai", "android", "music", "arts", "wellness", "sports", "career")
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
     repository: HubRepository = HubRepository(),
@@ -35,10 +36,13 @@ fun ProfileScreen(
     var bookmarks by remember { mutableStateOf(repository.registeredIds()) }
     var isStale by remember { mutableStateOf(false) }
     var interests by remember { mutableStateOf(repository.loggedInUser()?.interests.orEmpty()) }
+    // Last value known to be on the server; Save is offered only when [interests] differs.
+    var savedInterests by remember { mutableStateOf(interests) }
+    var savingInterests by remember { mutableStateOf(false) }
+    var refreshing by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
 
-    // Pull the authoritative bookmark list and profile from the server.
-    LaunchedEffect(Unit) {
+    suspend fun load() {
         when (val res = repository.bookmarks()) {
             is Result.Success -> {
                 bookmarks = res.data
@@ -50,30 +54,46 @@ fun ProfileScreen(
             }
         }
         repository.restoreSession()
-        interests = repository.loggedInUser()?.interests.orEmpty()
+        val fresh = repository.loggedInUser()?.interests.orEmpty()
+        // Do not clobber unsaved edits when the profile is refreshed.
+        if (interests == savedInterests) interests = fresh
+        savedInterests = fresh
     }
 
+    // Pull the authoritative bookmark list and profile from the server.
+    LaunchedEffect(Unit) { load() }
+
     fun toggleInterest(tag: String) {
-        val next = if (interests.contains(tag)) interests - tag else interests + tag
-        interests = next
+        interests = if (interests.contains(tag)) interests - tag else interests + tag
+    }
+
+    fun saveInterests() {
+        val next = interests
         scope.launch {
+            savingInterests = true
             when (val res = repository.updateInterests(next)) {
-                is Result.Success -> status = "Interests saved"
+                is Result.Success -> { savedInterests = next; status = "Interests saved" }
                 is Result.Error -> status = res.message
             }
+            savingInterests = false
         }
     }
 
+    val changed = interests.toSet() != savedInterests.toSet()
+
+    HubPullRefresh(
+        refreshing = refreshing,
+        onRefresh = { scope.launch { refreshing = true; load(); refreshing = false } },
+        modifier = Modifier.fillMaxSize().background(Paper)
+    ) {
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Paper),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
             PageHeader(
                 title = "Profile",
-                description = "Your profile is synced with the server"
+                description = "Your account, interests and saved events"
             )
         }
 
@@ -99,49 +119,53 @@ fun ProfileScreen(
         item {
             ProfileHeaderCard(
                 user = repository.loggedInUser(),
+                offline = isStale,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
 
         item {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text(
-                    text = "My interests",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Ink
-                )
-                Spacer(Modifier.height(8.dp))
-                // Interests are editable and persisted to the server.
-                FlowRowSimple(INTEREST_OPTIONS) { tag ->
-                    HubFilterChip(
-                        label = tag,
-                        selected = interests.contains(tag),
-                        onClick = { toggleInterest(tag) },
-                        modifier = Modifier.fillMaxWidth()
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "My interests",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Ink,
+                        modifier = Modifier.weight(1f)
                     )
+                    if (changed) {
+                        QuietButton(
+                            text = if (savingInterests) "Saving…" else "Save",
+                            onClick = { saveInterests() },
+                            enabled = !savingInterests,
+                            modifier = Modifier.testTag("save-interests")
+                        )
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    INTEREST_OPTIONS.forEach { tag ->
+                        HubFilterChip(
+                            label = tag,
+                            selected = interests.contains(tag),
+                            onClick = { toggleInterest(tag) }
+                        )
+                    }
                 }
             }
         }
 
         item {
             Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Bookmarked events (${bookmarks.size})",
-                style = MaterialTheme.typography.titleMedium,
-                color = Ink,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            HubDivider()
+            SectionTitle("Saved events (${bookmarks.size})")
         }
 
         if (bookmarks.isEmpty()) {
             item {
-                Text(
-                    text = "No bookmarks yet — open an event and tap Save.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Ink2,
-                    modifier = Modifier.padding(16.dp)
-                )
+                EmptyHint("No saved events yet.", actionLabel = null)
             }
         } else {
             items(bookmarks, key = { "bm-$it" }) { id ->
@@ -153,9 +177,7 @@ fun ProfileScreen(
 
         item {
             Spacer(Modifier.height(24.dp))
-            SecondaryButton(
-                text = "Sign out",
-                danger = true,
+            TextButton(
                 onClick = {
                     repository.logout()
                     scope.launch {
@@ -166,35 +188,21 @@ fun ProfileScreen(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
                     .fillMaxWidth()
-                    .testTag("sign-out")
-            )
+                    .heightIn(min = 48.dp)
+                    .testTag("sign-out"),
+                shape = ControlShape,
+                colors = ButtonDefaults.textButtonColors(contentColor = Danger)
+            ) { Text("Sign out", style = MaterialTheme.typography.labelLarge) }
         }
+    }
     }
 }
 
 /** Resolves a bookmarked id to its cached event, falling back to the embedded catalogue. */
 private fun eventFor(bookmarks: List<String>, id: String): Event? = OfflineStore.event(id)
 
-/** Small wrapping row helper — avoids depending on an experimental FlowRow API. */
 @Composable
-private fun FlowRowSimple(
-    options: List<String>,
-    content: @Composable (String) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        options.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { item ->
-                    Box(Modifier.weight(1f)) { content(item) }
-                }
-                repeat(3 - row.size) { Box(Modifier.weight(1f)) {} }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileHeaderCard(user: UserProfile?, modifier: Modifier = Modifier) {
+private fun ProfileHeaderCard(user: UserProfile?, offline: Boolean, modifier: Modifier = Modifier) {
     HubCard(modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -218,7 +226,7 @@ private fun ProfileHeaderCard(user: UserProfile?, modifier: Modifier = Modifier)
                     color = Ink3
                 )
                 Spacer(Modifier.height(6.dp))
-                HubChip("Synced with server", ChipKind.Success)
+                HubChip(if (offline) "Offline" else "Synced", if (offline) ChipKind.Warning else ChipKind.Success)
             }
         }
     }

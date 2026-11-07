@@ -6,6 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,6 +31,7 @@ import com.example.eventmanagementhub.data.model.SupportTicket
 import com.example.eventmanagementhub.ui.components.*
 import com.example.eventmanagementhub.ui.theme.*
 import kotlinx.coroutines.launch
+import androidx.compose.ui.text.style.TextAlign
 import java.time.Instant
 import java.util.UUID
 
@@ -72,7 +76,7 @@ private fun ScreenHeader(
 @Composable
 private fun Centered(content: @Composable ColumnScope.() -> Unit) {
     Column(
-        Modifier.fillMaxSize().padding(32.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         content = content
@@ -80,13 +84,16 @@ private fun Centered(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun EmptyState(title: String, hint: String) {
+private fun EmptyState(text: String, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
     Centered {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = Ink)
-        Spacer(Modifier.height(4.dp))
-        Text(hint, style = MaterialTheme.typography.bodyMedium, color = Ink2)
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = Ink2, textAlign = TextAlign.Center)
+        if (actionLabel != null && onAction != null) QuietButton(actionLabel, onAction)
     }
 }
+
+/** List-screen loading placeholder (static blocks, no shimmer). */
+@Composable
+private fun ListSkeleton() = SkeletonRows(rows = 6)
 
 @Composable
 private fun ErrorWithRetry(message: String, onRetry: () -> Unit) {
@@ -109,9 +116,12 @@ private fun StatusChip(status: String) {
 @Composable
 fun AnnouncementsEventsScreen(
     repository: HubRepository = HubRepository(),
-    onEventClick: (String) -> Unit
+    onEventClick: (String) -> Unit,
+    onBrowseEvents: (() -> Unit)? = null
 ) {
     var events by remember { mutableStateOf<List<Event>?>(null) }
+    var latest by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var pulling by remember { mutableStateOf(false) }
     var stale by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -131,6 +141,10 @@ fun AnnouncementsEventsScreen(
             }
             is Result.Error -> if (events == null) events = emptyList()
         }
+        // One extra call for the "latest update" line; absence just hides the line.
+        (repository.announcements() as? Result.Success)?.let {
+            latest = EventLogic.latestAnnouncementByEvent(it.data.announcements)
+        }
         loading = false
     }
     LaunchedEffect(Unit) { load() }
@@ -149,15 +163,30 @@ fun AnnouncementsEventsScreen(
         }
         val list = events
         when {
-            list == null -> Centered { CircularProgressIndicator(color = Accent) }
-            list.isEmpty() -> EmptyState(
-                "No registered events yet",
-                "Register for an event from the Events tab and its announcements and help chats will show up here."
-            )
-            else -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-                item { HubDivider() }
-                items(list, key = { it.id }) { e ->
-                    EventRow(event = e, onClick = { onEventClick(e.id) })
+            list == null -> ListSkeleton()
+            else -> HubPullRefresh(
+                refreshing = pulling,
+                onRefresh = { scope.launch { pulling = true; load(); pulling = false } },
+                modifier = Modifier.weight(1f)
+            ) {
+                if (list.isEmpty()) {
+                    EmptyState(
+                        "No saved events yet. Save an event to see its announcements and help chats here.",
+                        "Browse events".takeIf { onBrowseEvents != null }, onBrowseEvents
+                    )
+                } else {
+                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+                        item { HubDivider() }
+                        items(list, key = { it.id }) { e ->
+                            val now = Instant.now()
+                            EventRow(
+                                event = e,
+                                extra = latest[e.id]?.let { EventLogic.relativeTime(it, now) }
+                                    ?.takeIf { it.isNotBlank() }?.let { "Latest update $it" },
+                                onClick = { onEventClick(e.id) }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -179,6 +208,7 @@ fun EventAnnouncementsScreen(
     var title by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
+    var pulling by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     suspend fun load() {
@@ -207,11 +237,22 @@ fun EventAnnouncementsScreen(
             val list = items
             when {
                 list == null && error != null -> ErrorWithRetry(error!!) { scope.launch { load() } }
-                list == null -> Centered { CircularProgressIndicator(color = Accent) }
-                list.isEmpty() -> EmptyState("No announcements yet", "Organizers' updates for this event will appear here.")
-                else -> LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
-                    if (error != null) item { ErrorBanner(error!!, Modifier.padding(16.dp)) }
-                    items(list, key = { "${it.id}-${it.message.hashCode()}" }) { a -> AnnouncementItem(a) }
+                list == null -> ListSkeleton()
+                else -> HubPullRefresh(
+                    refreshing = pulling,
+                    onRefresh = { scope.launch { pulling = true; load(); pulling = false } },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    if (list.isEmpty()) {
+                        EmptyState("No announcements yet. Updates from the organizers will appear here.", "Refresh") {
+                            scope.launch { load() }
+                        }
+                    } else {
+                        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+                            if (error != null) item { ErrorBanner(error!!, Modifier.padding(16.dp)) }
+                            items(list, key = { "${it.id}-${it.message.hashCode()}" }) { a -> AnnouncementItem(a) }
+                        }
+                    }
                 }
             }
         }
@@ -265,6 +306,7 @@ fun HelpChatsScreen(
     var tickets by remember { mutableStateOf<List<SupportTicket>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
+    var pulling by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     suspend fun load() {
@@ -289,11 +331,21 @@ fun HelpChatsScreen(
             val list = tickets
             when {
                 list == null && error != null -> ErrorWithRetry(error!!) { scope.launch { load() } }
-                list == null -> Centered { CircularProgressIndicator(color = Accent) }
-                list.isEmpty() -> EmptyState("No help chats yet", "Tap + to start a chat with the event team.")
-                else -> LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
-                    if (error != null) item { ErrorBanner(error!!, Modifier.padding(16.dp)) }
-                    items(list, key = { it.id }) { t -> TicketRow(t) { onOpenTicket(t.id) } }
+                list == null -> ListSkeleton()
+                else -> HubPullRefresh(
+                    refreshing = pulling,
+                    onRefresh = { scope.launch { pulling = true; load(); pulling = false } },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (list.isEmpty()) {
+                        EmptyState("No help chats yet.", "Start a chat", onNewChat)
+                    } else {
+                        val now = Instant.now()
+                        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
+                            if (error != null) item { ErrorBanner(error!!, Modifier.padding(16.dp)) }
+                            items(list, key = { it.id }) { t -> TicketRow(t, now) { onOpenTicket(t.id) } }
+                        }
+                    }
                 }
             }
         }
@@ -311,7 +363,9 @@ fun HelpChatsScreen(
 }
 
 @Composable
-private fun TicketRow(t: SupportTicket, onClick: () -> Unit) {
+private fun TicketRow(t: SupportTicket, now: Instant, onClick: () -> Unit) {
+    val unread = ChatReadState.isUnread(t)
+    val whenText = EventLogic.relativeTime(t.lastMessageAt.ifBlank { t.createdAt }, now)
     HubListRow(
         title = t.subject,
         onClick = onClick,
@@ -319,12 +373,20 @@ private fun TicketRow(t: SupportTicket, onClick: () -> Unit) {
         meta = {
             Text(
                 SupportLogic.preview(t),
-                style = MaterialTheme.typography.bodySmall, color = Ink2, maxLines = 2,
+                style = MaterialTheme.typography.bodySmall, color = if (unread) Ink else Ink2, maxLines = 2,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
-            MetaText(SupportLogic.formatTime(t.lastMessageAt))
+            MetaText(whenText)
         },
-        trailing = { StatusChip(t.status) }
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (unread) {
+                    UnreadDot()
+                    Spacer(Modifier.width(8.dp))
+                }
+                StatusChip(t.status)
+            }
+        }
     )
 }
 
@@ -416,6 +478,7 @@ fun ChatThreadScreen(
             is Result.Success -> {
                 ticket = res.data.ticket ?: ticket
                 thread = SupportLogic.mergeThread(thread, res.data.messages)
+                ChatReadState.markViewed(ticketId)
                 loaded = true
                 error = null
             }
@@ -453,6 +516,8 @@ fun ChatThreadScreen(
     LaunchedEffect(ticketId) {
         LiveUpdates.signals.collect { if (SupportLogic.shouldRefreshThread(it, ticketId)) load() }
     }
+    // Leaving the thread counts as having seen everything in it (clears the list unread dot).
+    DisposableEffect(ticketId) { onDispose { ChatReadState.markViewed(ticketId) } }
     LaunchedEffect(thread.size) {
         if (thread.isNotEmpty()) listState.animateScrollToItem(thread.lastIndex)
     }
@@ -469,19 +534,24 @@ fun ChatThreadScreen(
         }
         Box(Modifier.weight(1f)) {
             if (!loaded && thread.isEmpty()) {
-                if (error == null) Centered { CircularProgressIndicator(color = Accent) }
+                if (error == null) ListSkeleton()
             } else {
                 LazyColumn(
                     state = listState,
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(thread, key = { it.clientId ?: it.id }) { item ->
-                        Bubble(item) {
-                            item.clientId?.let { cid ->
-                                thread = SupportLogic.markPending(thread, cid)
-                                error = null
-                                deliver(cid, item.body)
+                    itemsIndexed(thread, key = { _, it -> it.clientId ?: it.id }) { index, item ->
+                        Column {
+                            if (EventLogic.startsNewDay(thread.getOrNull(index - 1)?.createdAt, item.createdAt)) {
+                                DaySeparator(EventLogic.separatorLabel(item.createdAt, Instant.now()).orEmpty())
+                            }
+                            Bubble(item) {
+                                item.clientId?.let { cid ->
+                                    thread = SupportLogic.markPending(thread, cid)
+                                    error = null
+                                    deliver(cid, item.body)
+                                }
                             }
                         }
                     }
@@ -565,5 +635,21 @@ private fun Bubble(item: ThreadItem, onRetry: () -> Unit) {
         ) {
             Text(item.body, style = MaterialTheme.typography.bodyMedium, color = Ink)
         }
+    }
+}
+
+/** Centered day label between message groups ("Today", "Yesterday", "Sat 9 Nov"). */
+@Composable
+private fun DaySeparator(label: String) {
+    if (label.isBlank()) return
+    Box(Modifier.fillMaxWidth().padding(bottom = 12.dp), contentAlignment = Alignment.Center) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Ink3,
+            modifier = Modifier
+                .background(SurfaceSunken, ControlShape)
+                .padding(horizontal = 10.dp, vertical = 3.dp)
+        )
     }
 }

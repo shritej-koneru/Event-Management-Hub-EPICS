@@ -237,9 +237,15 @@ private fun AppRoot() {
                     )
                 }
                 composable("home") {
-                    HomeScreen(onEventClick = { id ->
-                        navController.navigate("event/$id")
-                    })
+                    HomeScreen(
+                        onEventClick = { id -> navController.navigate("event/$id") },
+                        // Same hand-off as Event Details: the Map tab consumes the venue.
+                        onDirections = { e ->
+                            mapTargetVenue = e.venueId
+                            openTab("map")
+                        },
+                        onSeeAll = { openTab("events") }
+                    )
                 }
                 composable("events") {
                     EventsScreen(onEventClick = { id ->
@@ -253,9 +259,10 @@ private fun AppRoot() {
                     )
                 }
                 composable("announcements") {
-                    AnnouncementsEventsScreen(onEventClick = { id ->
-                        navController.navigate("announcements/${Uri.encode(id)}")
-                    })
+                    AnnouncementsEventsScreen(
+                        onEventClick = { id -> navController.navigate("announcements/${Uri.encode(id)}") },
+                        onBrowseEvents = { openTab("events") }
+                    )
                 }
                 composable(
                     route = "announcements/{eventId}",
