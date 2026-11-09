@@ -13,6 +13,22 @@ export function migrationFiles() {
 }
 
 /**
+ * Migration files that have not been applied to the connected database yet (read-only).
+ * A database that has never been migrated (no `migrations` table) has every file pending.
+ *
+ * @param {{ query: Function }} [pool] injectable for tests
+ * @returns {Promise<string[]>} pending file names, in apply order
+ */
+export async function pendingMigrations(pool = getPool()) {
+  const files = migrationFiles();
+  const { rows: reg } = await pool.query("SELECT to_regclass('public.migrations') AS t");
+  if (!reg[0]?.t) return files;
+  const { rows } = await pool.query('SELECT id FROM migrations');
+  const applied = new Set(rows.map((row) => row.id));
+  return files.filter((file) => !applied.has(file));
+}
+
+/**
  * Applies every not-yet-applied migration, one transaction per file.
  * Safe to call on every boot — applied files are skipped.
  */

@@ -21,7 +21,7 @@
     "verify:migrations": "node scripts/verify-migrations.mjs"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=20.19.0 <25"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

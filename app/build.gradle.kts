@@ -1,3 +1,4 @@
+import java.net.URI
 import java.nio.file.Files
 
 plugins {
@@ -26,6 +27,61 @@ if (!customBuildDir.isNullOrBlank()) {
     layout.buildDirectory.set(file(customBuildDir))
 }
 
+// ---- Backend origin (BuildConfig.API_BASE_URL) ---------------------------------------------------
+// An ORIGIN, scheme://host[:port]/ , with NO "/api" (the endpoints already carry "api/"; passing
+// ".../api" would double-prefix every request). The REST client and the Socket.IO client both use it.
+// Most specific wins, per build type:
+//   1. -P API_BASE_URL_DEBUG / -P API_BASE_URL_RELEASE      on the Gradle command line
+//   2. API_BASE_URL_DEBUG / API_BASE_URL_RELEASE            in local.properties (untracked, this machine only)
+//   3. -P API_BASE_URL, then API_BASE_URL in local.properties   (applies to BOTH build types)
+//   4. built-in default: debug = emulator alias http://10.0.2.2:3000/ (host loopback, server PORT=3000);
+//      release = a non-routable placeholder, and assembleRelease/bundleRelease FAIL until a real
+//      https URL is provided (cleartext is blocked in release by src/main network_security_config).
+// Production example (the URL Render assigns to your web service; never commit a guessed value):
+//   local.properties:   API_BASE_URL_RELEASE=https://<your-service>.onrender.com/
+//   or CLI:             ./gradlew :app:assembleRelease -PAPI_BASE_URL_RELEASE=https://<your-service>.onrender.com/
+fun apiProp(key: String): String? =
+    ((project.findProperty(key) as String?) ?: localProp(key))?.trim()?.takeIf { it.isNotEmpty() }
+
+fun apiBaseUrlFor(buildType: String): String? = apiProp("API_BASE_URL_${buildType.uppercase()}") ?: apiProp("API_BASE_URL")
+
+/** Null when [url] is a usable origin; otherwise what is wrong with it. */
+fun originProblem(url: String, httpsOnly: Boolean): String? {
+    if ('"' in url || '\\' in url) return "must not contain quotes or backslashes"
+    val uri = runCatching { URI(url) }.getOrNull() ?: return "is not a valid URL"
+    val schemeOk = uri.scheme == "https" || (!httpsOnly && uri.scheme == "http")
+    if (!schemeOk) return if (httpsOnly) "must use https://" else "must start with http:// or https://"
+    if (uri.host.isNullOrBlank()) return "must include a host"
+    if (!(uri.path.isNullOrEmpty() || uri.path == "/") || uri.query != null || uri.fragment != null) {
+        return "must be the server root only, without /api or any path, query or fragment"
+    }
+    return null
+}
+
+val debugApiBaseUrl: String = (apiBaseUrlFor("debug") ?: "http://10.0.2.2:3000/").also { url ->
+    // The URL is embedded in generated source, so quotes are refused outright; other problems only warn for debug.
+    require('"' !in url && '\\' !in url) { "API_BASE_URL(_DEBUG) must not contain quotes or backslashes" }
+    originProblem(url, httpsOnly = false)?.let { logger.warn("API_BASE_URL for the debug build $it: $url") }
+}
+val releaseApiBaseUrlOverride: String? = apiBaseUrlFor("release")?.also { url ->
+    require('"' !in url && '\\' !in url) { "API_BASE_URL(_RELEASE) must not contain quotes or backslashes" }
+}
+val releaseApiBaseUrl: String = releaseApiBaseUrlOverride ?: "https://configure-api-base-url.invalid/"
+
+// Fail fast instead of shipping a release build that talks to a placeholder.
+gradle.taskGraph.whenReady {
+    val packagesRelease = allTasks.any { it.project == project && (it.name == "assembleRelease" || it.name == "bundleRelease") }
+    if (packagesRelease) {
+        val url = releaseApiBaseUrlOverride ?: throw GradleException(
+            "Release builds need the production backend URL. Set API_BASE_URL_RELEASE=https://<your-service>.onrender.com/ " +
+                "in local.properties, or pass -PAPI_BASE_URL_RELEASE=... (the server root, without /api)."
+        )
+        originProblem(url, httpsOnly = true)?.let {
+            throw GradleException("API_BASE_URL_RELEASE $it. Got: $url")
+        }
+    }
+}
+
 android {
     namespace = "com.example.eventmanagementhub"
     // API 36 minor release 1 ("Android 16.0 (36.1)" in SDK Manager). Plain
@@ -46,20 +102,13 @@ android {
 
     }
 
-    // Backend origin baked into BuildConfig.API_BASE_URL. Most specific wins:
-    //   1. -P API_BASE_URL=... on the Gradle command line
-    //   2. API_BASE_URL=... in local.properties (untracked -> this machine only)
-    //   3. built-in default: debug = emulator alias http://10.0.2.2:3000/ (host loopback,
-    //      matches server PORT=3000); release = a non-routable placeholder, so a release
-    //      build MUST be given its real https URL (cleartext is blocked in release).
-    val apiBaseUrlOverride: String? = (project.findProperty("API_BASE_URL") as String?) ?: localProp("API_BASE_URL")
-
+    // Backend origin baked into BuildConfig.API_BASE_URL: see the "Backend origin" block above `android`.
     buildTypes {
         debug {
-            buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrlOverride ?: "http://10.0.2.2:3000/"}\"")
+            buildConfigField("String", "API_BASE_URL", "\"$debugApiBaseUrl\"")
         }
         release {
-            buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrlOverride ?: "https://configure-api-base-url.invalid/"}\"")
+            buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

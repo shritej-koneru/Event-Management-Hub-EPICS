@@ -57,6 +57,30 @@ export function resolveSeedDemoUser(envLike = {}, prod = false) {
   return !prod;
 }
 
+/**
+ * What the server does to the database when it boots.
+ *
+ * Outside production nothing changes: migrations are applied and an empty database is seeded, so
+ * `npm run dev` and the tests keep working with zero setup. In production a restart must NOT touch the
+ * schema or insert data on its own, so both are off by default:
+ *   - MIGRATE_ON_BOOT=true  opts in to applying pending migrations at boot (default: false in production).
+ *     With it off the server still refuses to start if migrations are pending (see server.js), so a
+ *     failed or forgotten `npm run db:migrate` is a failed deploy, not a half-migrated database.
+ *   - Seeding an empty database at boot is development-only. SEED_ON_BOOT=true (see `seedOnBoot`)
+ *     remains an explicit opt-in that forces the idempotent seed.
+ *
+ * Exported as a pure function so the policy can be unit tested without mutating `process.env`.
+ *
+ * @returns {{ migrate: boolean, seedIfEmpty: boolean }}
+ */
+export function resolveBootPlan(envLike = {}, prod = false) {
+  const raw = String(envLike.MIGRATE_ON_BOOT ?? '').trim().toLowerCase();
+  let migrate = !prod;
+  if (raw === 'true' || raw === '1' || raw === 'yes') migrate = true;
+  else if (raw === 'false' || raw === '0' || raw === 'no') migrate = false;
+  return { migrate, seedIfEmpty: !prod };
+}
+
 /** Minimum JWT_SECRET length enforced in production. */
 export const MIN_PROD_SECRET_LENGTH = 32;
 
@@ -122,8 +146,11 @@ export const config = {
    */
   seedDemoUser: resolveSeedDemoUser(env, isProd),
 
-  /** Force the idempotent seed on every boot (otherwise only on an empty DB). */
+  /** Force the idempotent seed on every boot. Explicit opt-in only; never needed in normal operation. */
   seedOnBoot: bool('SEED_ON_BOOT', false),
+
+  /** Boot-time database actions (migrate / seed-if-empty). Production defaults to neither; see resolveBootPlan. */
+  boot: resolveBootPlan(env, isProd),
 
   /** Comma-separated CORS allowlist. Empty means "reflect the request origin". */
   corsOrigins: (env.CORS_ORIGINS || '')

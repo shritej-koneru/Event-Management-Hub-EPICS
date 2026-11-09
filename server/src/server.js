@@ -2,7 +2,7 @@ import http from 'node:http';
 import { config } from './config/index.js';
 import { createApp } from './app.js';
 import { ensureDatabase, releaseDatabase } from './db/bootstrap.js';
-import { migrate } from './db/migrate.js';
+import { migrate, pendingMigrations } from './db/migrate.js';
 import { seed } from './db/seeds/index.js';
 import { countEvents } from './models/eventModel.js';
 import { validateGraph } from './navigation/graph.js';
@@ -24,16 +24,31 @@ async function start() {
   const databaseUrl = await ensureDatabase();
   console.log(`  database: ${config.useEmbeddedPg ? 'local PostgreSQL' : 'DATABASE_URL'} (${maskUrl(databaseUrl)})`);
 
-  const { applied, total } = await migrate();
-  console.log(`  migrations: ${applied} applied / ${total} total`);
+  if (config.boot.migrate) {
+    const { applied, total } = await migrate();
+    console.log(`  migrations: ${applied} applied / ${total} total`);
+  } else {
+    // Production default (MIGRATE_ON_BOOT unset/false): a restart never changes the schema. Refuse to
+    // serve against an out-of-date schema instead, so a forgotten `npm run db:migrate` fails the deploy
+    // (the previous version keeps running) rather than breaking requests later.
+    const pending = await pendingMigrations();
+    if (pending.length) {
+      throw new Error(
+        `${pending.length} database migration(s) pending (${pending.join(', ')}). ` +
+          'Run `npm run db:migrate` against this database, then restart. ' +
+          'Set MIGRATE_ON_BOOT=true only if you want the server to apply them itself.'
+      );
+    }
+    console.log('  migrations: not applied at boot (MIGRATE_ON_BOOT is off); schema is up to date');
+  }
 
-  // Seed only into an empty database (or when SEED_ON_BOOT=true). Re-seeding on
-  // every boot would resurrect events an organizer deleted. The seed itself is
-  // idempotent, so forcing it is always safe.
-  if (config.seedOnBoot || (await countEvents()) === 0) {
+  // Development/test: seed only into an empty database. Re-seeding on every boot would resurrect events
+  // an organizer deleted. Production never seeds on its own: run `npm run db:seed` once, or set
+  // SEED_ON_BOOT=true to force the (idempotent) seed.
+  if (config.seedOnBoot || (config.boot.seedIfEmpty && (await countEvents()) === 0)) {
     await seed();
   } else {
-    console.log('  seed: skipped (database already populated; set SEED_ON_BOOT=true to force)');
+    console.log('  seed: skipped (set SEED_ON_BOOT=true, or run `npm run db:seed`, to seed)');
   }
 
   // The DB is the graph source of truth: load it into the in-memory registry.
