@@ -3,6 +3,8 @@
 #
 # This file lives in server/, not at the repo root. When you create the Blueprint in the Render
 # dashboard, set "Blueprint Path" to:  server/render.yaml
+# The service itself builds from the repo root (no rootDir) so that one URL serves the web app and the API.
+# The Node version comes from /.node-version at the repo root.
 #
 # COST: both resources below use the `free` plan so applying this Blueprint creates nothing billable.
 # The free plans are for trying it out, not for production:
@@ -15,14 +17,17 @@ services:
   - type: web
     name: emh-server
     runtime: node
-    rootDir: server                  # build/start commands run inside server/; nothing outside it is visible
-    branch: server                   # change to the branch you deploy from (for example main after merging)
+    # No rootDir: the service builds from the repository root so it can see BOTH frontend/ (web UI) and server/ (API).
+    # One service, one URL: Express serves the built frontend/dist plus /api, /ping and /socket.io.
+    branch: server                  # change to the branch you deploy from (for example main after merging)
     region: frankfurt                # Render has no London/UK region; Frankfurt (Germany) is the nearest listed to the UK.
                                      # Must equal the database region (the internal URL only works inside one region);
                                      # a region cannot be changed after creation, so decide before the first apply.
     plan: free
-    buildCommand: npm ci --omit=dev  # production dependencies only; the dev-only embedded PostgreSQL is not installed
-    startCommand: npm start          # node src/server.js: Express + Socket.IO on $PORT (Render sets PORT, default 10000)
+    # Frontend: --include=dev because NODE_ENV=production would otherwise skip vite/typescript, which the build needs.
+    # Backend: production dependencies only; the dev-only embedded PostgreSQL is not installed. Both use their own lockfile.
+    buildCommand: npm ci --prefix frontend --include=dev && npm run build --prefix frontend && npm ci --omit=dev --prefix server
+    startCommand: npm start --prefix server   # node src/server.js: Express + Socket.IO on $PORT (Render sets PORT, default 10000)
     healthCheckPath: /ping           # 2xx = healthy; it also runs a database query
     autoDeployTrigger: commit
     envVars:

@@ -1,7 +1,9 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { config, resolveDatabaseName } from './config/index.js';
+import { config, resolveDatabaseName, ROOT } from './config/index.js';
 import apiRoutes from './routes/index.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 import { apiRateLimit } from './middleware/rateLimit.js';
@@ -37,13 +39,49 @@ function isLoopback(req) {
   return addr === '::1' || addr === '127.0.0.1' || addr === '::ffff:127.0.0.1';
 }
 
+/** Built web frontend (Vite output). Lives next to server/ in the repository; built at deploy time, not committed. */
+export const FRONTEND_DIST = path.resolve(ROOT, '..', 'frontend', 'dist');
+
+/** Paths owned by the API, health check and Socket.IO: never answered with the frontend page. */
+const NON_SPA_PREFIX = /^\/(api|ping|socket\.io)(\/|$)/;
+
+/**
+ * Serves the built frontend from the same origin as the API.
+ *
+ * Does nothing when `dist/index.html` is absent (Android-only use, dev, tests), so the API behaves exactly as before.
+ * Hashed assets are cached for a year; index.html is never cached so a redeploy is picked up. Browser routes
+ * (`/events/123`) get index.html; /api, /ping and /socket.io never do, and a missing file (a path with an extension)
+ * is a real 404 instead of an HTML page pretending to be a script.
+ */
+export function mountFrontend(app, dir = FRONTEND_DIST) {
+  const indexFile = path.join(dir, 'index.html');
+  if (!fs.existsSync(indexFile)) return false;
+
+  app.use(
+    express.static(dir, {
+      index: false,
+      setHeaders(res, filePath) {
+        const hashed = filePath.startsWith(path.join(dir, 'assets') + path.sep);
+        res.setHeader('Cache-Control', hashed ? 'public, max-age=31536000, immutable' : 'no-cache');
+      }
+    })
+  );
+  app.get(/.*/, (req, res, next) => {
+    if (NON_SPA_PREFIX.test(req.path) || path.extname(req.path)) return next();
+    if (!req.accepts('html')) return next();
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.sendFile(indexFile);
+  });
+  return true;
+}
+
 /**
  * Builds the Express application.
  *
  * Kept separate from src/server.js so tests can mount it with supertest
  * without binding a TCP port.
  *
- * @param {{ broadcastEvent?: Function }} [deps] injected after Socket.IO boots
+ * @param {{ broadcastEvent?: Function, frontendDir?: string }} [deps] broadcastEvent is injected after Socket.IO boots
  */
 export function createApp(deps = {}) {
   const app = express();
@@ -52,7 +90,16 @@ export function createApp(deps = {}) {
 
   // Security headers. `crossOriginResourcePolicy: false` keeps the resource
   // policy from blocking the Android client and browser preflights.
-  app.use(helmet({ crossOriginResourcePolicy: false }));
+  // The only CSP change from helmet's defaults: the web map draws OpenStreetMap tiles as images.
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: false,
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: { 'img-src': ["'self'", 'data:', 'https://*.tile.openstreetmap.org'] }
+      }
+    })
+  );
 
   app.set('trust proxy', config.isProd ? 1 : false);
   app.use(cors({ origin: corsOriginDelegate(), credentials: true }));
@@ -100,6 +147,9 @@ export function createApp(deps = {}) {
     next();
   };
   app.use('/api', registryReady, apiRoutes);
+
+  // After every API route, before the JSON 404, so unmatched /api paths still get the API's 404.
+  mountFrontend(app, deps.frontendDir);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
