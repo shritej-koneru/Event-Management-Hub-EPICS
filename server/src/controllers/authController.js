@@ -15,8 +15,10 @@ async function requireExistingEvent(eventId) {
   return event;
 }
 
-/** POST /api/auth/register -> 201 { token, user } */
-export const register = asyncHandler(async (req, res) => {
+/**
+ * Creates the account with a FIXED role chosen by the route (never taken from the request body) and answers 201.
+ */
+async function createAccountAndRespond(req, res, role) {
   const { name, email, password, interests = [] } = req.body;
 
   // Fast path. The unique index below is still the authority: two concurrent
@@ -35,7 +37,8 @@ export const register = asyncHandler(async (req, res) => {
       name,
       email,
       passwordHash,
-      interests
+      interests,
+      role
     });
   } catch (err) {
     if (err?.code === '23505') {
@@ -45,6 +48,25 @@ export const register = asyncHandler(async (req, res) => {
   }
 
   res.status(201).json({ token: signToken(user), user: toPublicUser(user) });
+}
+
+/** POST /api/auth/register -> 201 { token, user }. The mobile app's sign-up: always a student. */
+export const register = asyncHandler(async (req, res) => createAccountAndRespond(req, res, 'student'));
+
+/** GET /api/auth/manager-signup -> 200 { enabled }. Lets the website decide whether to offer manager sign-up. */
+export const managerSignupStatus = (req, res) => {
+  res.json({ enabled: config.managerSignupEnabled === true });
+};
+
+/**
+ * POST /api/auth/register-manager -> 201 { token, user } with role "organizer".
+ * The website's sign-up. Refused with 403 unless the operator enabled it (off by default in production).
+ */
+export const registerManager = asyncHandler(async (req, res) => {
+  if (config.managerSignupEnabled !== true) {
+    throw ApiError.forbidden('Manager sign-up is turned off on this server', 'MANAGER_SIGNUP_DISABLED');
+  }
+  return createAccountAndRespond(req, res, 'organizer');
 });
 
 /** POST /api/auth/login -> 200 { token, user } */

@@ -24,13 +24,13 @@ export async function findUserById(id) {
   return rows[0] ?? null;
 }
 
-export async function insertUser({ id, name, email, passwordHash, interests = [] }) {
+export async function insertUser({ id, name, email, passwordHash, interests = [], role = 'student' }) {
   const pool = getPool();
   const { rows } = await pool.query(
-    `INSERT INTO users (id, name, email, password_hash, interests)
-     VALUES ($1, $2, $3, $4, $5::jsonb)
+    `INSERT INTO users (id, name, email, password_hash, interests, role)
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6)
      RETURNING *`,
-    [id, name, email, passwordHash, JSON.stringify(interests)]
+    [id, name, email, passwordHash, JSON.stringify(interests), role]
   );
   return rows[0];
 }

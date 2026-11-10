@@ -20,6 +20,8 @@ export interface AuthState {
   /** organizer or admin */
   isManager: boolean
   login: (email: string, password: string) => Promise<void>
+  /** Creates an organizer account (only when the server allows it) and signs it in. */
+  registerManager: (name: string, email: string, password: string) => Promise<void>
   logout: () => void
 }
 

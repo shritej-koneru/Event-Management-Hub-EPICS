@@ -99,6 +99,7 @@ deliberately from your machine against the database's **external** URL, as in st
 | `MIGRATE_ON_BOOT` | Blueprint | `false` |
 | `PORT` | Render | defaults to 10000; the server binds all interfaces on it |
 | `CORS_ORIGINS` | you, in the dashboard, only if a browser front end calls the API | comma-separated exact origins. Empty in production = no browser access (the Android app sends no Origin header and is unaffected). Socket.IO uses the same allowlist |
+| `ALLOW_MANAGER_SIGNUP` | you, in the dashboard, only while you need it | **off by default in production.** Set `true` to let the website's "Create a manager account" form create organizer accounts (`POST /api/auth/register-manager`); anyone who can reach the URL could use it, so set it back to `false` (or delete it) once your managers exist. The mobile app's sign-up is separate and always creates students. Changing it restarts the service |
 | `JWT_EXPIRES_IN`, `BCRYPT_ROUNDS` | optional | defaults `7d`, `10` |
 | `SEED_DEMO_USER`, `DEMO_USER_PASSWORD`, `SEED_ON_BOOT` | leave unset | see section 4 |
 | `API_BASE_URL`, `USE_EMBEDDED_PG`, `EMBEDDED_PG_*` | not used on Render | |

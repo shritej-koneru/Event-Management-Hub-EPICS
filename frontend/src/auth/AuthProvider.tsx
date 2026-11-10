@@ -92,6 +92,17 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     [applyToken],
   )
 
+  const registerManager = useCallback(
+    async (name: string, email: string, password: string) => {
+      const res = await api<AuthResponse>('/auth/register-manager', { method: 'POST', body: { name, email, password } })
+      if (!isManager(res.user.role)) throw new NotManagerError()
+      applyToken(res.token)
+      setUser(res.user)
+      setLoading(false)
+    },
+    [applyToken],
+  )
+
   const value = useMemo<AuthState>(
     () => ({
       token,
@@ -99,9 +110,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       isManager: user ? isManager(user.role) : false,
       login,
+      registerManager,
       logout,
     }),
-    [token, user, loading, login, logout],
+    [token, user, loading, login, registerManager, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

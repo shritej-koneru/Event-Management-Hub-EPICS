@@ -37,6 +37,17 @@ curl -s -X POST http://localhost:3000/api/auth/register \
   -d '{"name":"Test","email":"test@example.com","password":"secret123"}'
 ```
 
+The role is decided by the endpoint, never by the body: this one always creates a `student` (a `role` field in the
+body is ignored).
+
+## POST /api/auth/register-manager · GET /api/auth/manager-signup
+
+The website's sign-up. Same body as `register` (`interests` is ignored) → `201` `{ token, user }` with
+`user.role = "organizer"` · `403 MANAGER_SIGNUP_DISABLED` · `409 EMAIL_TAKEN` · `400 VALIDATION_ERROR`.
+It only works when `ALLOW_MANAGER_SIGNUP` is on: **off by default in production**, on in development and tests.
+It can create an `organizer` only, never an `admin`. `GET /api/auth/manager-signup` (no auth) answers
+`{ "enabled": true|false }` so the website knows whether to show the form.
+
 ## POST /api/auth/login
 
 Body: `{ "email", "password" }` → `200` `{ token, user }` · `401 INVALID_CREDENTIALS`

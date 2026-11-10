@@ -58,6 +58,23 @@ export function resolveSeedDemoUser(envLike = {}, prod = false) {
 }
 
 /**
+ * Whether the website may create manager (organizer) accounts through POST /api/auth/register-manager.
+ *
+ * Anyone who can reach the server could use that endpoint to become a manager (post announcements, read every
+ * help-desk ticket), so in production it is OFF unless an operator sets ALLOW_MANAGER_SIGNUP=true on purpose, and
+ * should be switched off again once the managers exist. Everywhere else (local development, tests) it defaults to on.
+ * The app's student sign-up (POST /api/auth/register) is unaffected and can never create a manager.
+ *
+ * Exported as a pure function so the policy can be unit tested without mutating `process.env`.
+ */
+export function resolveManagerSignup(envLike = {}, prod = false) {
+  const raw = String(envLike.ALLOW_MANAGER_SIGNUP ?? '').trim().toLowerCase();
+  if (raw === 'true' || raw === '1' || raw === 'yes') return true;
+  if (raw === 'false' || raw === '0' || raw === 'no') return false;
+  return !prod;
+}
+
+/**
  * What the server does to the database when it boots.
  *
  * Outside production nothing changes: migrations are applied and an empty database is seeded, so
@@ -145,6 +162,9 @@ export const config = {
    * seeding. Off by default in production - see resolveSeedDemoUser().
    */
   seedDemoUser: resolveSeedDemoUser(env, isProd),
+
+  /** Lets the website create organizer accounts. Off by default in production - see resolveManagerSignup(). */
+  managerSignupEnabled: resolveManagerSignup(env, isProd),
 
   /** Force the idempotent seed on every boot. Explicit opt-in only; never needed in normal operation. */
   seedOnBoot: bool('SEED_ON_BOOT', false),

@@ -16,6 +16,10 @@ const router = Router();
 router.post('/register', authRateLimit, validate({ body: registerSchema }), auth.register);
 router.post('/login', authRateLimit, validate({ body: loginSchema }), auth.login);
 
+// Website manager sign-up: creates an organizer, but only when the operator turned it on (see config).
+router.get('/manager-signup', auth.managerSignupStatus);
+router.post('/register-manager', authRateLimit, validate({ body: registerSchema }), auth.registerManager);
+
 // GET /api/auth/me -> 200 (requires JWT)
 router.get('/me', requireAuth, auth.me);
 
