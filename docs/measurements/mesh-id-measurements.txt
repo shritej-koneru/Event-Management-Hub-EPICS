@@ -1,0 +1,45 @@
+== A. Source device id (3 chars of a 32-char alphabet, SecureRandom, persisted)
+keyspace = 32^3 = 32768
+P(one given pair of installs share an id) = 1/32768 = 0.003052%
+installs | exact P(any two share an id) | Monte Carlo (20000 trials, seed 42)
+       5 |                      0.0305% | 0.0250%
+      10 |                      0.1372% | 0.1550%
+      30 |                      1.3191% | 1.2150%
+      50 |                      3.6712% | 3.5850%
+     100 |                     14.0337% | 13.6250%
+     200 |                     45.5853% | 45.1100%
+     500 |                     97.8216% | 97.7950%
+    1000 |                    100.0000% | 100.0000%
+note: id persists in SharedPreferences; app data clear / reinstall => new random id (source reading).
+
+== B. Wire message id (first 3 ASCII chars of a random UUID string)
+messages created+encoded+decoded: 2000000
+distinct wire msgIds observed   : 4096  (theory 16^3 = 4096)
+alphabet observed               : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, b, c, d, e, f]
+ids not exactly 3 chars         : 0
+effective entropy               : 12.0 bits
+sender-side id length 36 vs receiver-side id length 3 (same message)
+
+== C. Router dedup (key = msgId only, maxSeen = 4096, never reset in app/meshlib)
+fresh Router, N distinct messages from DIFFERENT senders heard in sequence;
+'delivered' = reached the sink. Average of 100 runs.
+   N heard | delivered (avg) | % delivered | theory 4096*(1-e^(-N/4096))
+      100 |            99.0 |       99.0% | 98.8
+      500 |           471.3 |       94.3% | 470.7
+     1000 |           889.2 |       88.9% | 887.3
+     2000 |          1582.5 |       79.1% | 1582.4
+     4096 |          2590.5 |       63.2% | 2589.2
+     8192 |          3545.2 |       43.3% | 3541.7
+    20000 |          4064.5 |       20.3% | 4065.0
+    50000 |          4096.0 |        8.2% | 4096.0
+sanity: same message heard twice => delivered 1 time(s) (expected 1)
+
+== D. Can two gateways derive the same id for the same heard message?
+gateway1 createdAt=1794239911677  gateway2 createdAt=1794239913184  (decode stamps LOCAL receive time)
+original createdAt=1794239911677  (never on the wire)
+same src/msgId on both gateways: true / true
+placeholder 'm1:src:msgId:createdAtSec' agrees across gateways: false
+pairs of distinct messages from the SAME sender in the SAME second share a wire id with p = 1/4096
+fragment group id sample=A4R (3 chars of 32-char alphabet => 32768 values; FNV-1a over src|text|epochMs)
+a 59-char text becomes 9 frames; each frame is its own MeshMessage with its OWN random 3-hex msgId
+distinct msgIds across those frames: 9 (so frame ids are not a message identity)

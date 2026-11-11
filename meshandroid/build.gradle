@@ -1,0 +1,28 @@
+// Offline BLE mesh BACKEND for the Event Management Hub app: Android transport (BLE advertise/scan), the mesh manager
+// and the foreground service. NO screens. The pure-Java engine lives in :meshlib. Source: offline-backend @ 7daad04
+// `Application/app` (mesh/ + service/ only), with the deliberate changes listed in ../MERGE_PROGRESS.md.
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'com.epics.bitchat'
+    compileSdk 34
+    buildToolsVersion "36.0.0"
+
+    defaultConfig {
+        minSdk 26
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    api project(':meshlib')
+    implementation 'androidx.core:core:1.13.1'
+    testImplementation 'junit:junit:4.13.2'
+}

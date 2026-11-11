@@ -1,0 +1,21 @@
+NOTE (added by hand): output of MeshIdMeasure part C re-run AFTER the R3 Router change. The section title below is the
+tool's old text and is stale: the Router now keys on source+id+kind+dst+payload with sliding expiry. The 'theory' column is
+the OLD id-only formula and no longer applies. This traffic is deliberately harsh: only 29 distinct sources and a constant payload
+'x' => 118,784 distinct keys vs a 4096-entry window, so ~3.4% key clashes are expected (observed ~3.3% at large N).
+With distinct payloads the unit test delivers 20000/20000. Before R3 this same tool gave 63% at N=4096 and 8% at N=50000.
+
+== C. Router dedup (key = msgId only, maxSeen = 4096, never reset in app/meshlib)
+fresh Router, N distinct messages from DIFFERENT senders heard in sequence;
+'delivered' = reached the sink. Average of 100 runs.
+   N heard | delivered (avg) | % delivered | theory 4096*(1-e^(-N/4096))
+      100 |           100.0 |      100.0% | 98.8
+      500 |           498.9 |       99.8% | 470.7
+     1000 |           995.9 |       99.6% | 887.3
+     2000 |          1983.9 |       99.2% | 1582.4
+     4096 |          4026.7 |       98.3% | 2589.2
+     8192 |          7984.0 |       97.5% | 3541.7
+    20000 |         19380.9 |       96.9% | 4065.0
+    50000 |         48349.4 |       96.7% | 4096.0
+sanity: same message heard twice => delivered 1 time(s) (expected 1)
+
+== D. Can two gateways derive the same id for the same heard message?

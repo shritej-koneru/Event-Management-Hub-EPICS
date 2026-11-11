@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.eventmanagementhub.data.HubRepository
 import com.example.eventmanagementhub.data.LiveUpdates
@@ -117,7 +118,9 @@ private fun StatusChip(status: String) {
 fun AnnouncementsEventsScreen(
     repository: HubRepository = HubRepository(),
     onEventClick: (String) -> Unit,
-    onBrowseEvents: (() -> Unit)? = null
+    onBrowseEvents: (() -> Unit)? = null,
+    /** Opens nearby chat (offline, over Bluetooth). */
+    onOpenNearby: (() -> Unit)? = null
 ) {
     var events by remember { mutableStateOf<List<Event>?>(null) }
     var latest by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
@@ -161,6 +164,8 @@ fun AnnouncementsEventsScreen(
                 StatusBanner("Offline — showing your saved registered events")
             }
         }
+        // Always reachable, including when there are no saved events and when the phone is offline.
+        if (onOpenNearby != null) NearbyEntryRow(onOpenNearby)
         val list = events
         when {
             list == null -> ListSkeleton()
@@ -190,6 +195,19 @@ fun AnnouncementsEventsScreen(
                 }
             }
         }
+    }
+}
+
+/** Row that opens nearby chat: messaging over Bluetooth that needs no internet. */
+@Composable
+internal fun NearbyEntryRow(onOpen: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        SecondaryButton(
+            text = "Nearby chat (offline)",
+            onClick = onOpen,
+            modifier = Modifier.fillMaxWidth().testTag("open-nearby-chat")
+        )
+        MetaText("Message phones around you over Bluetooth, no internet needed", Modifier.padding(top = 4.dp))
     }
 }
 

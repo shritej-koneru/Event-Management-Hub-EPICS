@@ -1,0 +1,720 @@
+--------- beginning of main
+11-09 22:12:06.593 I/Zygote  (19013): Process 19013 created for com.epics.bitchat
+11-09 22:12:06.593 I/m.epics.bitchat(19013): Late-enabling -Xcheck:jni
+11-09 22:12:06.635 I/m.epics.bitchat(19013): Using non-generational CollectorTypeCMC GC.
+11-09 22:12:06.659 D/nativeloader(19013): Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+11-09 22:12:06.671 D/ActivityThread(19013): setConscryptValidator
+11-09 22:12:06.673 D/ActivityThread(19013): setConscryptValidator - put
+11-09 22:12:06.715 D/CompatChangeReporter(19013): Compat change id reported: 242716250; UID 10367; state: ENABLED
+11-09 22:12:06.744 D/nativeloader(19013): Configuring clns-9 for other apk /data/app/~~HYcB3mqPQpYWuPX8ohje0A==/com.epics.bitchat-MXmNtRbKg0ldmToEJtBBeQ==/base.apk. target_sdk_version=34, uses_libraries=, library_path=/data/app/~~HYcB3mqPQpYWuPX8ohje0A==/com.epics.bitchat-MXmNtRbKg0ldmToEJtBBeQ==/lib/arm64, permitted_path=/data:/mnt/expand:/data/user/0/com.epics.bitchat
+11-09 22:12:06.765 V/GraphicsEnvironment(19013): Currently set values for:
+11-09 22:12:06.765 V/GraphicsEnvironment(19013):   angle_gl_driver_selection_pkgs=[]
+11-09 22:12:06.765 V/GraphicsEnvironment(19013):   angle_gl_driver_selection_values=[]
+11-09 22:12:06.765 V/GraphicsEnvironment(19013): com.epics.bitchat is not listed in per-application setting
+11-09 22:12:06.765 V/GraphicsEnvironment(19013): ANGLE allowlist from config: com.dreamgames.royalmatch com.dts.freefiremax com.dxx.firenow com.gramgames.mergedragons com.ludo.king com.mojang.minecraftpe com.my.defense com.nintendo.zaka com.os.airforce com.playrix.fishdomdd.gplay io.teslatech.callbreak jp.konami.prospia net.peakgames.toonblast
+11-09 22:12:06.765 V/GraphicsEnvironment(19013): No special selections for ANGLE, returning default driver choice
+11-09 22:12:06.765 V/GraphicsEnvironment(19013): Neither updatable production driver nor prerelease driver is supported.
+--------- beginning of system
+11-09 22:12:06.851 D/ActivityThread(19013): com.epics.bitchat will use render engine as VK
+11-09 22:12:06.851 D/HWUI    (19013): HWUI - treat SMPTE_170M as sRGB
+11-09 22:12:06.853 I/DisplayManager(19013): Choreographer implicitly registered for the refresh rate.
+11-09 22:12:06.856 D/HWUI    (19013): CacheManager constructor. deviceInfo=(1080, 1920)
+11-09 22:12:06.856 D/libMEOW (19013): meow new tls: 0xb400007df38a2180
+11-09 22:12:06.857 D/libMEOW (19013): meow reload base cfg path: na
+11-09 22:12:06.857 D/libMEOW (19013): meow reload overlay cfg path: na
+11-09 22:12:06.857 W/QT      (19013): qt_process_init() called
+11-09 22:12:06.857 E/QT      (19013): [QT]file does not exist
+11-09 22:12:06.857 W/QT      (19013): Support!!
+11-09 22:12:06.857 D/libMEOW (19013): applied 0 plugin for [com.epics.bitchat].
+11-09 22:12:06.900 D/DesktopExperienceFlags(19013): Toggle override initialized to: false
+11-09 22:12:06.905 D/AppCompatDelegate(19013): Checking for metadata for AppLocalesMetadataHolderService : Service not found
+11-09 22:12:06.920 E/ashmem  (19013): Pinning is deprecated since Android Q. Please use trim or other methods.
+11-09 22:12:06.964 D/DesktopModeFlags(19013): Toggle override initialized to: OVERRIDE_UNSET
+11-09 22:12:06.975 I/DecorView(19013): setWindowBackground: isPopOver=false color=ff141218 d=android.graphics.drawable.ColorDrawable@2c47545
+11-09 22:12:06.985 I/m.epics.bitchat(19013): hiddenapi: Accessing hidden method Landroid/view/ViewGroup;->makeOptionalFitsSystemWindows()V (runtime_flags=0, domain=platform, api=unsupported) from Landroidx/appcompat/widget/ViewUtils; (domain=app, TargetSdkVersion=34) using reflection: allowed
+11-09 22:12:07.027 I/HWUI    (19013): Using FreeType backend (prop=Auto)
+11-09 22:12:07.146 I/BluetoothAdapter(19013): BluetoothAdapter() : com.epics.bitchat
+11-09 22:12:07.149 I/BitChatMesh(19013): starting mesh in BLE mode: id=CTZ name=SM-M156B
+11-09 22:12:07.152 I/BitChatMesh(19013): BLE transport started: id=CTZ name=SM-M15
+11-09 22:12:07.152 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:12:07.153 E/BluetoothLeAdvertiser(19013): Callback not registered or already removed
+11-09 22:12:07.153 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:07.154 I/BluetoothAdapter(19013): BluetoothAdapter() : com.epics.bitchat
+11-09 22:12:07.157 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:12:07.157 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:07.162 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:07.164 D/BluetoothLeScanner(19013): Start Scan with callback
+11-09 22:12:07.182 D/BluetoothLeScanner(19013): onScannerRegistered() - status=0 scannerId=9 mScannerId=0
+11-09 22:12:07.296 I/ViewRootImpl(19013): dVRR is disabled
+11-09 22:12:07.297 D/HardwareRenderer(19013): onDisplayChanged. displayId=0 current wxh=1080x2340 mLargest wxh=0x0
+11-09 22:12:07.298 W/HWUI    (19013): Unknown dataspace 0
+11-09 22:12:07.298 D/HardwareRenderer(19013): Set largestWidth and largestHeight as logical resolution. (1080x2340)
+11-09 22:12:07.298 D/HWUI    (19013): setMaxSurfaceArea requested wxh=(1080,2340) requestedSurfaceArea(2527200) mMaxSurfaceArea(2073600)
+11-09 22:12:07.299 D/NativeCustomFrequencyManager(19013): [NativeCFMS] BpCustomFrequencyManager::BpCustomFrequencyManager()
+11-09 22:12:07.310 D/InputTransport(19013): Input channel constructed: '50bdfbb', fd=129
+11-09 22:12:07.312 I/InsetsController(19013): onStateChanged: host=com.epics.bitchat/com.epics.bitchat.MainActivity, from=android.view.ViewRootImpl.onInsetsStateChanged:3038, state=InsetsState: {mDisplayFrame=Rect(0, 0 - 1080, 2340), mDisplayCutout=DisplayCutout{insets=Rect(0, 80 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(472, 0 - 608, 80), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 displayHeight=2340 physicalDisplayWidth=1080 physicalDisplayHeight=2340 density={2.8125} cutoutSpec={M 0,0 H -24.177777778 V 28.4444444444 H 24.177777778 V 0 H 0 Z @dp} rotation={0} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}} sideOverrides={}}, mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=105, center=Point(105, 105)}, RoundedCorner{position=TopRight, radius=105, center=Point(975, 105)}, RoundedCorner{position=BottomRight, radius=105, center=Point(975, 2235)}, RoundedCorner{position=BottomLeft, radius=105, center=Point(105, 2235)}]}  mRoundedCornerFrame=Rect(0, 0 - 1080, 2340), mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(964, 0 - 1080, 80) rotation=0}, mDisplayShape=DisplayShape{ spec=-311912193 displayWidth=1080 displayHeight=2340 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}, mSources= { InsetsSource: {3 mType=ime mFrame=[0,0][0,0] mAttachedInsets=null mVisible=false mFlags=INVALID mSideHint=NONE mBoundingRects=null}, InsetsSource: {27 mType=displayCutout mFrame=[0,0][1080,80] mAttachedInsets=null mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {3cb10001 mType=navigationBars mFrame=[0,2238][1080,2340] mAttachedInsets=null mVisible=false mFlags= mSideHint=BOTTOM mBoundingRects=null}, InsetsSource: {3cb10004 mType=systemGestures mFrame=[0,0][0,0] mAttachedInsets=null mVisible=true mFlags= mSideHint=NONE mBoundingRects=null}, InsetsSource: {3cb10005 mType=mandatorySystemGestures mFrame=[0,2238][1080,2340] mAttachedInsets=null mVisible=true mFlags= mSideHint=BOTTOM mBoundingRects=null}, InsetsSource: {3cb10006 mType=tappableElement mFrame=[0,2238][1080,2340] mAttachedInsets=null mVisible=true mFlags= mSideHint=BOTTOM mBoundingRects=null}, InsetsSource: {3cb10024 mType=systemGestures mFrame=[0,0][0,0] mAttachedInsets=null mVisible=true mFlags= mSideHint=NONE mBoundingRects=null}, InsetsSource: {3ebf0000 mType=statusBars mFrame=[0,0][1080,80] mAttachedInsets=null mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {3ebf0005 mType=mandatorySystemGestures mFrame=[0,0][1080,112] mAttachedInsets=null mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {3ebf0006 mType=tappableElement mFrame=[0,0][1080,80] mAttachedInsets=null mVisible=true mFlags= mSideHint=TOP mBoundingRects=null} }
+11-09 22:12:07.316 I/VRI[MainActivity]@418be38(19013): synced displayState. AttachInfo displayState=2
+11-09 22:12:07.319 I/VRI[MainActivity]@418be38(19013): setView = com.android.internal.policy.DecorView@26d4213 IsHRR=false mFlingFrameRateChange=0 TM=true
+11-09 22:12:07.320 I/IDS_TAG (19013): Starting IDS observe window
+11-09 22:12:07.320 I/IDS_TAG (19013): Getting Shared Preference for android.app.Application@394563d uid = 10367
+11-09 22:12:07.322 I/IDS_TAG (19013): App android.app.Application@394563d has not finished training
+11-09 22:12:07.323 I/IDS_TAG (19013): Closing IDS observe window
+11-09 22:12:07.323 I/IDS_TAG (19013): Getting Shared Preference for android.app.Application@394563d uid = 10367
+11-09 22:12:07.323 I/IDS_TAG (19013): IDS count updated to 1 for android.app.Application@394563d
+11-09 22:12:07.338 D/VRI[MainActivity]@418be38(19013): WindowInsets changed: 1080x2340 statusBars:[0,80,0,0] mandatorySystemGestures:[0,112,0,102] 
+11-09 22:12:07.340 D/WindowOnBackDispatcher(19013): setTopOnBackInvokedCallback (unwrapped): android.view.ViewRootImpl$$ExternalSyntheticLambda16@62ad65a
+11-09 22:12:07.406 D/BufferQueueConsumer(19013): [](id:4a4500000000,api:0,p:-1,c:19013) connect: controlledByApp=false
+11-09 22:12:07.410 I/BLASTBufferQueue(19013): [VRI[MainActivity]@418be38#0](f:0,a:0,s:0) constructor()
+11-09 22:12:07.411 I/BLASTBufferQueue_Java(19013): new BLASTBufferQueue, mName= VRI[MainActivity]@418be38 mNativeObject= 0xb400007d85edc400 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3603 android.view.ViewRootImpl.relayoutWindow:11813 android.view.ViewRootImpl.performTraversals:4840 android.view.ViewRootImpl.doTraversal:3959 android.view.ViewRootImpl$TraversalRunnable.run:13034 android.view.Choreographer$CallbackRecord.run:1961 android.view.Choreographer$CallbackRecord.run:1970 android.view.Choreographer.doCallbacks:1423 android.view.Choreographer.doFrame:1348 android.view.Choreographer$FrameDisplayEventReceiver.run:1930 
+11-09 22:12:07.411 I/BLASTBufferQueue_Java(19013): update, w= 1080 h= 2340 mName = VRI[MainActivity]@418be38 mNativeObject= 0xb400007d85edc400 sc.mNativeObject= 0xb400007d85e575c0 format= -1 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3608 android.view.ViewRootImpl.relayoutWindow:11813 android.view.ViewRootImpl.performTraversals:4840 android.view.ViewRootImpl.doTraversal:3959 android.view.ViewRootImpl$TraversalRunnable.run:13034 android.view.Choreographer$CallbackRecord.run:1961 
+11-09 22:12:07.412 I/BLASTBufferQueue(19013): [VRI[MainActivity]@418be38#0](f:0,a:0,s:0) update width=1080 height=2340 format=-1 mTransformHint=0
+11-09 22:12:07.413 I/VRI[MainActivity]@418be38(19013): Relayout returned: old=(0,0,1080,2340) new=(0,0,1080,2340) relayoutAsync=false req=(1080,2340)0 dur=49 res=0x3 s={true 0xb400007d85ec5000} ch=true seqId=0
+11-09 22:12:07.415 I/VRI[MainActivity]@418be38(19013): performConfigurationChange setNightDimText nightDimLevel=0
+11-09 22:12:07.419 D/VRI[MainActivity]@418be38(19013): mThreadedRenderer.initialize() mSurface={isValid=true 0xb400007d85ec5000} hwInitialized=true
+11-09 22:12:07.441 D/CompatChangeReporter(19013): Compat change id reported: 263076149; UID 10367; state: ENABLED
+11-09 22:12:07.444 D/VRI[MainActivity]@418be38(19013): reportNextDraw android.view.ViewRootImpl.performTraversals:5507 android.view.ViewRootImpl.doTraversal:3959 android.view.ViewRootImpl$TraversalRunnable.run:13034 android.view.Choreographer$CallbackRecord.run:1961 android.view.Choreographer$CallbackRecord.run:1970 
+11-09 22:12:07.444 D/VRI[MainActivity]@418be38(19013): Setup new sync=wmsSync-VRI[MainActivity]@418be38#0
+11-09 22:12:07.444 I/VRI[MainActivity]@418be38(19013): Creating new active sync group VRI[MainActivity]@418be38#1
+11-09 22:12:07.457 D/VRI[MainActivity]@418be38(19013): registerCallbacksForSync syncBuffer=false
+11-09 22:12:07.497 D/m.epics.bitchat(19013): Can't load libmbrainSDK
+11-09 22:12:07.497 D/m.epics.bitchat(19013): initMbrain failed
+11-09 22:12:07.498 D/VRI[MainActivity]@418be38(19013): Received frameDrawingCallback syncResult=0 frameNum=1.
+11-09 22:12:07.499 I/VRI[MainActivity]@418be38(19013): mWNT: t=0xb400007d85ec3000 mBlastBufferQueue=0xb400007d85edc400 fn= 1 HdrRenderState mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$12.onFrameDraw:15561 android.view.ThreadedRenderer$1.onFrameDraw:751 <bottom of call stack> 
+11-09 22:12:07.499 I/VRI[MainActivity]@418be38(19013): Setting up sync and frameCommitCallback
+11-09 22:12:07.779 I/BLASTBufferQueue(19013): [VRI[MainActivity]@418be38#0](f:0,a:0,s:0) onFrameAvailable the first frame is available
+11-09 22:12:07.780 I/GrallocExtra(19013): gralloc_extra_query:is_SW3D 0
+11-09 22:12:07.780 I/BLASTBufferQueue(19013): [VRI[MainActivity]@418be38#0](f:0,a:1,s:0) acquireNextBufferLocked size=1080x2340 mFrameNumber=1 applyTransaction=true mTimestamp=559118657857324(auto) mPendingTransactions.size=0 graphicBufferId=81660213198853 transform=0
+11-09 22:12:07.781 D/m.epics.bitchat(19013): Can't load libmbrainSDK
+11-09 22:12:07.781 D/m.epics.bitchat(19013): initMbrain failed
+11-09 22:12:07.781 I/VRI[MainActivity]@418be38(19013): Received frameCommittedCallback lastAttemptedDrawFrameNum=1 didProduceBuffer=true
+11-09 22:12:07.782 D/HWUI    (19013): CFMS:: SetUp Pid : 19013    Tid : 19032
+11-09 22:12:07.782 D/VRI[MainActivity]@418be38(19013): reportDrawFinished seqId=0
+11-09 22:12:07.801 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:12:07.803 I/HWUI    (19013): Davey! duration=933ms; Flags=1, FrameTimelineVsyncId=97505559, IntendedVsync=559117726293207, Vsync=559118192605403, InputEventId=0, HandleInputStart=559118202702632, AnimationStart=559118202711247, PerformTraversalsStart=559118202908094, DrawStart=559118336221632, FrameDeadline=559117742959874, FrameStartTime=559118202328401, FrameInterval=16654007, WorkloadTarget=16666667, SyncQueued=559118375305094, SyncStart=559118375504786, IssueDrawCommandsStart=559118375864478, SwapBuffers=559118654828401, FrameCompleted=559118660324171, DequeueBufferDuration=21154, QueueBufferDuration=1752923, GpuCompleted=559118659552401, SwapBuffersCompleted=559118660324171, DisplayPresentTime=0, CommandSubmissionCompleted=559118654828401, 
+11-09 22:12:07.807 D/HWUI    (19013): HWUI - treat SMPTE_170M as sRGB
+11-09 22:12:07.838 I/InsetsSourceConsumer(19013): applyRequestedVisibilityToControl: visible=true, type=statusBars, host=com.epics.bitchat/com.epics.bitchat.MainActivity
+11-09 22:12:07.841 D/VRI[MainActivity]@418be38(19013): mThreadedRenderer.initializeIfNeeded()#2 mSurface={isValid=true 0xb400007d85ec5000}
+11-09 22:12:07.847 D/InputMethodManagerUtils(19013): startInputInner - Id : 0
+11-09 22:12:07.847 I/InputMethodManager(19013): startInputInner - IInputMethodManagerGlobalInvoker.startInputOrWindowGainedFocus
+11-09 22:12:07.869 D/InsetsController(19013): hide(ime())
+11-09 22:12:07.869 I/ImeTracker(19013): com.epics.bitchat:53570829: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+11-09 22:12:07.875 D/InputTransport(19013): Input channel constructed: 'ClientS', fd=168
+11-09 22:12:08.600 I/m.epics.bitchat(19013): Compiler allocated 5314KB to compile void android.view.ViewRootImpl.performTraversals()
+11-09 22:12:12.536 D/ProfileInstaller(19013): Installing profile for com.epics.bitchat
+11-09 22:12:17.202 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:12:17.204 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:12:17.208 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:17.209 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:12:17.209 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:17.218 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:12:17.232 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:12:27.218 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:12:27.220 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:12:27.225 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:27.225 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:12:27.226 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:27.232 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:12:27.249 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:12:37.231 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:12:37.233 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:12:37.236 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:37.236 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:12:37.236 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:37.240 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:12:37.250 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:12:47.240 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:12:47.243 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:12:47.249 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:47.249 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:12:47.250 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:47.256 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:12:47.273 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:12:57.257 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:12:57.259 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:12:57.264 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:57.264 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:12:57.264 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:12:57.270 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:12:57.289 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:13:07.270 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:13:07.272 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:13:07.276 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:07.277 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:13:07.277 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:07.283 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:13:07.300 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:13:17.283 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:13:17.285 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:13:17.290 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:17.291 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:13:17.291 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:17.298 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:13:17.315 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:13:27.298 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:13:27.300 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:13:27.304 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:27.304 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:13:27.305 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:27.312 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:13:27.330 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:13:37.311 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:13:37.312 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:13:37.315 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:37.315 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:13:37.315 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:37.319 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:13:37.328 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:13:47.320 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:13:47.323 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:13:47.330 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:47.331 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:13:47.331 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:47.338 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:13:47.358 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:13:57.337 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:13:57.339 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:13:57.343 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:57.344 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:13:57.344 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:13:57.351 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:13:57.369 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:14:07.351 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:14:07.354 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:14:07.357 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:07.358 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:14:07.358 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:07.364 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:14:07.385 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:14:17.364 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:14:17.366 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:14:17.371 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:17.371 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:14:17.371 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:17.377 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:14:17.394 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:14:27.378 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:14:27.379 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:14:27.383 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:27.384 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:14:27.384 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:27.391 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:14:27.404 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:14:37.390 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:14:37.393 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:14:37.398 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:37.398 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:14:37.399 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:37.405 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:14:37.423 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:14:43.010 D/ActivityThread(19013): com.epics.bitchat will use render engine as VK
+11-09 22:14:43.028 I/DecorView(19013): setWindowBackground: isPopOver=false color=ff141218 d=android.graphics.drawable.ColorDrawable@80d61e8
+11-09 22:14:43.043 D/ScrollView(19013): initGoToTop
+11-09 22:14:43.153 I/ViewRootImpl(19013): dVRR is disabled
+11-09 22:14:43.153 D/NativeCustomFrequencyManager(19013): [NativeCFMS] BpCustomFrequencyManager::BpCustomFrequencyManager()
+11-09 22:14:43.160 D/InputTransport(19013): Input channel constructed: 'b2d354d', fd=171
+11-09 22:14:43.161 I/InsetsController(19013): onStateChanged: host=com.epics.bitchat/com.epics.bitchat.ui.test.HopTestActivity, from=android.view.ViewRootImpl.onInsetsStateChanged:3038, state=InsetsState: {mDisplayFrame=Rect(0, 0 - 1080, 2340), mDisplayCutout=DisplayCutout{insets=Rect(0, 80 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(472, 0 - 608, 80), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 displayHeight=2340 physicalDisplayWidth=1080 physicalDisplayHeight=2340 density={2.8125} cutoutSpec={M 0,0 H -24.177777778 V 28.4444444444 H 24.177777778 V 0 H 0 Z @dp} rotation={0} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}} sideOverrides={}}, mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=105, center=Point(105, 105)}, RoundedCorner{position=TopRight, radius=105, center=Point(975, 105)}, RoundedCorner{position=BottomRight, radius=105, center=Point(975, 2235)}, RoundedCorner{position=BottomLeft, radius=105, center=Point(105, 2235)}]}  mRoundedCornerFrame=Rect(0, 0 - 1080, 2340), mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(964, 0 - 1080, 80) rotation=0}, mDisplayShape=DisplayShape{ spec=-311912193 displayWidth=1080 displayHeight=2340 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}, mSources= { InsetsSource: {3 mType=ime mFrame=[0,0][0,0] mAttachedInsets=null mVisible=false mFlags=INVALID mSideHint=NONE mBoundingRects=null}, InsetsSource: {27 mType=displayCutout mFrame=[0,0][1080,80] mAttachedInsets=null mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {3cb10001 mType=navigationBars mFrame=[0,2238][1080,2340] mAttachedInsets=null mVisible=false mFlags= mSideHint=BOTTOM mBoundingRects=null}, InsetsSource: {3cb10004 mType=systemGestures mFrame=[0,0][0,0] mAttachedInsets=null mVisible=true mFlags= mSideHint=NONE mBoundingRects=null}, InsetsSource: {3cb10005 mType=mandatorySystemGestures mFrame=[0,2238][1080,2340] mAttachedInsets=null mVisible=true mFlags= mSideHint=BOTTOM mBoundingRects=null}, InsetsSource: {3cb10006 mType=tappableElement mFrame=[0,2238][1080,2340] mAttachedInsets=null mVisible=true mFlags= mSideHint=BOTTOM mBoundingRects=null}, InsetsSource: {3cb10024 mType=systemGestures mFrame=[0,0][0,0] mAttachedInsets=null mVisible=true mFlags= mSideHint=NONE mBoundingRects=null}, InsetsSource: {3ebf0000 mType=statusBars mFrame=[0,0][1080,80] mAttachedInsets=null mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {3ebf0005 mType=mandatorySystemGestures mFrame=[0,0][1080,112] mAttachedInsets=null mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {3ebf0006 mType=tappableElement mFrame=[0,0][1080,80] mAttachedInsets=null mVisible=true mFlags= mSideHint=TOP mBoundingRects=null} }
+11-09 22:14:43.161 I/VRI[HopTestActivity]@3174ebd(19013): synced displayState. AttachInfo displayState=2
+11-09 22:14:43.163 I/VRI[HopTestActivity]@3174ebd(19013): setView = com.android.internal.policy.DecorView@f8ed5f IsHRR=false mFlingFrameRateChange=0 TM=true
+11-09 22:14:43.164 D/HWUI    (19013): HWUI - treat SMPTE_170M as sRGB
+11-09 22:14:43.179 D/VRI[HopTestActivity]@3174ebd(19013): WindowInsets changed: 1080x2340 statusBars:[0,80,0,0] mandatorySystemGestures:[0,112,0,102] 
+11-09 22:14:43.179 D/WindowOnBackDispatcher(19013): setTopOnBackInvokedCallback (unwrapped): android.view.ViewRootImpl$$ExternalSyntheticLambda16@1ad4c44
+11-09 22:14:43.208 D/BufferQueueConsumer(19013): [](id:4a4500000001,api:0,p:-1,c:19013) connect: controlledByApp=false
+11-09 22:14:43.208 I/BLASTBufferQueue(19013): [VRI[HopTestActivity]@3174ebd#1](f:0,a:0,s:0) constructor()
+11-09 22:14:43.209 I/BLASTBufferQueue_Java(19013): new BLASTBufferQueue, mName= VRI[HopTestActivity]@3174ebd mNativeObject= 0xb400007cf8ce0000 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3603 android.view.ViewRootImpl.relayoutWindow:11813 android.view.ViewRootImpl.performTraversals:4840 android.view.ViewRootImpl.doTraversal:3959 android.view.ViewRootImpl$TraversalRunnable.run:13034 android.view.Choreographer$CallbackRecord.run:1961 android.view.Choreographer$CallbackRecord.run:1970 android.view.Choreographer.doCallbacks:1423 android.view.Choreographer.doFrame:1348 android.view.Choreographer$FrameDisplayEventReceiver.run:1930 
+11-09 22:14:43.209 I/BLASTBufferQueue_Java(19013): update, w= 1080 h= 2340 mName = VRI[HopTestActivity]@3174ebd mNativeObject= 0xb400007cf8ce0000 sc.mNativeObject= 0xb400007cf8daa540 format= -1 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3608 android.view.ViewRootImpl.relayoutWindow:11813 android.view.ViewRootImpl.performTraversals:4840 android.view.ViewRootImpl.doTraversal:3959 android.view.ViewRootImpl$TraversalRunnable.run:13034 android.view.Choreographer$CallbackRecord.run:1961 
+11-09 22:14:43.209 I/BLASTBufferQueue(19013): [VRI[HopTestActivity]@3174ebd#1](f:0,a:0,s:0) update width=1080 height=2340 format=-1 mTransformHint=0
+11-09 22:14:43.209 I/VRI[HopTestActivity]@3174ebd(19013): Relayout returned: old=(0,0,1080,2340) new=(0,0,1080,2340) relayoutAsync=false req=(1080,2340)0 dur=10 res=0x3 s={true 0xb400007cf8e05400} ch=true seqId=0
+11-09 22:14:43.210 I/VRI[HopTestActivity]@3174ebd(19013): performConfigurationChange setNightDimText nightDimLevel=0
+11-09 22:14:43.210 D/VRI[HopTestActivity]@3174ebd(19013): mThreadedRenderer.initialize() mSurface={isValid=true 0xb400007cf8e05400} hwInitialized=true
+11-09 22:14:43.214 D/ScrollView(19013):  onsize change changed 
+11-09 22:14:43.215 D/VRI[HopTestActivity]@3174ebd(19013): reportNextDraw android.view.ViewRootImpl.performTraversals:5507 android.view.ViewRootImpl.doTraversal:3959 android.view.ViewRootImpl$TraversalRunnable.run:13034 android.view.Choreographer$CallbackRecord.run:1961 android.view.Choreographer$CallbackRecord.run:1970 
+11-09 22:14:43.217 D/VRI[HopTestActivity]@3174ebd(19013): Setup new sync=wmsSync-VRI[HopTestActivity]@3174ebd#2
+11-09 22:14:43.217 I/VRI[HopTestActivity]@3174ebd(19013): Creating new active sync group VRI[HopTestActivity]@3174ebd#3
+11-09 22:14:43.217 D/VRI[HopTestActivity]@3174ebd(19013): registerCallbacksForSync syncBuffer=false
+11-09 22:14:43.229 D/VRI[HopTestActivity]@3174ebd(19013): Received frameDrawingCallback syncResult=0 frameNum=1.
+11-09 22:14:43.229 I/VRI[HopTestActivity]@3174ebd(19013): mWNT: t=0xb400007d85f6b800 mBlastBufferQueue=0xb400007cf8ce0000 fn= 1 HdrRenderState mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$12.onFrameDraw:15561 android.view.ThreadedRenderer$1.onFrameDraw:751 <bottom of call stack> 
+11-09 22:14:43.229 I/VRI[HopTestActivity]@3174ebd(19013): Setting up sync and frameCommitCallback
+11-09 22:14:43.264 I/BLASTBufferQueue(19013): [VRI[HopTestActivity]@3174ebd#1](f:0,a:0,s:0) onFrameAvailable the first frame is available
+11-09 22:14:43.264 I/BLASTBufferQueue(19013): [VRI[HopTestActivity]@3174ebd#1](f:0,a:1,s:0) acquireNextBufferLocked size=1080x2340 mFrameNumber=1 applyTransaction=true mTimestamp=559274142805103(auto) mPendingTransactions.size=0 graphicBufferId=81660213198858 transform=0
+11-09 22:14:43.264 I/VRI[HopTestActivity]@3174ebd(19013): Received frameCommittedCallback lastAttemptedDrawFrameNum=1 didProduceBuffer=true
+11-09 22:14:43.265 D/HWUI    (19013): CFMS:: SetUp Pid : 19013    Tid : 19032
+11-09 22:14:43.265 D/VRI[HopTestActivity]@3174ebd(19013): reportDrawFinished seqId=0
+11-09 22:14:43.265 I/ImeFocusController(19013): onPreWindowFocus: skipped hasWindowFocus=false mHasImeFocus=true
+11-09 22:14:43.266 I/ImeFocusController(19013): onPostWindowFocus: skipped hasWindowFocus=false mHasImeFocus=true
+11-09 22:14:43.269 I/InsetsSourceConsumer(19013): applyRequestedVisibilityToControl: visible=true, type=statusBars, host=com.epics.bitchat/com.epics.bitchat.ui.test.HopTestActivity
+11-09 22:14:43.312 D/VRI[HopTestActivity]@3174ebd(19013): mThreadedRenderer.initializeIfNeeded()#2 mSurface={isValid=true 0xb400007cf8e05400}
+11-09 22:14:43.313 D/InputMethodManagerUtils(19013): startInputInner - Id : 0
+11-09 22:14:43.313 I/InputMethodManager(19013): startInputInner - IInputMethodManagerGlobalInvoker.startInputOrWindowGainedFocus
+11-09 22:14:43.315 D/InsetsController(19013): hide(ime())
+11-09 22:14:43.315 I/ImeTracker(19013): com.epics.bitchat:4f59bd42: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+11-09 22:14:43.317 D/InputTransport(19013): Input channel constructed: 'ClientS', fd=204
+11-09 22:14:43.790 I/VRI[MainActivity]@418be38(19013): handleAppVisibility mAppVisible = true visible = false
+11-09 22:14:43.790 D/VRI[MainActivity]@418be38(19013): visibilityChanged oldVisibility=true newVisibility=false
+11-09 22:14:43.824 I/BLASTBufferQueue(19013): [VRI[MainActivity]@418be38#0](f:0,a:3,s:0) destructor()
+11-09 22:14:43.824 D/BufferQueueConsumer(19013): [VRI[MainActivity]@418be38#0(BLAST Consumer)0](id:4a4500000000,api:0,p:-1,c:19013) disconnect
+11-09 22:14:43.825 I/VRI[MainActivity]@418be38(19013): Relayout returned: old=(0,0,1080,2340) new=(0,0,1080,2340) relayoutAsync=false req=(1080,2340)8 dur=8 res=0x2 s={false 0x0} ch=true seqId=0
+11-09 22:14:43.825 D/VRI[MainActivity]@418be38(19013): Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility
+11-09 22:14:43.827 I/VRI[MainActivity]@418be38(19013): stopped(true) old = false
+11-09 22:14:43.827 D/VRI[MainActivity]@418be38(19013): WindowStopped on com.epics.bitchat/com.epics.bitchat.MainActivity set to true
+11-09 22:14:43.856 I/VRI[MainActivity]@418be38(19013): Relayout returned: old=(0,0,1080,2340) new=(0,0,1080,2340) relayoutAsync=false req=(1080,2340)8 dur=3 res=0x2 s={false 0x0} ch=false seqId=0
+11-09 22:14:47.405 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:14:47.407 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:14:47.412 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:47.412 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:14:47.412 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:47.419 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:14:47.435 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:14:57.419 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:14:57.422 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:14:57.425 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:57.425 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:14:57.425 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:14:57.432 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:14:57.448 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:07.432 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:07.435 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:07.439 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:07.439 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:07.439 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:07.445 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:07.458 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:17.445 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:17.447 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:17.451 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:17.451 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:17.452 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:17.458 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:17.474 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:27.458 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:27.460 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:27.464 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:27.464 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:27.465 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:27.472 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:27.487 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:37.472 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:37.474 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:37.478 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:37.478 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:37.479 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:37.485 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:37.502 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:47.029 I/BitChatMesh(19013): ingest solo-ev-01 (UVF) -> flooding over BLE
+11-09 22:15:47.032 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:47.034 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:47.040 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.040 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:47.040 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.043 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:47.053 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:47.194 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:47.195 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:47.200 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.200 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:47.200 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.206 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:47.222 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:47.356 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:47.358 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:47.363 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.363 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:47.363 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.369 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:47.386 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:47.519 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:47.521 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:47.525 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.525 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:47.526 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.532 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:47.558 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:47.682 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:47.684 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:47.688 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.688 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:47.689 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.695 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:47.712 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:47.846 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:47.847 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:47.851 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.851 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:47.852 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:47.857 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:47.878 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:48.007 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:48.009 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:48.013 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.014 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:48.014 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.020 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:48.038 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:48.170 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:48.172 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:48.176 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.176 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:48.176 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.182 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:48.199 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:48.333 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:48.334 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:48.339 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.339 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:48.339 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.345 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:48.363 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:48.486 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:48.488 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:48.493 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.494 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:48.495 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.502 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:48.519 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:48.652 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:48.654 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:48.658 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.659 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:48.659 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.665 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:48.681 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:48.815 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:48.817 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:48.821 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.821 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:48.821 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.827 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:48.843 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:48.977 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:48.979 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:48.983 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.983 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:48.983 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:48.989 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:49.005 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:49.139 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:49.140 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:49.144 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.145 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:49.145 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.151 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:49.168 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:49.301 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:49.303 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:49.307 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.307 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:49.307 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.313 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:49.330 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:49.463 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:49.465 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:49.468 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.469 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:49.469 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.475 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:49.488 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:49.490 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:49.493 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.494 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:49.494 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.502 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:49.502 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:49.516 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:49.563 D/InputTransport(19013): Input channel destroyed: 'ClientS', fd=204
+11-09 22:15:49.651 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:49.652 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:49.656 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.656 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:49.657 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.663 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:49.679 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:49.813 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:49.815 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:49.819 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.819 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:49.820 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.825 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:49.841 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:49.976 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:49.978 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:49.982 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.982 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:49.983 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:49.990 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:50.007 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:50.140 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:50.142 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:50.146 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.146 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:50.146 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.152 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:50.170 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:50.302 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:50.304 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:50.308 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.309 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:50.309 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.314 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:50.332 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:50.465 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:50.466 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:50.470 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.471 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:50.471 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.476 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:50.491 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:50.493 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:50.497 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.498 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:50.498 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.504 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:50.505 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:50.524 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:50.654 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:50.656 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:50.660 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.660 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:50.660 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.666 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:50.683 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:50.817 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:50.819 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:50.822 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.822 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:50.823 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.829 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:50.846 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:50.979 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:50.981 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:50.985 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.986 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:50.986 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:50.992 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:51.010 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:51.142 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:51.144 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:51.148 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.148 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:51.148 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.154 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:51.170 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:51.304 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:51.306 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:51.310 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.311 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:51.311 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.317 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:51.335 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:51.467 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:51.469 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:51.473 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.474 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:51.474 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.480 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:51.493 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:51.495 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:51.499 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.499 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:51.499 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.505 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:51.505 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:51.519 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:51.655 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:51.657 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:51.660 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.661 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:51.661 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.667 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:51.684 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:51.817 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:51.819 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:51.823 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.823 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:51.824 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.830 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:51.847 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:51.980 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:51.982 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:51.986 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.987 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:51.987 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:51.993 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:52.007 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:52.144 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:52.146 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:52.150 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.151 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:52.151 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.157 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:52.171 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:52.307 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:52.308 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:52.312 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.312 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:52.312 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.318 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:52.335 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:52.469 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:52.470 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:52.474 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.475 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:52.475 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.480 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:52.499 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:52.631 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:52.633 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:52.637 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.638 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:52.638 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.643 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:52.660 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:52.794 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:52.796 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:52.800 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.800 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:52.800 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.806 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:52.823 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:52.957 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:52.959 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:52.963 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.963 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:52.963 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:52.970 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:52.987 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:53.120 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:53.121 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:53.124 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.125 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:53.125 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.129 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:53.144 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:53.281 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:53.282 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:53.285 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.285 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:53.285 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.289 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:53.303 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:53.440 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:53.441 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:53.444 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.445 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:53.445 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.449 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:53.464 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:53.600 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:53.601 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:53.615 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.615 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:53.615 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.627 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:53.645 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:53.771 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:53.773 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:53.776 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.777 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:53.777 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.781 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:53.796 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:15:53.932 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:53.934 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:53.938 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.938 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:53.938 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.945 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:53.946 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:53.952 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.952 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:53.952 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:53.958 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:15:53.977 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(3, -10, 0)
+11-09 22:15:57.485 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:15:57.488 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:15:57.492 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:57.492 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:15:57.492 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:15:57.502 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(3)
+11-09 22:15:57.519 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:16:07.502 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:16:07.504 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:16:07.507 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:16:07.508 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:16:07.508 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:16:07.514 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:16:07.531 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:16:17.514 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:16:17.516 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:16:17.520 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:16:17.520 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:16:17.520 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:16:17.524 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:16:17.537 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:16:27.524 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:16:27.526 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:16:27.530 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:16:27.530 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:16:27.531 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:16:27.536 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:16:27.554 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:16:29.127 I/VRI[HopTestActivity]@3174ebd(19013): ViewPostIme key 0
+11-09 22:16:29.129 D/Activity(19013): onKeyDown(KEYCODE_BACK), activity=com.epics.bitchat.ui.test.HopTestActivity@f2774cd
+11-09 22:16:29.140 I/VRI[HopTestActivity]@3174ebd(19013): ViewPostIme key 1
+11-09 22:16:29.145 D/Activity(19013): onBackInvoked, activity=com.epics.bitchat.ui.test.HopTestActivity@f2774cd, caller=android.app.Activity.onBackPressed:4615 androidx.activity.ComponentActivity.access$001:119 androidx.activity.ComponentActivity$5.run:698 
+11-09 22:16:29.166 I/VRI[MainActivity]@418be38(19013): stopped(false) old = true
+11-09 22:16:29.166 D/VRI[MainActivity]@418be38(19013): WindowStopped on com.epics.bitchat/com.epics.bitchat.MainActivity set to false
+11-09 22:16:29.186 I/VRI[MainActivity]@418be38(19013): handleAppVisibility mAppVisible = false visible = true
+11-09 22:16:29.186 D/VRI[MainActivity]@418be38(19013): visibilityChanged oldVisibility=false newVisibility=true
+11-09 22:16:29.207 D/BufferQueueConsumer(19013): [](id:4a4500000002,api:0,p:-1,c:19013) connect: controlledByApp=false
+11-09 22:16:29.208 I/BLASTBufferQueue(19013): [VRI[MainActivity]@418be38#2](f:0,a:0,s:0) constructor()
+11-09 22:16:29.208 I/BLASTBufferQueue_Java(19013): new BLASTBufferQueue, mName= VRI[MainActivity]@418be38 mNativeObject= 0xb400007cf8e68800 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3603 android.view.ViewRootImpl.relayoutWindow:11813 android.view.ViewRootImpl.performTraversals:4840 android.view.ViewRootImpl.doTraversal:3959 android.view.ViewRootImpl$TraversalRunnable.run:13034 android.view.Choreographer$CallbackRecord.run:1961 android.view.Choreographer$CallbackRecord.run:1970 android.view.Choreographer.doCallbacks:1423 android.view.Choreographer.doFrame:1348 android.view.Choreographer$FrameDisplayEventReceiver.run:1930 
+11-09 22:16:29.208 I/BLASTBufferQueue_Java(19013): update, w= 1080 h= 2340 mName = VRI[MainActivity]@418be38 mNativeObject= 0xb400007cf8e68800 sc.mNativeObject= 0xb400007cf8d05900 format= -1 caller= android.view.ViewRootImpl.updateBlastSurfaceIfNeeded:3608 android.view.ViewRootImpl.relayoutWindow:11813 android.view.ViewRootImpl.performTraversals:4840 android.view.ViewRootImpl.doTraversal:3959 android.view.ViewRootImpl$TraversalRunnable.run:13034 android.view.Choreographer$CallbackRecord.run:1961 
+11-09 22:16:29.209 I/BLASTBufferQueue(19013): [VRI[MainActivity]@418be38#2](f:0,a:0,s:0) update width=1080 height=2340 format=-1 mTransformHint=0
+11-09 22:16:29.210 I/VRI[MainActivity]@418be38(19013): Relayout returned: old=(0,0,1080,2340) new=(0,0,1080,2340) relayoutAsync=false req=(1080,2340)0 dur=13 res=0x3 s={true 0xb400007dea992d00} ch=true seqId=0
+11-09 22:16:29.211 D/VRI[MainActivity]@418be38(19013): mThreadedRenderer.initialize() mSurface={isValid=true 0xb400007dea992d00} hwInitialized=true
+11-09 22:16:29.284 D/VRI[MainActivity]@418be38(19013): reportNextDraw android.view.ViewRootImpl.performTraversals:5507 android.view.ViewRootImpl.doTraversal:3959 android.view.ViewRootImpl$TraversalRunnable.run:13034 android.view.Choreographer$CallbackRecord.run:1961 android.view.Choreographer$CallbackRecord.run:1970 
+11-09 22:16:29.284 D/VRI[MainActivity]@418be38(19013): Setup new sync=wmsSync-VRI[MainActivity]@418be38#4
+11-09 22:16:29.284 I/VRI[MainActivity]@418be38(19013): Creating new active sync group VRI[MainActivity]@418be38#5
+11-09 22:16:29.284 D/VRI[MainActivity]@418be38(19013): Start draw after previous draw not visible
+11-09 22:16:29.285 D/VRI[MainActivity]@418be38(19013): registerCallbacksForSync syncBuffer=false
+11-09 22:16:29.305 D/VRI[MainActivity]@418be38(19013): Received frameDrawingCallback syncResult=0 frameNum=1.
+11-09 22:16:29.306 I/VRI[MainActivity]@418be38(19013): mWNT: t=0xb400007de67bd400 mBlastBufferQueue=0xb400007cf8e68800 fn= 1 HdrRenderState mRenderHdrSdrRatio=1.0 caller= android.view.ViewRootImpl$12.onFrameDraw:15561 android.view.ThreadedRenderer$1.onFrameDraw:751 <bottom of call stack> 
+11-09 22:16:29.306 I/VRI[MainActivity]@418be38(19013): Setting up sync and frameCommitCallback
+11-09 22:16:29.312 I/BLASTBufferQueue(19013): [VRI[MainActivity]@418be38#2](f:0,a:0,s:0) onFrameAvailable the first frame is available
+11-09 22:16:29.313 I/BLASTBufferQueue(19013): [VRI[MainActivity]@418be38#2](f:0,a:1,s:0) acquireNextBufferLocked size=1080x2340 mFrameNumber=1 applyTransaction=true mTimestamp=559380191043186(auto) mPendingTransactions.size=0 graphicBufferId=81660213198865 transform=0
+11-09 22:16:29.313 I/VRI[MainActivity]@418be38(19013): Received frameCommittedCallback lastAttemptedDrawFrameNum=1 didProduceBuffer=true
+11-09 22:16:29.314 D/VRI[MainActivity]@418be38(19013): reportDrawFinished seqId=0
+11-09 22:16:29.315 I/ImeFocusController(19013): onPreWindowFocus: skipped hasWindowFocus=false mHasImeFocus=true
+11-09 22:16:29.317 I/ImeFocusController(19013): onPostWindowFocus: skipped hasWindowFocus=false mHasImeFocus=true
+11-09 22:16:29.318 I/InsetsSourceConsumer(19013): applyRequestedVisibilityToControl: visible=true, type=statusBars, host=com.epics.bitchat/com.epics.bitchat.MainActivity
+11-09 22:16:29.367 D/VRI[MainActivity]@418be38(19013): mThreadedRenderer.initializeIfNeeded()#2 mSurface={isValid=true 0xb400007dea992d00}
+11-09 22:16:29.368 D/InputMethodManagerUtils(19013): startInputInner - Id : 0
+11-09 22:16:29.368 I/InputMethodManager(19013): startInputInner - IInputMethodManagerGlobalInvoker.startInputOrWindowGainedFocus
+11-09 22:16:29.372 D/InsetsController(19013): hide(ime())
+11-09 22:16:29.372 I/ImeTracker(19013): com.epics.bitchat:2e3c1e66: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+11-09 22:16:29.373 D/InputTransport(19013): Input channel constructed: 'ClientS', fd=146
+11-09 22:16:29.791 I/VRI[HopTestActivity]@3174ebd(19013): handleAppVisibility mAppVisible = true visible = false
+11-09 22:16:29.791 D/VRI[HopTestActivity]@3174ebd(19013): visibilityChanged oldVisibility=true newVisibility=false
+11-09 22:16:29.805 I/BLASTBufferQueue(19013): [VRI[HopTestActivity]@3174ebd#1](f:0,a:3,s:0) destructor()
+11-09 22:16:29.805 D/BufferQueueConsumer(19013): [VRI[HopTestActivity]@3174ebd#1(BLAST Consumer)1](id:4a4500000001,api:0,p:-1,c:19013) disconnect
+11-09 22:16:29.806 I/VRI[HopTestActivity]@3174ebd(19013): Relayout returned: old=(0,0,1080,2340) new=(0,0,1080,2340) relayoutAsync=false req=(1080,2340)8 dur=7 res=0x2 s={false 0x0} ch=true seqId=0
+11-09 22:16:29.806 D/VRI[HopTestActivity]@3174ebd(19013): Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility
+11-09 22:16:29.807 I/VRI[HopTestActivity]@3174ebd(19013): stopped(true) old = false
+11-09 22:16:29.807 D/VRI[HopTestActivity]@3174ebd(19013): WindowStopped on com.epics.bitchat/com.epics.bitchat.ui.test.HopTestActivity set to true
+11-09 22:16:29.810 D/WindowOnBackDispatcher(19013): setTopOnBackInvokedCallback (unwrapped): null
+11-09 22:16:29.812 D/ViewRootImpl(19013): Skipping stats log for color mode
+11-09 22:16:29.813 I/VRI[HopTestActivity]@3174ebd(19013): dispatchDetachedFromWindow
+11-09 22:16:29.817 D/InputTransport(19013): Input channel destroyed: 'b2d354d', fd=171
+11-09 22:16:37.536 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:16:37.538 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:16:37.541 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:16:37.541 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:16:37.541 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:16:37.547 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:16:37.561 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
+11-09 22:16:47.547 D/AdvertiseSettings(19013): setTxPowerLevel: 2
+11-09 22:16:47.549 D/BluetoothLeAdvertiser(19013): Stop AdvertingSet
+11-09 22:16:47.554 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:16:47.554 D/BluetoothLeAdvertiser(19013): TxPower == ADVERTISE_TX_POWER_MEDIUM
+11-09 22:16:47.554 D/BluetoothAdapter(19013): isLeEnabled(): ON
+11-09 22:16:47.560 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStopped(2)
+11-09 22:16:47.577 D/BluetoothLeAdvertiser(19013): onAdvertisingSetStarted(2, -10, 0)
