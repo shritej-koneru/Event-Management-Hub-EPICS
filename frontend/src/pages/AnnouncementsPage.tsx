@@ -6,9 +6,11 @@ import { useAuth } from '@/auth/useAuth'
 import ConfirmDialog from '@/components/Dialog'
 import { Empty, ErrorNote, Loading } from '@/components/Feedback'
 import PageContainer from '@/components/layout/PageContainer'
+import { draftAnnouncementWithAi, useAiEnabled } from '@/lib/ai'
 import {
   buttonIconDanger,
   buttonPrimary,
+  buttonSecondary,
   chipClass,
   errorTextClass,
   inputClass,
@@ -91,6 +93,25 @@ export default function AnnouncementsPage() {
   const venues = map.data?.venues ?? []
   const events = myEvents.data?.events ?? []
   const left = MAX - message.length
+
+  const aiEnabled = useAiEnabled()
+  const [notes, setNotes] = useState('')
+  const [aiBusy, setAiBusy] = useState(false)
+
+  /** Puts a draft in the message box. It is never sent: the manager reviews and presses Send. */
+  async function draftWithAi() {
+    setAiBusy(true)
+    setError(null)
+    setNotice(null)
+    try {
+      setMessage(await draftAnnouncementWithAi(notes.trim(), target === 'event' && eventId ? eventId : undefined))
+      setNotice('Draft added. Check it, edit it, then send it yourself.')
+    } catch (err) {
+      setError(apiErrorMessage(err))
+    } finally {
+      setAiBusy(false)
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -217,6 +238,26 @@ export default function AnnouncementsPage() {
               <p role="status" className="text-small text-success">
                 {notice}
               </p>
+            )}
+            {aiEnabled && (
+              <div className="rounded-md border border-line p-3">
+                <label className={labelClass}>
+                  Draft with AI from your notes (optional)
+                  <input
+                    maxLength={800}
+                    className={inputClass}
+                    value={notes}
+                    placeholder="e.g. remind people the doors open at 10:00"
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                </label>
+                <div className="mt-2 flex items-center gap-3">
+                  <button type="button" className={buttonSecondary} disabled={aiBusy || !notes.trim()} onClick={draftWithAi}>
+                    {aiBusy ? 'Drafting...' : 'Draft with AI'}
+                  </button>
+                  <p className="text-caption text-ink-3">Fills the message only. Review and edit, then press Send yourself.</p>
+                </div>
+              </div>
             )}
             <div>
               <button type="submit" disabled={busy} className={buttonPrimary}>

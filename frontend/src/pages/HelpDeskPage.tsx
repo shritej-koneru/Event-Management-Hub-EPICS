@@ -17,6 +17,8 @@ import {
   textareaClass,
 } from '@/components/styles'
 import { api } from '@/lib/api'
+import { suggestTicketCategory, useAiEnabled } from '@/lib/ai'
+import type { CategorySuggestion } from '@/lib/ai'
 import { formatDate, formatDateTime } from '@/lib/format'
 import { apiErrorMessage } from '@/lib/manage'
 import {
@@ -55,6 +57,24 @@ export default function HelpDeskPage() {
   const [draft, setDraft] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const aiEnabled = useAiEnabled()
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestion, setSuggestion] = useState<(CategorySuggestion & { ticketId: string }) | null>(null)
+
+  /** On-demand only; the category is shown, never stored. */
+  async function suggestCategory() {
+    if (!sel.ticket) return
+    const ticketId = sel.ticket
+    setSuggesting(true)
+    setActionError(null)
+    try {
+      setSuggestion({ ...(await suggestTicketCategory(ticketId)), ticketId })
+    } catch (err) {
+      setActionError(apiErrorMessage(err))
+    } finally {
+      setSuggesting(false)
+    }
+  }
 
   const events = useFetch((signal) =>
     api<{ events: SupportEventSummary[] }>('/manage/support/events', { signal }),
@@ -355,7 +375,18 @@ export default function HelpDeskPage() {
                       </span>
                     </p>
                   )}
+                  {suggestion && String(suggestion.ticketId) === sel.ticket && (
+                    <p role="status" className="mt-1 text-small text-ink-2">
+                      Suggested category: <strong className="capitalize">{suggestion.category}</strong>
+                      {suggestion.aiGenerated ? ' (AI suggestion)' : ' (keyword match, AI unavailable)'}. Nothing is saved.
+                    </p>
+                  )}
                 </div>
+                {threadData && aiEnabled && (
+                  <button type="button" className={buttonSecondary} disabled={suggesting} onClick={() => void suggestCategory()}>
+                    {suggesting ? 'Thinking...' : 'Suggest category'}
+                  </button>
+                )}
                 {threadData && (
                   <button
                     type="button"

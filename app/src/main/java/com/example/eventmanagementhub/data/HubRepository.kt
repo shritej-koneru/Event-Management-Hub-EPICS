@@ -3,6 +3,7 @@ package com.example.eventmanagementhub.data
 import com.example.eventmanagementhub.data.api.ApiClient
 import com.example.eventmanagementhub.data.api.AuthProvider
 import com.example.eventmanagementhub.data.api.HubApi
+import com.example.eventmanagementhub.data.model.AiSearchFilters
 import com.example.eventmanagementhub.data.model.AiSearchRequest
 import com.example.eventmanagementhub.data.model.AiSearchResponse
 import com.example.eventmanagementhub.data.model.Announcement
@@ -256,17 +257,22 @@ class HubRepository(
 
     // ---- AI -----------------------------------------------------------------------
 
-    suspend fun aiSearch(query: String): Result<AiSearchResponse> = withContext(Dispatchers.IO) {
+    /**
+     * [filters] are explicit and strict, so they only work against the server: offline we return an error instead of
+     * an unfiltered list that would look filtered.
+     */
+    suspend fun aiSearch(query: String, filters: AiSearchFilters? = null): Result<AiSearchResponse> = withContext(Dispatchers.IO) {
         OfflineStore.awaitReady()
         try {
-            val resp = api.aiSearch(AiSearchRequest(query))
+            val resp = api.aiSearch(AiSearchRequest(query, filters = filters?.takeUnless { it.isEmpty() }))
             val body = resp.body()
             if (resp.isSuccessful && body != null) {
                 OfflineStore.addRecentQuery(query)
                 Result.Success(body)
             } else failure(resp, "Search failed").propagate()
         } catch (e: Exception) {
-            Result.Success(OfflineEngine.search(query), isStale = true)
+            if (filters != null && !filters.isEmpty()) Result.Error("Filters need a connection.", null)
+            else Result.Success(OfflineEngine.search(query), isStale = true)
         }
     }
 

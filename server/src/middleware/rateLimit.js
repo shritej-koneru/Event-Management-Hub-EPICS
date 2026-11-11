@@ -31,12 +31,13 @@ export function buildRateLimiter({
   max,
   code = 'RATE_LIMITED',
   message = 'Too many requests',
-  skipSuccessfulRequests = false
+  skipSuccessfulRequests = false,
+  key = keyGenerator
 }) {
   return rateLimit({
     windowMs,
     limit: max,
-    keyGenerator,
+    keyGenerator: key,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     skipSuccessfulRequests,
@@ -64,3 +65,19 @@ export const apiRateLimit = buildRateLimiter({
   code: 'RATE_LIMITED',
   message: 'Too many requests. Slow down and try again.'
 });
+/**
+ * Limiter for the AI endpoints (each call costs provider quota): per signed-in user when there is one, otherwise per IP.
+ * Exported as a factory so tests can mount a tight one.
+ */
+export function buildAiRateLimit(max) {
+  return buildRateLimiter({
+    windowMs: 60 * 1000,
+    max,
+    code: 'AI_RATE_LIMITED',
+    message: 'Too many AI requests. Try again in a minute.',
+    key: (req) => (req.auth?.uid ? `u:${req.auth.uid}` : `ip:${keyGenerator(req)}`)
+  });
+}
+
+/** Default AI limiter: AI_RATE_PER_MINUTE per user/IP (effectively off under test). */
+export const aiRateLimit = buildAiRateLimit(config.isTest ? 100_000 : config.ai.ratePerMinute);

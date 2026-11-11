@@ -96,7 +96,30 @@ describe('event form', () => {
       capacity: 120,
       host: 'CS Club',
       description: 'Build things',
+      price: null, // unknown stays unknown
+      accessibility: {},
     })
+  })
+  it('sends only explicitly stated price and accessibility', () => {
+    const base = eventToForm(event)
+    const form = {
+      ...base,
+      priceMode: 'paid' as const,
+      priceAmount: '250.50',
+      priceCurrency: 'inr',
+      accessibility: { ...base.accessibility, stepFree: 'yes' as const, captions: 'no' as const },
+    }
+    const p = eventFormToPayload(form)
+    expect(p.price).toEqual({ type: 'paid', amountCents: 25050, currency: 'INR' })
+    expect(p.accessibility).toEqual({ stepFree: true, captions: false })
+    expect(eventFormToPayload({ ...form, priceMode: 'free' }).price).toEqual({ type: 'free' })
+    expect(validateEventForm({ ...form, priceAmount: '0' })).toMatch(/price/i)
+    expect(validateEventForm({ ...form, priceCurrency: 'RUPEES' })).toMatch(/currency/i)
+  })
+  it('round-trips a stored price and accessibility into the form', () => {
+    const form = eventToForm({ ...event, price: { type: 'free' }, accessibility: { stepFree: true, hearingLoop: false } })
+    expect(form.priceMode).toBe('free')
+    expect(form.accessibility).toMatchObject({ stepFree: 'yes', hearingLoop: 'no', captions: 'unknown' })
   })
   it('trims text and coerces numbers', () => {
     const p = eventFormToPayload({ ...emptyEventForm(), title: '  A ', category: ' B', venue: 'V ', capacity: '7' })

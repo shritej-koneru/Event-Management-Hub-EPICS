@@ -282,6 +282,10 @@ private fun AnnouncementItem(a: Announcement) {
             }
             Spacer(Modifier.height(6.dp))
             Text(a.message.ifBlank { a.room }, style = MaterialTheme.typography.bodyMedium, color = Ink)
+            if (a.message.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                AiAnnouncementTools(a.id) // hidden unless the server has AI on; the original above is never replaced
+            }
             if (!a.sentByName.isNullOrBlank()) {
                 Spacer(Modifier.height(4.dp))
                 Text("— ${a.sentByName}", style = MaterialTheme.typography.bodySmall, color = Ink3)
@@ -435,6 +439,7 @@ fun NewChatScreen(
                     enabled = !sending
                 )
             }
+            AiRewriteSuggestion(text = message, kind = "message", onUse = { message = it.take(1000) })
             PrimaryButton(
                 text = "Start chat",
                 onClick = {
@@ -567,6 +572,9 @@ fun ChatThreadScreen(
                     style = MaterialTheme.typography.bodySmall, color = Ink3,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
+            }
+            Box(Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp)) {
+                AiRewriteSuggestion(text = draft, kind = "message", onUse = { draft = it.take(1000) })
             }
             Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.Bottom) {
                 OutlinedTextField(

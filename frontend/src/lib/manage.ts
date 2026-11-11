@@ -1,6 +1,6 @@
 /** Pure helpers for the manager console (unit-tested in manage.test.ts). */
 import { ApiError } from './api'
-import type { CampusBounds, EventItem, MapVenue } from './types'
+import type { AccessibilityKey, CampusBounds, EventAccessibility, EventItem, EventPrice, MapVenue } from './types'
 
 // ---- venue slug ---------------------------------------------------------
 export const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -133,7 +133,28 @@ export interface EventFormValues {
   capacity: string
   host: string
   description: string
+  /** 'unknown' sends null / leaves the feature unstated. Nothing is guessed. */
+  priceMode: 'unknown' | 'free' | 'paid'
+  priceAmount: string
+  priceCurrency: string
+  accessibility: Record<AccessibilityKey, 'unknown' | 'yes' | 'no'>
 }
+
+export const ACCESSIBILITY_OPTIONS: { key: AccessibilityKey; label: string }[] = [
+  { key: 'stepFree', label: 'Step-free access' },
+  { key: 'accessibleRestroom', label: 'Accessible restroom' },
+  { key: 'signLanguage', label: 'Sign language interpretation' },
+  { key: 'captions', label: 'Captions' },
+  { key: 'hearingLoop', label: 'Hearing loop' },
+]
+
+const unknownAccessibility = (): EventFormValues['accessibility'] => ({
+  stepFree: 'unknown',
+  accessibleRestroom: 'unknown',
+  signLanguage: 'unknown',
+  captions: 'unknown',
+  hearingLoop: 'unknown',
+})
 
 export const emptyEventForm = (): EventFormValues => ({
   title: '',
@@ -145,9 +166,20 @@ export const emptyEventForm = (): EventFormValues => ({
   capacity: '50',
   host: '',
   description: '',
+  priceMode: 'unknown',
+  priceAmount: '',
+  priceCurrency: 'INR',
+  accessibility: unknownAccessibility(),
 })
 
 export function eventToForm(e: EventItem): EventFormValues {
+  const accessibility = unknownAccessibility()
+  for (const { key } of ACCESSIBILITY_OPTIONS) {
+    const v = e.accessibility?.[key]
+    if (v === true) accessibility[key] = 'yes'
+    else if (v === false) accessibility[key] = 'no'
+  }
+  const price = e.price
   return {
     title: e.title,
     category: e.category,
@@ -158,7 +190,29 @@ export function eventToForm(e: EventItem): EventFormValues {
     capacity: String(e.capacity),
     host: e.host,
     description: e.description,
+    priceMode: price ? price.type : 'unknown',
+    priceAmount: price?.type === 'paid' ? String(price.amountCents / 100) : '',
+    priceCurrency: price?.type === 'paid' ? price.currency : 'INR',
+    accessibility,
   }
+}
+
+/** Form -> typed price. 'unknown' is null (the server stores "not stated"). */
+export function formPrice(f: EventFormValues): EventPrice | null {
+  if (f.priceMode === 'free') return { type: 'free' }
+  if (f.priceMode === 'paid')
+    return { type: 'paid', amountCents: Math.round(Number(f.priceAmount) * 100), currency: f.priceCurrency.trim().toUpperCase() }
+  return null
+}
+
+/** Only features the organizer explicitly set; 'unknown' ones are left out. */
+export function formAccessibility(f: EventFormValues): EventAccessibility {
+  const out: EventAccessibility = {}
+  for (const { key } of ACCESSIBILITY_OPTIONS) {
+    if (f.accessibility[key] === 'yes') out[key] = true
+    else if (f.accessibility[key] === 'no') out[key] = false
+  }
+  return out
 }
 
 export function eventFormToPayload(f: EventFormValues) {
@@ -172,6 +226,8 @@ export function eventFormToPayload(f: EventFormValues) {
     capacity: Number(f.capacity),
     host: f.host.trim(),
     description: f.description.trim(),
+    price: formPrice(f),
+    accessibility: formAccessibility(f),
   }
 }
 
@@ -186,6 +242,11 @@ export function validateEventForm(f: EventFormValues): string | null {
   if (!Number.isInteger(cap) || cap < 0) return 'Capacity must be a whole number, 0 or more.'
   const dur = Number(f.durationMin)
   if (!Number.isInteger(dur) || dur < 1 || dur > 1440) return 'Duration must be 1-1440 minutes.'
+  if (f.priceMode === 'paid') {
+    const amount = Number(f.priceAmount)
+    if (!(amount > 0) || Math.round(amount * 100) > 100000000) return 'Enter the price as a positive amount.'
+    if (!/^[A-Za-z]{3}$/.test(f.priceCurrency.trim())) return 'Currency must be a 3-letter code, e.g. INR.'
+  }
   return null
 }
 
@@ -217,6 +278,11 @@ const CODE_MESSAGES: Record<string, string> = {
   NOT_REGISTERED: 'That attendee is not registered for this event.',
   EVENT_NOT_FOUND: 'That event no longer exists.',
   TICKET_NOT_FOUND: 'That chat no longer exists.',
+  AI_DISABLED: 'AI helpers are not available on this server right now.',
+  AI_UNAVAILABLE: 'The AI service is not responding. Try again later or write it yourself.',
+  AI_TIMEOUT: 'The AI service took too long. Try again later or write it yourself.',
+  AI_BAD_RESPONSE: 'The AI draft was discarded because it could not be trusted. Try rewording your notes.',
+  AI_RATE_LIMITED: 'AI is busy. Wait a minute and try again.',
   NETWORK_ERROR: 'Cannot reach the server. Check your connection.',
 }
 

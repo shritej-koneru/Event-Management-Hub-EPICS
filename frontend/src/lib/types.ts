@@ -13,6 +13,13 @@ export interface User {
   bookmarks?: string[]
 }
 
+/** Typed price: null = not stated (unknown). Never inferred from the description. */
+export type EventPrice = { type: 'free' } | { type: 'paid'; amountCents: number; currency: string }
+
+/** Accessibility features an organizer has explicitly stated. A missing key means unknown, not "no". */
+export type AccessibilityKey = 'stepFree' | 'accessibleRestroom' | 'signLanguage' | 'captions' | 'hearingLoop'
+export type EventAccessibility = Partial<Record<AccessibilityKey, boolean>>
+
 export interface EventItem {
   id: string
   title: string
@@ -28,6 +35,8 @@ export interface EventItem {
   description: string
   tags: string[]
   icon: string
+  price?: EventPrice | null
+  accessibility?: EventAccessibility
 }
 
 /** GET /api/manage/events item: normal event fields + createdBy, bookmarkCount. */

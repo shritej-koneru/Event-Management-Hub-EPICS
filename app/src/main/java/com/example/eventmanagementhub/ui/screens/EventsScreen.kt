@@ -20,7 +20,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.eventmanagementhub.data.AiLogic
 import com.example.eventmanagementhub.data.HubRepository
 import com.example.eventmanagementhub.data.Result
 import com.example.eventmanagementhub.data.model.Event
@@ -44,6 +47,8 @@ fun EventsScreen(
     var isStale by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
     var bookmarks by remember { mutableStateOf<List<String>>(emptyList()) }
+    var chips by remember { mutableStateOf<Set<AiLogic.Chip>>(emptySet()) }
+    var unknownNote by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     suspend fun loadBookmarks() {
@@ -56,6 +61,20 @@ fun EventsScreen(
 
     suspend fun loadEvents(q: String?) {
         errorMsg = null
+        unknownNote = null
+        if (chips.isNotEmpty()) {
+            // Explicit filters: the server answers only with events that state the value; offline gives an error, never a fake list.
+            val filters = AiLogic.filtersFor(chips, java.time.LocalDate.now())
+            when (val res = repository.aiSearch(AiLogic.queryFor(q.orEmpty(), chips), filters)) {
+                is Result.Success -> {
+                    events = res.data.results.map { it.event }
+                    isStale = res.isStale
+                    unknownNote = AiLogic.unknownNote(res.data.unknownExcluded)
+                }
+                is Result.Error -> errorMsg = res.message
+            }
+            return
+        }
         when (val res = repository.events(query = q?.takeIf { it.isNotBlank() })) {
             is Result.Success -> {
                 events = res.data
@@ -131,6 +150,25 @@ fun EventsScreen(
             }
         } else {
             Spacer(Modifier.height(8.dp))
+        }
+        LazyRow(
+            modifier = Modifier.testTag("filter-chips"),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(AiLogic.Chip.entries, key = { it.name }) { chip ->
+                HubFilterChip(
+                    chip.label,
+                    selected = chip in chips,
+                    onClick = {
+                        chips = if (chip in chips) chips - chip else chips + chip
+                        refresh(query)
+                    }
+                )
+            }
+        }
+        unknownNote?.let {
+            Text(it, color = Ink2, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp))
         }
         HubDivider()
 

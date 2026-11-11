@@ -56,6 +56,25 @@ export const eventIdRouteParamsSchema = z.object({
  * the navigation graph in the controller so an unmappable venue produces a
  * clear UNKNOWN_VENUE error instead of an unroutable event.
  */
+/** Accessibility features an event can declare. A feature that is not sent stays UNKNOWN. */
+export const ACCESSIBILITY_KEYS = ['stepFree', 'accessibleRestroom', 'signLanguage', 'captions', 'hearingLoop'];
+
+export const accessibilitySchema = z.strictObject(
+  Object.fromEntries(ACCESSIBILITY_KEYS.map((key) => [key, z.boolean().optional()]))
+);
+
+/** `null` = unknown. `free` carries no amount; `paid` needs a positive amount and a currency code. */
+export const priceSchema = z
+  .discriminatedUnion('type', [
+    z.strictObject({ type: z.literal('free') }),
+    z.strictObject({
+      type: z.literal('paid'),
+      amountCents: z.coerce.number().int().min(1).max(100_000_000),
+      currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/, 'currency must be a 3-letter code')
+    })
+  ])
+  .nullable();
+
 export const createEventBase = z.object({
   title: z.string().trim().min(1, 'title is required').max(200),
   category: z.string().trim().min(1, 'category is required').max(60),
@@ -75,7 +94,9 @@ export const createEventBase = z.object({
   host: z.string().trim().max(120).default(''),
   description: z.string().trim().max(2000).default(''),
   tags: z.array(z.string().trim().min(1)).max(20).default([]),
-  icon: z.string().trim().max(8).default('🎫')
+  icon: z.string().trim().max(8).default('🎫'),
+  price: priceSchema.optional(),
+  accessibility: accessibilitySchema.optional()
 });
 
 export const createEventSchema = createEventBase;
@@ -126,13 +147,26 @@ export const eventListQuerySchema = z
 /* AI                                                                         */
 /* -------------------------------------------------------------------------- */
 
+const isoDate = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be formatted YYYY-MM-DD');
+
+/** Filters the app's filter chips send with a search. Unknown keys are rejected, not ignored. */
+export const searchFiltersSchema = z.strictObject({
+  category: z.string().trim().min(1).max(60).optional(),
+  dateFrom: isoDate.optional(),
+  dateTo: isoDate.optional(),
+  free: z.boolean().optional(),
+  maxPriceCents: z.coerce.number().int().min(0).max(100_000_000).optional(),
+  accessibility: z.array(z.enum(ACCESSIBILITY_KEYS)).max(ACCESSIBILITY_KEYS.length).optional()
+});
+
 export const aiSearchSchema = z.object({
   query: z
     .string({ error: 'query is required' })
     .trim()
     .min(1, 'query is required')
     .max(500),
-  limit: z.coerce.number().int().min(1).max(50).default(10)
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+  filters: searchFiltersSchema.optional()
 });
 
 /**
@@ -393,4 +427,31 @@ export const managerSupportTicketsQuerySchema = z.object({
 
 export const supportStatusSchema = z.strictObject({
   status: z.enum(['open', 'closed'], { error: 'status must be open or closed' })
+});
+
+/* -------------------------------------------------------------------------- */
+/* AI helpers (all calls are made by the server; see src/ai/)                  */
+/* -------------------------------------------------------------------------- */
+
+export const aiAssistantSchema = z.object({
+  question: z.string({ error: 'question is required' }).trim().min(1, 'question is required').max(300)
+});
+
+export const aiTranslateSchema = z.object({
+  language: z.string({ error: 'language is required' }).trim().min(2).max(8)
+});
+
+export const aiRewriteSchema = z.object({
+  text: z.string({ error: 'text is required' }).trim().min(1, 'text is required').max(1000),
+  kind: z.enum(['subject', 'message']).default('message')
+});
+
+export const aiScheduleSchema = z.object({
+  eventIds: z.array(eventIdParamSchema.shape.id).max(30).optional()
+});
+
+export const aiDraftSchema = z.object({
+  kind: z.enum(['event', 'announcement']),
+  brief: z.string({ error: 'brief is required' }).trim().min(1, 'brief is required').max(800),
+  eventId: eventIdParamSchema.shape.id.optional()
 });

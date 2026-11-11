@@ -137,6 +137,8 @@ fun EventDetailScreen(
                         FactRow(Icons.Default.Place, "Venue", details?.venue?.name ?: e.venue)
                     }
                     Spacer(Modifier.height(12.dp))
+                    AiEventHelp(event = e, savedIds = repository.registeredIds())
+                    Spacer(Modifier.height(12.dp))
 
                     // ---- capacity ----
                     if (e.capacity > 0) {

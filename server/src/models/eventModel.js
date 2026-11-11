@@ -21,8 +21,27 @@ export function rowToEvent(row) {
     host: row.host,
     description: row.description,
     tags: Array.isArray(row.tags) ? row.tags : [],
-    icon: row.icon
+    icon: row.icon,
+    // Typed and explicit. null / an absent key means UNKNOWN, never "no" and never inferred from the description.
+    price: rowToPrice(row),
+    accessibility: row.accessibility && typeof row.accessibility === 'object' ? row.accessibility : {}
   };
+}
+
+/** `null` (unknown) | `{ type: 'free' }` | `{ type: 'paid', amountCents, currency }`. */
+function rowToPrice(row) {
+  if (row.price_type === 'free') return { type: 'free' };
+  if (row.price_type === 'paid') {
+    return { type: 'paid', amountCents: row.price_amount_cents, currency: row.price_currency };
+  }
+  return null;
+}
+
+/** Splits the API price value into the three columns. Unknown (undefined/null) stores NULLs. */
+export function priceToColumns(price) {
+  if (!price) return { type: null, amount: null, currency: null };
+  if (price.type === 'free') return { type: 'free', amount: null, currency: null };
+  return { type: 'paid', amount: price.amountCents, currency: price.currency };
 }
 
 const SELECT_EVENT = `
@@ -142,8 +161,9 @@ export async function insertEvent(event) {
   const { rows } = await pool.query(
     `INSERT INTO events
        (id, title, category, venue_id, date, time, duration_min,
-        capacity, registered, host, description, tags, icon, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14)
+        capacity, registered, host, description, tags, icon, created_by,
+        price_type, price_amount_cents, price_currency, accessibility)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14, $15, $16, $17, $18::jsonb)
      RETURNING id`,
     [
       event.id,
@@ -159,7 +179,11 @@ export async function insertEvent(event) {
       event.description,
       JSON.stringify(event.tags),
       event.icon,
-      event.createdBy ?? null
+      event.createdBy ?? null,
+      priceToColumns(event.price).type,
+      priceToColumns(event.price).amount,
+      priceToColumns(event.price).currency,
+      JSON.stringify(event.accessibility ?? {})
     ]
   );
   return findEventById(rows[0].id);
@@ -201,6 +225,16 @@ export async function updateEventRow(id, patch) {
   if (patch.tags !== undefined) {
     values.push(JSON.stringify(patch.tags));
     sets.push(`tags = $${values.length}::jsonb`);
+  }
+  // `price: null` clears it back to unknown; `accessibility: {}` clears every feature back to unknown.
+  if (patch.price !== undefined) {
+    const cols = priceToColumns(patch.price);
+    values.push(cols.type, cols.amount, cols.currency);
+    sets.push(`price_type = $${values.length - 2}`, `price_amount_cents = $${values.length - 1}`, `price_currency = $${values.length}`);
+  }
+  if (patch.accessibility !== undefined) {
+    values.push(JSON.stringify(patch.accessibility));
+    sets.push(`accessibility = $${values.length}::jsonb`);
   }
   if (!sets.length) return findEventById(id);
   const { rowCount } = await getPool().query(`UPDATE events SET ${sets.join(', ')} WHERE id = $1`, values);

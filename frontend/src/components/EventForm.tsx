@@ -2,7 +2,9 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 
 import { api } from '@/lib/api'
+import { draftEventWithAi, useAiEnabled } from '@/lib/ai'
 import {
+  ACCESSIBILITY_OPTIONS,
   apiErrorMessage,
   emptyEventForm,
   eventFormToPayload,
@@ -37,6 +39,26 @@ export default function EventForm({ event, venues, onSaved, onCancel }: EventFor
   )
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const aiEnabled = useAiEnabled()
+  const [notes, setNotes] = useState('')
+  const [aiBusy, setAiBusy] = useState(false)
+  const [aiNote, setAiNote] = useState<string | null>(null)
+
+  /** Fills title/description/tags from the organizer's notes. Never saves; the organizer edits and submits. */
+  async function draftWithAi() {
+    setAiBusy(true)
+    setError(null)
+    setAiNote(null)
+    try {
+      const d = await draftEventWithAi(notes.trim())
+      setForm((f) => ({ ...f, title: d.title, description: d.description }))
+      setAiNote(`Draft added${d.tags.length ? ` (suggested tags: ${d.tags.join(', ')})` : ''}. Check every detail before saving.`)
+    } catch (err) {
+      setError(apiErrorMessage(err))
+    } finally {
+      setAiBusy(false)
+    }
+  }
 
   const set = (key: keyof EventFormValues) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -127,6 +149,97 @@ export default function EventForm({ event, venues, onSaved, onCancel }: EventFor
               onChange={set('description')}
             />
           </label>
+
+          {aiEnabled && (
+            <div className="rounded-md border border-line p-3 sm:col-span-2" aria-label="AI draft">
+              <label className={labelClass}>
+                Draft with AI from your notes (optional)
+                <textarea
+                  maxLength={800}
+                  rows={2}
+                  className={textareaClass}
+                  value={notes}
+                  placeholder="e.g. beginner robotics workshop, bring a laptop"
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </label>
+              <div className="mt-2 flex items-center gap-3">
+                <button type="button" className={buttonSecondary} disabled={aiBusy || !notes.trim()} onClick={draftWithAi}>
+                  {aiBusy ? 'Drafting...' : 'Draft with AI'}
+                </button>
+                <p className="text-caption text-ink-3">
+                  Fills the title, description and tags only. Review and edit before you save.
+                </p>
+              </div>
+              {aiNote && (
+                <p role="status" className="mt-2 text-small text-success">
+                  {aiNote}
+                </p>
+              )}
+            </div>
+          )}
+
+          <fieldset className="sm:col-span-2">
+            <legend className={labelClass}>Price</legend>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                aria-label="Price"
+                className={inputClass}
+                value={form.priceMode}
+                onChange={(e) => setForm((f) => ({ ...f, priceMode: e.target.value as EventFormValues['priceMode'] }))}
+              >
+                <option value="unknown">Not stated</option>
+                <option value="free">Free</option>
+                <option value="paid">Paid</option>
+              </select>
+              {form.priceMode === 'paid' && (
+                <>
+                  <input
+                    aria-label="Price amount"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className={inputClass}
+                    value={form.priceAmount}
+                    onChange={set('priceAmount')}
+                  />
+                  <input
+                    aria-label="Currency"
+                    maxLength={3}
+                    className={inputClass}
+                    value={form.priceCurrency}
+                    onChange={set('priceCurrency')}
+                  />
+                </>
+              )}
+            </div>
+          </fieldset>
+
+          <fieldset className="sm:col-span-2">
+            <legend className={labelClass}>Accessibility (only what you know for sure)</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {ACCESSIBILITY_OPTIONS.map(({ key, label: text }) => (
+                <label key={key} className="flex items-center justify-between gap-2 text-small text-ink-2">
+                  {text}
+                  <select
+                    aria-label={text}
+                    className={inputClass}
+                    value={form.accessibility[key]}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        accessibility: { ...f.accessibility, [key]: e.target.value as 'unknown' | 'yes' | 'no' },
+                      }))
+                    }
+                  >
+                    <option value="unknown">Not stated</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </label>
+              ))}
+            </div>
+          </fieldset>
         </div>
 
         <div className="border-t border-line px-5 py-3">

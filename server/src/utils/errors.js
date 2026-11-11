@@ -36,6 +36,21 @@ export class ApiError extends Error {
   static internal(message = 'Internal server error', code = 'INTERNAL') {
     return new ApiError(500, message, code);
   }
+
+  /** 429 for a limit the caller hit (ours or the AI provider's). */
+  static tooManyRequests(message = 'Too many requests', code = 'RATE_LIMITED') {
+    return new ApiError(429, message, code);
+  }
+
+  /** 502: a dependency answered, but not with something we can use. */
+  static badGateway(message = 'Upstream service returned an unusable response', code = 'BAD_GATEWAY') {
+    return new ApiError(502, message, code);
+  }
+
+  /** 503: a dependency (the AI provider) is off, slow or down. Callers fall back to non-AI behaviour. */
+  static unavailable(message = 'Service temporarily unavailable', code = 'UNAVAILABLE') {
+    return new ApiError(503, message, code);
+  }
 }
 
 /**

@@ -108,10 +108,14 @@ object ApiClient {
         .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
-    val service: HubApi = Retrofit.Builder()
+    private val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(baseUrl)
         .client(okHttp)
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
-        .create(HubApi::class.java)
+
+    val service: HubApi = retrofit.create(HubApi::class.java)
+
+    /** AI helper endpoints (same server, same auth). */
+    val aiService: AiApi = retrofit.create(AiApi::class.java)
 }

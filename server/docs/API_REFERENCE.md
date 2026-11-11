@@ -405,3 +405,40 @@ join these rooms via `join`). After every successful write:
 
 Existing `event` announcement broadcasts are unchanged. Clients should refetch on these events and fall back
 to polling when the socket is down.
+
+## AI helpers (contract 1.7.0, additive)
+
+Everything here is **additive**: existing routes keep their behaviour. The provider key lives only on the server
+(`NVIDIA_API_KEY`); no client ever sees it. If the key is missing or `AI_ENABLED=false`, the provider-backed routes answer
+`503 AI_DISABLED` and `GET /api/ai/status` reports `enabled:false`, which the apps use to hide the AI buttons.
+Errors use the usual `{error, code}` envelope: `AI_DISABLED` 503, `AI_TIMEOUT` 503, `AI_UNAVAILABLE` 503,
+`AI_RATE_LIMITED` 429, `AI_BAD_RESPONSE` 502, `UNSUPPORTED_LANGUAGE` 400, `INPUT_TOO_LONG` 400.
+Provider routes are rate limited per signed-in user (default 20/min, `AI_RATE_PER_MINUTE`).
+
+### Event price and accessibility (migration `010`)
+`Event` gains `price` (`null` = not stated | `{type:"free"}` | `{type:"paid", amountCents, currency}`) and `accessibility`
+(object of booleans: `stepFree`, `accessibleRestroom`, `signLanguage`, `captions`, `hearingLoop`; a missing key = **unknown**,
+never "no"). Accepted by `POST/PUT /api/events` (`price:null` clears). Nothing is inferred from the description.
+
+### `GET /api/ai/status` (public) -> `{enabled, languages:[{code,name}], maxInputChars}`
+
+### `POST /api/ai/search` (extended)
+Body adds optional `filters {category, dateFrom, dateTo, free, maxPriceCents, accessibility[]}`; the same filters are also
+understood from the sentence ("free step-free events this weekend"). Filters are strict: an event that does not state the value
+is left out and counted. Response adds `appliedFilters` and `unknownExcluded` only when filters were used. No provider call.
+
+### Signed-in routes (provider-backed unless noted)
+- `POST /api/ai/assistant {question}` -> `{available, answer|null, sources:[{id,type,refId,title}], aiGenerated, fallback?, message?}`.
+  Answers only from current events, venues, announcements and app-help topics, citing source ids; otherwise `available:false`.
+- `POST /api/ai/announcements/:id/summary` -> `{summary, original, link, aiGenerated}` (short ones and provider failures: no AI text, flagged).
+- `POST /api/ai/announcements/:id/translate {language}` -> `{original, translated, language}`. Only verified languages
+  (see `/status`); wrong-script output is rejected.
+- `POST /api/ai/support/rewrite {text, kind:"subject"|"message"}` -> `{original, suggestion, requiresReview:true}`. Sends nothing.
+- `POST /api/ai/events/:id/simplify` -> `{original, plain, accessibility:{offered,notOffered,notStated}}` (accessibility from typed data only).
+- `POST /api/ai/schedule/conflicts {eventIds?}` -> `{hasConflicts, conflicts, alternatives, basedOn, limitation}`. Deterministic, no provider.
+  Registrations live on the device, so the app sends its saved ids; without them the server's bookmarks are used and the response says so.
+- `GET /api/ai/recommendations` is unchanged (deterministic reasons).
+
+### Manager routes (organizer = their own events, admin = all)
+- `POST /api/ai/manage/tickets/:id/category` -> `{category, reason, aiGenerated, fallback?}` (suggestion only; nothing stored).
+- `POST /api/ai/manage/draft {kind:"event"|"announcement", brief, eventId?}` -> `{draft, status:"DRAFT_REQUIRES_REVIEW"}`. Nothing is saved or published.

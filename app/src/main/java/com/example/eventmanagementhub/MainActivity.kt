@@ -41,6 +41,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.eventmanagementhub.data.api.AuthProvider
+import com.example.eventmanagementhub.ui.screens.AiAssistantScreen
 import com.example.eventmanagementhub.ui.screens.AuthScreen
 import com.example.eventmanagementhub.ui.screens.AnnouncementsEventsScreen
 import com.example.eventmanagementhub.ui.screens.ChatThreadScreen
@@ -244,7 +245,14 @@ private fun AppRoot() {
                             mapTargetVenue = e.venueId
                             openTab("map")
                         },
-                        onSeeAll = { openTab("events") }
+                        onSeeAll = { openTab("events") },
+                        onAssistant = { navController.navigate("assistant") }
+                    )
+                }
+                composable("assistant") {
+                    AiAssistantScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenEvent = { id -> navController.navigate("event/$id") }
                     )
                 }
                 composable("events") {

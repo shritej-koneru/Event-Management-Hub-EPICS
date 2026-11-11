@@ -74,6 +74,57 @@ export function resolveManagerSignup(envLike = {}, prod = false) {
   return !prod;
 }
 
+/** Defaults for the AI provider (NVIDIA's OpenAI-compatible chat-completions API). All overridable by env. */
+export const AI_DEFAULTS = Object.freeze({
+  baseUrl: 'https://integrate.api.nvidia.com/v1',
+  chatModel: 'nvidia/nemotron-3.5-bolt-e4b',
+  translateModel: 'nvidia/riva-translate-4b-instruct-v2',
+  timeoutMs: 15_000,
+  maxInputChars: 2_000,
+  maxOutputTokens: 400,
+  ratePerMinute: 20
+});
+
+/**
+ * AI provider settings from the environment.
+ *
+ * The API key is read ONLY from NVIDIA_API_KEY (never from code or the client). With no key, or AI_ENABLED=false,
+ * `enabled` is false and every AI endpoint answers 503 AI_DISABLED so the apps fall back to their non-AI behaviour.
+ * The base URL must be https (http only for localhost, which the tests use); anything else falls back to the default.
+ *
+ * Exported as a pure function so the policy can be unit tested without mutating `process.env`.
+ */
+export function resolveAiConfig(envLike = {}) {
+  const text = (name, fallback) => String(envLike[name] ?? '').trim() || fallback;
+  const number = (name, fallback, min, max) => {
+    const n = Number.parseInt(String(envLike[name] ?? '').trim(), 10);
+    return Number.isFinite(n) && n >= min && n <= max ? n : fallback;
+  };
+  const apiKey = String(envLike.NVIDIA_API_KEY ?? '').trim();
+  const switchedOff = ['false', '0', 'no'].includes(String(envLike.AI_ENABLED ?? '').trim().toLowerCase());
+
+  let baseUrl = text('NVIDIA_BASE_URL', AI_DEFAULTS.baseUrl).replace(/\/+$/, '');
+  try {
+    const u = new URL(baseUrl);
+    const local = ['localhost', '127.0.0.1'].includes(u.hostname);
+    if (!(u.protocol === 'https:' || (u.protocol === 'http:' && local))) baseUrl = AI_DEFAULTS.baseUrl;
+  } catch {
+    baseUrl = AI_DEFAULTS.baseUrl;
+  }
+
+  return {
+    apiKey,
+    enabled: apiKey.length > 0 && !switchedOff,
+    baseUrl,
+    chatModel: text('NVIDIA_CHAT_MODEL', AI_DEFAULTS.chatModel),
+    translateModel: text('NVIDIA_TRANSLATE_MODEL', AI_DEFAULTS.translateModel),
+    timeoutMs: number('AI_TIMEOUT_MS', AI_DEFAULTS.timeoutMs, 1_000, 60_000),
+    maxInputChars: number('AI_MAX_INPUT_CHARS', AI_DEFAULTS.maxInputChars, 100, 20_000),
+    maxOutputTokens: number('AI_MAX_OUTPUT_TOKENS', AI_DEFAULTS.maxOutputTokens, 16, 4_000),
+    ratePerMinute: number('AI_RATE_PER_MINUTE', AI_DEFAULTS.ratePerMinute, 1, 600)
+  };
+}
+
 /**
  * What the server does to the database when it boots.
  *
@@ -165,6 +216,9 @@ export const config = {
 
   /** Lets the website create organizer accounts. Off by default in production - see resolveManagerSignup(). */
   managerSignupEnabled: resolveManagerSignup(env, isProd),
+
+  /** AI provider settings. `ai.apiKey` must never be logged, returned or sent to a client. */
+  ai: resolveAiConfig(env),
 
   /** Force the idempotent seed on every boot. Explicit opt-in only; never needed in normal operation. */
   seedOnBoot: bool('SEED_ON_BOOT', false),

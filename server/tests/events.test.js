@@ -6,8 +6,7 @@ import { VENUE_IDS, venueIdToName } from '../src/navigation/venues.js';
 const REQUIRED_EVENT_FIELDS = [
   'id', 'title', 'category', 'venue', 'venueId', 'date',
   'time', 'durationMin', 'capacity', 'registered',
-  'host', 'description', 'tags', 'icon'
-];
+  'host', 'description', 'tags', 'icon', 'price', 'accessibility'];
 
 describe('GET /api/events', () => {
   it('returns the seeded events from the database', async () => {

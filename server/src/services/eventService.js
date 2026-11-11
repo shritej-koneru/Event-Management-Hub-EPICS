@@ -98,6 +98,8 @@ export async function createEvent(payload, { createdBy = null } = {}) {
     description: payload.description ?? '',
     tags: payload.tags ?? [],
     icon: payload.icon ?? '🎫',
+    price: payload.price ?? null,
+    accessibility: payload.accessibility ?? {},
     createdBy
   });
 }

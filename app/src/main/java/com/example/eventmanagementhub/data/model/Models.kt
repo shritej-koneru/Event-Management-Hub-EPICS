@@ -17,7 +17,11 @@ data class Event(
     val host: String = "",
     val description: String = "",
     val tags: List<String> = emptyList(),
-    val icon: String = "\uD83C\uDFAB"
+    val icon: String = "\uD83C\uDFAB",
+    /** Null = the organizer did not state a price. Never treated as free. */
+    val price: EventPrice? = null,
+    /** Only explicitly stated features appear; a missing key means unknown, not "no". */
+    val accessibility: Map<String, Boolean> = emptyMap()
 )
 
 @Serializable
@@ -69,13 +73,19 @@ data class BookmarkMutationResponse(
 data class InterestsRequest(val interests: List<String> = emptyList())
 
 @Serializable
-data class AiSearchRequest(val query: String, val limit: Int = 10)
+data class AiSearchRequest(val query: String, val limit: Int = 10, val filters: AiSearchFilters? = null)
 
 @Serializable
 data class AiResult(val event: Event, val score: Double, val reason: String)
 
 @Serializable
-data class AiSearchResponse(val query: String = "", val results: List<AiResult> = emptyList())
+data class AiSearchResponse(
+    val query: String = "",
+    val results: List<AiResult> = emptyList(),
+    /** Present only when filters were used: what was understood, and how many events were hidden for missing data. */
+    val appliedFilters: List<String> = emptyList(),
+    val unknownExcluded: Int = 0
+)
 
 @Serializable
 data class RecommendationResponse(val recommendations: List<AiResult> = emptyList())

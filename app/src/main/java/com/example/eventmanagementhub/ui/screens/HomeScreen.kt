@@ -29,7 +29,9 @@ fun HomeScreen(
     repository: HubRepository = HubRepository(),
     /** Opens the Map tab with the event's venue as destination; defaults to the event details. */
     onDirections: (Event) -> Unit = { onEventClick(it.id) },
-    onSeeAll: (() -> Unit)? = null
+    onSeeAll: (() -> Unit)? = null,
+    /** Opens the campus assistant. Shown only when the server says AI is on. */
+    onAssistant: (() -> Unit)? = null
 ) {
     var events by remember { mutableStateOf<List<Event>>(emptyList()) }
     var recommendations by remember { mutableStateOf<List<Recommended>>(emptyList()) }
@@ -128,6 +130,9 @@ fun HomeScreen(
                     placeholder = "Ask: android workshop, music, ai…",
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
+                if (onAssistant != null && rememberAiStatus().enabled) {
+                    QuietButton("Ask the campus assistant", onAssistant, Modifier.padding(horizontal = 8.dp).testTag("open-assistant"))
+                }
                 Spacer(Modifier.height(16.dp))
             }
             if (searching) {
