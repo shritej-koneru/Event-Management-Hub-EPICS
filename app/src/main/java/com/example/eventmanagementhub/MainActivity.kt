@@ -45,6 +45,7 @@ import com.example.eventmanagementhub.ui.screens.AiAssistantScreen
 import com.example.eventmanagementhub.ui.screens.AuthScreen
 import com.example.eventmanagementhub.ui.screens.AnnouncementsEventsScreen
 import com.example.eventmanagementhub.ui.screens.ChatThreadScreen
+import com.example.eventmanagementhub.ui.screens.NearbyChatScreen
 import com.example.eventmanagementhub.ui.screens.EventAnnouncementsScreen
 import com.example.eventmanagementhub.ui.screens.HelpChatsScreen
 import com.example.eventmanagementhub.ui.screens.NewChatScreen
@@ -234,8 +235,13 @@ private fun AppRoot() {
                             navController.navigate(if (isNewAccount) "profile" else "home") {
                                 popUpTo("auth") { inclusive = true }
                             }
-                        }
+                        },
+                        onOpenNearby = { navController.navigate("nearby") }
                     )
+                }
+                // Offline messaging over Bluetooth: reachable before sign-in and from the Updates tab.
+                composable("nearby") {
+                    NearbyChatScreen(onBack = { navController.popBackStack() })
                 }
                 composable("home") {
                     HomeScreen(
@@ -269,7 +275,8 @@ private fun AppRoot() {
                 composable("announcements") {
                     AnnouncementsEventsScreen(
                         onEventClick = { id -> navController.navigate("announcements/${Uri.encode(id)}") },
-                        onBrowseEvents = { openTab("events") }
+                        onBrowseEvents = { openTab("events") },
+                        onOpenNearby = { navController.navigate("nearby") }
                     )
                 }
                 composable(

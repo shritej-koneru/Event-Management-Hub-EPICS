@@ -21,3 +21,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "EventManagementHub"
 include(":app")
+// Pure-Java BLE mesh engine (no Android deps).
+include(":meshlib")
+// Offline mesh backend for Android (BLE transport, mesh manager, foreground service). No screens.
+include(":meshandroid")

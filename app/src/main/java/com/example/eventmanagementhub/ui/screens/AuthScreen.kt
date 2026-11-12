@@ -31,7 +31,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
-    onAuthed: (isNewAccount: Boolean) -> Unit
+    onAuthed: (isNewAccount: Boolean) -> Unit,
+    /** Opens nearby chat (offline, over Bluetooth): needs no account and no internet. */
+    onOpenNearby: (() -> Unit)? = null
 ) {
     var isLogin by remember { mutableStateOf(true) }
     var name by remember { mutableStateOf("") }
@@ -183,6 +185,13 @@ fun AuthScreen(
                 onClick = { isLogin = !isLogin; errorMsg = null },
                 modifier = Modifier.fillMaxWidth()
             )
+            if (onOpenNearby != null) {
+                QuietButton(
+                    text = "Nearby chat (offline)",
+                    onClick = onOpenNearby,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
             NoticeBanner("Demo account: alice@uni.edu / secret123", ChipKind.Info)

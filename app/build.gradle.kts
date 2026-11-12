@@ -201,6 +201,10 @@ dependencies {
     // graph + Compose canvas and does not depend on this.
     implementation(libs.osmdroid.android)
 
+    // Offline Bluetooth mesh backend (transport, manager, service) + the pure-Java engine. The app shows it with its own
+    // Compose screens (ui/screens/NearbyChatScreen.kt); none of the old BitChat screens are used.
+    implementation(project(":meshandroid"))
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.retrofit)
